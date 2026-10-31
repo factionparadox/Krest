@@ -1,0 +1,3 @@
+#!/bin/sh
+# Super+? : the keys, in a terminal (q closes).
+exec xterm -title Keys -e less /usr/share/pustota/keys.txt

@@ -1,0 +1,3 @@
+# Your ratpoison settings. Pustota's defaults come first; add your own below.
+# Reload after editing: Super+Shift+r  (or Ctrl+t then :source ~/.ratpoisonrc)
+source /etc/pustota/ratpoisonrc

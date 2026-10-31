@@ -1,0 +1,38 @@
+! Pustota's X resources (pustota-session loads this, then your ~/.Xresources).
+! The Framework 13 Pro's screen is dense: 144 dpi makes text 1.5 times larger. Try 120 or 168.
+Xft.dpi: 144
+Xft.antialias: true
+Xft.hinting: true
+Xft.hintstyle: hintslight
+Xft.rgba: rgb
+Xcursor.size: 32
+
+! xterm: the terminal
+XTerm*faceName: DejaVu Sans Mono
+XTerm*faceSize: 11
+XTerm*locale: true
+XTerm*utf8: 1
+XTerm*saveLines: 10000
+XTerm*scrollBar: false
+XTerm*selectToClipboard: true
+XTerm*metaSendsEscape: true
+XTerm*termName: xterm-256color
+XTerm*background: #16161c
+XTerm*foreground: #d8d8d8
+XTerm*cursorColor: #c8323c
+XTerm*color0: #16161c
+XTerm*color1: #c8323c
+XTerm*color2: #7a9a5c
+XTerm*color3: #c9a554
+XTerm*color4: #5f7fa8
+XTerm*color5: #9a6fa8
+XTerm*color6: #5f9a9a
+XTerm*color7: #d8d8d8
+XTerm*color8: #4a4a54
+XTerm*color9: #e0505a
+XTerm*color10: #98b878
+XTerm*color11: #e0c070
+XTerm*color12: #7f9fc8
+XTerm*color13: #b88fc8
+XTerm*color14: #7fbaba
+XTerm*color15: #f0f0f0

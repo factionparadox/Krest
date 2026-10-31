@@ -1,0 +1,6 @@
+#!/bin/sh
+# Pustota's automatic installer (Void glibc, XFS, runit). Needs root and a network.
+set -eu
+[ "$(xbps-uhelper arch)" = x86_64 ] || { echo "Pustota needs Void Linux x86_64 glibc." >&2; exit 2; }
+[ "$(id -u)" -eq 0 ] || exec sudo "$0" "$@"
+exec /usr/bin/python3 /usr/lib/pustota/pustota-installer.py "$@"

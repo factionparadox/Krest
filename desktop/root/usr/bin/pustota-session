@@ -1,0 +1,21 @@
+#!/bin/sh
+# Pustota's X session. startx (from ~/.xinitrc) runs this; each line starts one piece of the
+# desktop, and ratpoison, the window manager, comes last: the session ends when it exits.
+
+# A D-Bus session bus for notifications, mounting and the browser.
+[ -z "$DBUS_SESSION_BUS_ADDRESS" ] && exec dbus-run-session -- "$0" "$@"
+
+xrdb -merge /etc/pustota/Xresources                # fonts, DPI, terminal colours
+[ -f "$HOME/.Xresources" ] && xrdb -merge "$HOME/.Xresources"
+xsetroot -solid '#0c0c10' -cursor_name left_ptr
+xset s 600 600 dpms 600 900 1200                   # blank after 10 minutes, screen off later
+xss-lock --transfer-sleep-lock -- slock &          # lock on sleep, lid and Super+l
+dunst &                                            # notifications
+pipewire &                                         # sound (starts WirePlumber and pipewire-pulse)
+udiskie --automount --notify &                     # USB sticks and drives
+xbanish &                                          # hide the pointer while typing
+pustota-battery &                                  # low-battery warnings, hibernate when empty
+polybar pustota >/dev/null 2>&1 &                  # the bar at the top
+[ -x "$HOME/.config/pustota/autostart" ] && "$HOME/.config/pustota/autostart" &
+
+exec ratpoison

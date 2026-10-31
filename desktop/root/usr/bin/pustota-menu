@@ -1,0 +1,81 @@
+#!/bin/sh
+# Pustota's menu (Super+Space): dmenu lists, one per topic, like the classic right-click menu.
+#   pustota-menu [main|russian|learn|power|system]
+# Each entry is "label<TAB>command"; edit /usr/bin/pustota-menu's lists, or copy it to
+# ~/.local/bin/pustota-menu and change your copy.
+dm() { dmenu -i -l 14 -p "$1" -fn 'DejaVu Sans Mono-12' -nb '#16161c' -nf '#d8d8d8' -sb '#c8323c' -sf '#ffffff'; }
+pick() {  # pick PROMPT, entries on stdin
+  entries=$(cat)
+  label=$(printf '%s\n' "$entries" | cut -f1 | dm "$1") || exit 0
+  printf '%s\n' "$entries" | awk -F'\t' -v l="$label" '$1 == l { print $2; exit }'
+}
+run() { [ -n "$1" ] && setsid -f sh -c "$1" >/dev/null 2>&1; }
+
+case "${1:-main}" in
+main)
+  run "$(pick 'Пустота' <<'M'
+Terminal	xterm
+Files (Midnight Commander)	xterm -title Files -e mc
+Write (acme)	pustota-acme
+Web	firefox
+Russian ›	pustota-menu russian
+Learn the system ›	pustota-menu learn
+Wi-Fi	networkmanager_dmenu
+Bluetooth	xterm -title Bluetooth -e bluetuith
+Sound	xterm -title Sound -e pulsemixer
+System ›	pustota-menu system
+Screenshot	pustota-screenshot
+Keys	pustota-keys
+Power ›	pustota-menu power
+M
+)" ;;
+russian)
+  run "$(pick 'Русский' <<'M'
+Where to start (the route to B2)	xterm -title Russian -e pustota-russian --pause path
+Words (10 minutes, spaced repetition)	xterm -title Слова -e pustota-russian --pause words
+Tutor (AI, on this laptop)	xterm -title Репетитор -e pustota-russian --pause tutor
+Listen (audiobooks)	xterm -title Listen -e pustota-russian --pause listen --pick
+Course library (FSI, DLI, Peace Corps)	pustota-russian library --open
+Textbook: Между нами	pustota-russian read mezhdunami
+Dictionary (Wiktionary)	pustota-russian read wiktionary
+Download material…	xterm -title Downloads -e sh -c 'sudo pustota-content; read -r -p "Enter to close " _'
+M
+)" ;;
+learn)
+  run "$(pick 'Learn' <<'M'
+Lessons	xterm -title Learn -e pustota-learn browse
+System map (what is running)	xterm -title 'System map' -e sh -c 'pustota-learn doctor; read -r -p "Enter to close " _'
+Explain a command…	pustota-menu explain
+Void Handbook	xterm -title Handbook -e void-docs
+Manual page…	pustota-menu manual
+Where things come from	xterm -title Sources -e sh -c 'pustota-learn sources | less'
+M
+)" ;;
+explain)
+  cmd=$(printf '' | dm 'Explain (nothing is run):') || exit 0
+  [ -n "$cmd" ] && setsid -f xterm -title Explain -e sh -c 'pustota-learn explain "$1" | less' _ "$cmd" ;;
+manual)
+  page=$(printf '' | dm 'man') || exit 0
+  [ -n "$page" ] && setsid -f xterm -title "man $page" -e man "$page" ;;
+system)
+  run "$(pick 'System' <<'M'
+Update everything (xbps-install -Su)	xterm -title Update -e sh -c 'sudo xbps-install -Su; read -r -p "Enter to close " _'
+Services (sv status)	xterm -title Services -e sh -c 'sudo sv status /var/service/* | less'
+Processes (htop)	xterm -title htop -e htop
+Battery report (powertop)	xterm -title powertop -e sudo powertop
+Disks	xterm -title Disks -e sh -c 'lsblk -f; df -h -x tmpfs -x devtmpfs; read -r -p "Enter to close " _'
+Firmware updates (fwupd)	xterm -title Firmware -e sh -c 'fwupdmgr refresh; fwupdmgr get-updates; read -r -p "Enter to close " _'
+M
+)" ;;
+power)
+  run "$(pick 'Power' <<'M'
+Lock	loginctl lock-session
+Suspend	loginctl suspend
+Hibernate	loginctl hibernate
+Log out	ratpoison -c quit
+Restart	loginctl reboot
+Power off	loginctl poweroff
+M
+)" ;;
+*) echo "usage: pustota-menu [main|russian|learn|system|power]" >&2; exit 2 ;;
+esac

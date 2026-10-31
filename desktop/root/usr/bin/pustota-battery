@@ -1,0 +1,20 @@
+#!/bin/sh
+# Low-battery watch (started by the session): a warning at 15 %, an urgent one at 7 %, and at
+# 4 % on battery the laptop hibernates (or suspends, if there is no swap to hibernate into).
+warned=0
+while sleep 60; do
+  for bat in /sys/class/power_supply/BAT*; do
+    [ -r "$bat/capacity" ] || continue
+    level=$(cat "$bat/capacity"); state=$(cat "$bat/status")
+    if [ "$state" != Discharging ]; then warned=0; continue; fi
+    if [ "$level" -le 4 ]; then
+      notify-send -u critical "Battery empty" "Hibernating now"
+      sleep 5
+      loginctl hibernate 2>/dev/null || loginctl suspend
+    elif [ "$level" -le 7 ] && [ "$warned" -lt 2 ]; then
+      notify-send -u critical "Battery at $level %" "Plug in now: the laptop hibernates at 4 %"; warned=2
+    elif [ "$level" -le 15 ] && [ "$warned" -lt 1 ]; then
+      notify-send "Battery at $level %" "Time to find a charger"; warned=1
+    fi
+  done
+done

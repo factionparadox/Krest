@@ -1,0 +1,32 @@
+ Пустота — keys                                               (q closes this)
+
+ Super is the Windows key. Every window fills the screen; Super+Tab moves between them.
+
+ PROGRAMS                            WINDOWS AND FRAMES
+ Super+Space   the menu              Super+Tab        next window (Shift: previous)
+ Super+d       run any program       Super+`          list the windows
+ Super+Return  terminal (xterm)      Super+0 … 9      window by number
+ Super+e       files (mc)            Super+q          close the window
+ Super+a       acme (write)          Super+s          split side by side
+ Super+w       web (Firefox)         Super+Shift+s    split top and bottom
+ Super+r       Russian menu          Super+arrows     move between frames
+ Super+n       Wi-Fi                 Super+Shift+arrows  swap windows between frames
+ Super+b       Bluetooth             Super+x          remove this frame
+ Super+m       sound mixer           Super+o          back to one frame
+ Super+p       power menu            Super+Shift+r    reload the settings
+ Super+l       lock
+ Print         screenshot (Shift+Print: an area)
+
+ LANGUAGE      Alt+Shift switches English / Russian (phonetic: я on q, в on w, ж on v ...)
+ LAPTOP KEYS   volume, mute, microphone and brightness keys work as marked.
+
+ RATPOISON'S OWN KEYS   Ctrl+t, then:
+   ?  all keys    c  terminal    n/p  next/previous    k  close    s/S  split    Q  one frame
+   :  type a ratpoison command (e.g.  :windows)
+
+ MIDNIGHT COMMANDER (mc)   Tab other panel · F3 view · F4 edit · F5 copy · F6 move
+                           F7 new folder · F8 delete · F10 quit · Ctrl+o the shell underneath
+ ACME     middle-click runs a word · right-click opens it · Put saves · Del closes ·
+          type a file name anywhere and right-click it to open it
+
+ Learn more:  pustota-learn browse   (or Super+Space → Learn the system)

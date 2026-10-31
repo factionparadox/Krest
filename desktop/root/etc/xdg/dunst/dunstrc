@@ -1,0 +1,22 @@
+# Pustota notifications
+[global]
+    font = DejaVu Sans 10
+    origin = top-right
+    offset = (16, 46)
+    width = (240, 420)
+    frame_width = 2
+    frame_color = "#c8323c"
+    background = "#16161c"
+    foreground = "#d8d8d8"
+    padding = 10
+    horizontal_padding = 12
+    corner_radius = 0
+    idle_threshold = 120
+[urgency_low]
+    timeout = 4
+[urgency_normal]
+    timeout = 8
+[urgency_critical]
+    background = "#c8323c"
+    foreground = "#ffffff"
+    timeout = 0

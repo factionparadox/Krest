@@ -1,0 +1,9 @@
+#!/bin/sh
+# acme, Plan 9's text editor and workspace (Super+a). Middle-click runs a word, right-click
+# opens it: type a command or a file name anywhere and click it. The plumber makes right-click
+# open files, man pages and URLs in the right place.
+export PLAN9=/usr/lib/plan9
+case ":$PATH:" in *":$PLAN9/bin:"*) ;; *) PATH=$PATH:$PLAN9/bin ;; esac
+pgrep -u "$(id -u)" -x plumber >/dev/null || 9 plumber
+cd "$HOME" || exit 1
+exec 9 acme -a -f /mnt/font/DejaVuSans/14a/font -F /mnt/font/DejaVuSansMono/14a/font "$@"

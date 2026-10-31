@@ -1,0 +1,8 @@
+#!/bin/sh
+# Print: the whole screen. Shift+Print: drag to choose an area.
+# Saved in ~/Pictures/Screenshots and copied to the clipboard.
+dir=$HOME/Pictures/Screenshots; mkdir -p "$dir"
+file=$dir/$(date +%Y-%m-%d_%H-%M-%S).png
+if [ "${1:-}" = area ]; then maim -s "$file" || exit 0; else maim "$file"; fi
+xclip -selection clipboard -t image/png < "$file"
+notify-send "Screenshot" "$file (also on the clipboard)"
