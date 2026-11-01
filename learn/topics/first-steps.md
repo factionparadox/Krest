@@ -1,6 +1,6 @@
 # First steps
 
-Press Super+? for the keys. Super+Space opens the menu; everything in it is a plain command you
+Press Super+? for the keys. Ctrl+Super+Space opens the menu; everything in it is a plain command you
 can also type. Super+Return opens a terminal.
 
 ## Three places to learn from
@@ -17,7 +17,7 @@ can also type. Super+Return opens a terminal.
     fastfetch                        the system at a glance, with the Пустота logo
 
 ## Keeping up to date
-    sudo xbps-install -Su            (or Super+Space -> System -> Update everything)
+    sudo xbps-install -Su            (or Ctrl+Super+Space -> System -> Update everything)
 Void is a rolling release: everything updates together. If XBPS says it must update itself
 first, run the same command twice.
 

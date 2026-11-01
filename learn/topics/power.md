@@ -15,7 +15,7 @@ memory to disk and switching off completely, so a forgotten laptop does not drai
 battery watcher (pustota-battery) warns at 15 % and 7 % and hibernates at 4 %.
 Settings: /etc/elogind/logind.conf.d/ and /etc/elogind/sleep.conf.d/.
 
-    loginctl suspend ; loginctl hibernate      (also in Super+p)
+    loginctl suspend ; loginctl hibernate      (Super+z suspends; Super+Escape is the power menu)
 
 ## Measure, don't guess
     sudo powertop                    watts used and what uses them

@@ -6,7 +6,7 @@ video, input, network, bluetooth, storage.
 
 ## Automatic login
 If you chose it, agetty logs you in on tty1 (GETTY_ARGS in /etc/sv/agetty-tty1/conf). The
-screen still locks with your password on sleep, lid close and Super+l (xss-lock + slock), so a
+screen still locks with your password on sleep, lid close and Super+x (xss-lock + slock), so a
 stolen sleeping laptop is locked, but a stolen powered-off one boots to your desktop. To turn
 it off, remove --autologin YOU from that file. Without disk encryption, anyone with the laptop
 can read the disk anyway: Pustota does not encrypt it (yet).

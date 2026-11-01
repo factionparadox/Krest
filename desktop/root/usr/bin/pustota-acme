@@ -1,5 +1,5 @@
 #!/bin/sh
-# acme, Plan 9's text editor and workspace (Super+a). Middle-click runs a word, right-click
+# acme, Plan 9's text editor and workspace (Ctrl+Super+c). Middle-click runs a word, right-click
 # opens it: type a command or a file name anywhere and click it. The plumber makes right-click
 # open files, man pages and URLs in the right place.
 export PLAN9=/usr/lib/plan9

@@ -4,7 +4,7 @@ Plan 9 was Bell Labs' successor to Unix, by the same people. plan9port brings it
 Linux, installed in /usr/lib/plan9 (PLAN9 and PATH are set in /etc/profile.d/plan9.sh). Run
 them with the "9" wrapper so the Plan 9 versions win:  9 acme,  9 man rc.
 
-## acme (Super+a): text as the interface
+## acme (Ctrl+Super+c): text as the interface
 acme is an editor in which any text is a command. The mouse buttons do the work:
 - left selects; MIDDLE-click runs a word (Put saves, Del closes, Get reloads, Undo, New...);
 - RIGHT-click opens or finds the word: a file name opens the file, a word finds the next one.

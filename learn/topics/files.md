@@ -1,6 +1,6 @@
 # Files: Midnight Commander
 
-mc (Super+e) shows two folders side by side. Tab switches sides; the function keys along the
+mc (Ctrl+Super+e) shows two folders side by side. Tab switches sides; the function keys along the
 bottom are the actions:
     F3 view   F4 edit (mcedit)   F5 copy   F6 move/rename   F7 new folder   F8 delete   F10 quit
     Ctrl+o    hide the panels and use the shell underneath (Ctrl+o again to come back)

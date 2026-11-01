@@ -73,7 +73,7 @@ class Desktop(unittest.TestCase):
     KNOWN = {'startup_message', 'escape', 'set', 'definekey', 'exec', 'next', 'prev', 'windows',
              'delete', 'vsplit', 'hsplit', 'remove', 'only', 'focusleft', 'focusright', 'focusup',
              'focusdown', 'exchangeleft', 'exchangeright', 'exchangeup', 'exchangedown', 'select',
-             'source'}
+             'source', 'gselect', 'gmove', 'addhook'}
 
     def test_ratpoison_commands_are_real(self):
         for line in self.rc.splitlines():
@@ -86,7 +86,11 @@ class Desktop(unittest.TestCase):
 
     def test_programs_bound_to_keys_are_installed(self):
         provided = {'pustota-menu', 'pustota-acme', 'pustota-keys', 'pustota-screenshot', 'loginctl',
-                    'networkmanager_dmenu', 'dmenu_run'}
+                    'networkmanager_dmenu', 'dmenu_run', 'pustota-open', 'pustota-overview',
+                    'pustota-width', 'pustota-workstations'}
+        for script in provided:
+            if script.startswith('pustota-'):
+                self.assertTrue((DESK / 'usr/bin' / script).is_file(), script)
         packages_of = {'xterm': 'xterm', 'firefox': 'firefox', 'pamixer': 'pamixer',
                        'brightnessctl': 'brightnessctl', 'bluetuith': 'bluetuith', 'pulsemixer': 'pulsemixer',
                        'mc': 'mc', 'networkmanager_dmenu': 'networkmanager-dmenu', 'dmenu_run': 'dmenu',
@@ -119,11 +123,38 @@ class Desktop(unittest.TestCase):
 
     def test_keys_sheet_matches_bindings(self):
         sheet = (DESK / 'usr/share/pustota/keys.txt').read_text()
-        for key, bind in (('Super+Space', 's-space'), ('Super+d', 's-d'), ('Super+a', 's-a'),
-                          ('Super+q', 's-q'), ('Super+s', 's-s'), ('Super+Shift+s', 's-S-s'),
-                          ('Super+l', 's-l'), ('Super+o', 's-o'), ('Super+x', 's-x')):
+        for key, bind in (('Super+Space', 's-space'), ('Super+Tab', 's-Tab'), ('Super+q', 's-q'),
+                          ('Super+f', 's-f'), ('Super+r', 's-r'), ('Super+Shift+s', 's-S-s'),
+                          ('Super+x', 's-x'), ('Super+z', 's-z'), ('Super+o', 's-o'),
+                          ('Super+Escape', 's-Escape')):
             self.assertIn(key, sheet)
             self.assertIn(f'definekey top {bind} ', self.rc)
+        # the Ctrl+Super chords for programs
+        for letter in 'wtdveapcrnbm':
+            column = ' '.join(l[43:55] for l in sheet.splitlines())     # the PROGRAMS column
+            self.assertRegex(column, rf'(^|\s){letter}(\s|$)', letter)
+            self.assertIn(f'definekey top C-s-{letter} exec ', self.rc)
+
+    def test_workstations(self):
+        for n in '123456789':
+            self.assertIn(f'definekey top s-{n} gselect {n}\n', self.rc)
+            self.assertIn(f'definekey top s-S-{n} gmove {n}\n', self.rc)
+        self.assertIn('definekey top s-S-sterling gmove 3', self.rc)     # Shift+3 on a UK keyboard
+        bar = (DESK / 'etc/pustota/polybar.ini').read_text()
+        self.assertIn('[module/workstation]', bar)
+        self.assertIn('#workstation.hook.0', self.rc)
+        ws = (DESK / 'usr/bin/pustota-workstations').read_text()
+        self.assertIn('gnewbg', ws)
+
+    def test_chord_programs_are_installed(self):
+        opener = (DESK / 'usr/bin/pustota-open').read_text()
+        for prog in ('firefox', 'xterm', 'mpv', 'mc', 'ani-cli'):
+            self.assertIn(prog, opener)
+            self.assertIn(prog, PACKAGES)
+        for opt in ('web', 'terminal', 'discord', 'video', 'files', 'anime', 'vpn'):
+            self.assertIn(f'pustota-open {opt}', self.rc)
+            self.assertRegex(opener, rf'(?m)^  {opt}\)')
+        self.assertIn('NetworkManager', PACKAGES)               # pustota-vpn uses nmcli
 
     def test_user_files_include_the_packaged_defaults(self):
         self.assertIn('source /etc/pustota/ratpoisonrc', (DESK / 'etc/skel/.ratpoisonrc').read_text())

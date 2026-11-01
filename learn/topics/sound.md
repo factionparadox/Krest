@@ -11,7 +11,7 @@ The Framework's speakers and microphones sit behind Intel's audio DSP: the SOF f
 
 ## Use
     the volume and mute keys          (pamixer, bound in ratpoison)
-    Super+m                           pulsemixer: per-program volumes, inputs, outputs
+    Ctrl+Super+m                      pulsemixer: per-program volumes, inputs, outputs
     pamixer --get-volume ; pamixer --list-sinks
 
 ## Look

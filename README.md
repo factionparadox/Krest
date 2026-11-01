@@ -25,7 +25,7 @@
 5. Read the summary and choose **Erase and install**. That erases the whole chosen disk; it's the only point of no return.
 6. Wait while it downloads about 1.5 GB from Void, then reboot.
 
-It boots straight into the desktop (or asks for your password, if you chose that). Press **Super+?** for the keys, or **Super+Space** for the menu.
+It boots straight into the desktop (or asks for your password, if you chose that). Press **Super+?** for the keys, or **Ctrl+Super+Space** for the menu.
 
 What the installer does, step by step, is the manual chroot install from Void's handbook: partitions, `mkfs`, `xbps-install -r /mnt base-system …`, `xgenfstab -U`, locales, users, runit service links, `xbps-reconfigure -fa`, GRUB. After installing, `pustota-learn learn install` shows each command it ran, and `/var/log/pustota-install.log` holds them with their output. If anything fails, it stops with the reason on screen; Alt+F2 opens a shell to read the log.
 
@@ -41,13 +41,15 @@ pustota-russian path              # the route from A1 to B2
 
 | Keys | |
 | --- | --- |
-| Super+Space | menu (Russian, Learn, System and Power submenus) |
-| Super+Return / d / e / a / w | terminal / run anything / files (mc) / acme / Firefox |
-| Super+r | Russian menu |
-| Super+n / b / m | Wi-Fi / Bluetooth / sound mixer |
-| Super+Tab, Super+q | next window, close window |
-| Super+s, Super+Shift+s, Super+o | split side by side, split top and bottom, back to one frame |
-| Super+l, Super+p | lock, power menu |
+| Super+1…9, Super+Shift+1…9 | go to workstation, send the window there |
+| Super+Tab | overview: pick a window or workstation |
+| Super+q / f / r | close, full size, width 33→50→67→100% |
+| Super+Space | run any program (dmenu) |
+| Ctrl+Super+w / t / d / v / e / a / p | Firefox / terminal / Discord / video / files (mc) / ani-cli / VPN |
+| Ctrl+Super+c / r / n / b / m | acme / Russian / Wi-Fi / Bluetooth / sound mixer |
+| Ctrl+Super+Space | the Pustota menu (Russian, Learn, System, Power) |
+| Super+x / z / Escape | lock / suspend / power menu |
+| Super+Shift+s | screenshot of an area |
 | Alt+Shift | English ↔ Russian |
 | Ctrl+t then ? | all of ratpoison's own keys |
 

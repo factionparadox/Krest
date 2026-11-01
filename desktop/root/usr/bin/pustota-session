@@ -10,7 +10,7 @@ xrdb -merge /etc/pustota/Xresources                # fonts, DPI, terminal colour
 xsetroot -cursor_name left_ptr
 feh --no-fehbg --bg-fill /usr/share/pustota/pustota-wallpaper.png   # the Пустота roundel
 xset s 600 600 dpms 600 900 1200                   # blank after 10 minutes, screen off later
-xss-lock --transfer-sleep-lock -- slock &          # lock on sleep, lid and Super+l
+xss-lock --transfer-sleep-lock -- slock &          # lock on sleep, lid and Super+x
 dunst &                                            # notifications
 pipewire &                                         # sound (starts WirePlumber and pipewire-pulse)
 udiskie --automount --notify &                     # USB sticks and drives

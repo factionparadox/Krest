@@ -1,7 +1,7 @@
 # Russian, A1 to B2
 
 The Russian kit (pustota-russian, from Constellation) runs on this laptop, offline once the
-material is downloaded. Super+r opens its menu.
+material is downloaded. Ctrl+Super+r opens its menu.
 
     pustota-russian path         what to study at each level, with your word progress
     pustota-russian words        ten minutes of spaced repetition (10,000 words, A1-B2)

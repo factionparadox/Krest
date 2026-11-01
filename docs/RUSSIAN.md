@@ -1,6 +1,6 @@
 # Russian, A1 to B2
 
-From Constellation (and Kirin before it). `pustota-russian path` lays out the route; everything runs offline once downloaded. Super+r opens these as a menu.
+From Constellation (and Kirin before it). `pustota-russian path` lays out the route; everything runs offline once downloaded. Ctrl+Super+r opens these as a menu.
 
 | Command | |
 | --- | --- |

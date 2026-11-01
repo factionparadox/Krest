@@ -1,5 +1,5 @@
 #!/bin/sh
-# Pustota's menu (Super+Space): dmenu lists, one per topic, like the classic right-click menu.
+# Pustota's menu (Ctrl+Super+Space): dmenu lists, one per topic, like the classic right-click menu.
 #   pustota-menu [main|russian|learn|power|system]
 # Each entry is "label<TAB>command"; edit /usr/bin/pustota-menu's lists, or copy it to
 # ~/.local/bin/pustota-menu and change your copy.
