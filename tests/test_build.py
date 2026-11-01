@@ -248,26 +248,22 @@ class Compression(unittest.TestCase):
 
 class Branding(unittest.TestCase):
     def test_fastfetch_config_and_logo(self):
+        """The block logo: the roundel in true colour, two pixels per character."""
         import json
         raw = (DESK / 'etc/xdg/fastfetch/config.jsonc.in').read_text()
         config = json.loads(re.sub(r'^\s*//.*$', '', raw, flags=re.M))
         logo = config['logo']
-        self.assertEqual((logo['type'], logo['source']), ('file', '/usr/share/pustota/fastfetch-logo.txt'))
-        # the colours are the ones on the hand-drawn logo's "colors" line, in order
-        codes = (ROOT / 'branding/pustota-ascii.txt').read_text().splitlines()[0].split()[1:]
-        self.assertEqual(logo['color'], {str(i + 1): f'38;5;{c}' for i, c in enumerate(codes)})
+        self.assertEqual((logo['type'], logo['source']), ('file-raw', '/usr/share/pustota/fastfetch-logo.txt'))
         art = (DESK / 'usr/share/pustota/fastfetch-logo.txt').read_text(encoding='utf-8')
-        self.assertNotIn('${c', art)                         # converted to fastfetch's $1..$6
-        self.assertEqual(sorted(set(re.findall(r'\$(\d)', art))), [str(i + 1) for i in range(len(codes))])
-        self.assertNotIn('\\\\', art)                     # neofetch's escaped backslashes undone
-        widths = [len(re.sub(r'\$\d', '', l)) for l in art.splitlines()]
-        self.assertLessEqual(max(widths), 52)
-        self.assertTrue(art.splitlines()[0].strip() and art.splitlines()[-1].strip())   # no blank margin
-        # the true-colour version, for --logo-type file-raw
-        blocks = (DESK / 'usr/share/pustota/fastfetch-logo-blocks.txt').read_text(encoding='utf-8').splitlines()
-        self.assertEqual(len(blocks), 22)
-        for line in blocks:
-            self.assertEqual(len(re.sub(r'\x1b\[[0-9;]*m', '', line)), 44)
+        lines = art.splitlines()
+        self.assertEqual(len(lines), logo['height'])
+        for line in lines:
+            self.assertEqual(len(re.sub(r'\x1b\[[0-9;]*m', '', line)), logo['width'])
+        # the flag's three colours are all there: white, blue and red
+        colours = {tuple(map(int, m)) for m in re.findall(r'\x1b\[[34]8;2;(\d+);(\d+);(\d+)m', art)}
+        self.assertTrue(any(r > 220 and g > 220 and b > 220 for r, g, b in colours), 'white')
+        self.assertTrue(any(b > 150 and r < 60 and g < 90 for r, g, b in colours), 'blue')
+        self.assertTrue(any(r > 180 and g < 60 and b < 70 for r, g, b in colours), 'red')
         self.assertTrue(any('Пустота' in str(m) for m in config['modules']))
         self.assertIn('@VERSION@', raw)
         self.assertIn('config.jsonc.in', (ROOT / 'build/build-packages.sh').read_text())

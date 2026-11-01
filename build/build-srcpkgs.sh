@@ -33,15 +33,31 @@ done
 
 cd "$vp"
 if [[ -f /.pustota-build-root ]]; then
-  # Pustota's disposable build root (made by build-iso.sh): the ethereal style, as Void's CI
-  # containers use it: the root itself is the masterdir.
-  # base-chroot lives in Void's separate "bootstrap" repository (repository=bootstrap)
+  # Inside Pustota's build root, xbps-src gets a root of its own holding only base-chroot and
+  # git: base-chroot's minimal tools (chroot-bash, chroot-grep ...) conflict with a full Void
+  # system, so it cannot go in the build root itself. This is the setup Void documents for its
+  # "ethereal" style (common/chroot-style/ethereal.sh): xbps-src runs inside that root, which
+  # is its masterdir, entered with a plain chroot (which works under WSL2).
   mirror=${VOID_MIRROR:-https://repo-default.voidlinux.org}
-  xbps-install -Sy -R "$mirror/current/bootstrap" -R "$mirror/current" base-chroot git
-  xbps-uhelper arch > /.xbps_chroot_init
+  sr=$work/xbps-src-root
+  if [[ ! -x $sr/usr/bin/git ]]; then
+    rm -rf "$sr"; mkdir -p "$sr/var/db/xbps/keys"
+    cp /var/db/xbps/keys/*.plist "$sr/var/db/xbps/keys/"      # trust Void's key, as this root does
+    xbps-install -r "$sr" -Sy -R "$mirror/current/bootstrap" -R "$mirror/current" base-chroot git
+  fi
+  xbps-uhelper arch > "$sr/.xbps_chroot_init"
+  mkdir -p "$sr/etc" "$sr/hostrepo" "$sr/dev" "$sr/proc" "$sr/sys"
+  cp -L /etc/resolv.conf "$sr/etc/resolv.conf"
+  unmount() { for m in hostrepo sys proc dev; do mountpoint -q "$sr/$m" && umount -R "$sr/$m"; done; true; }
+  trap unmount EXIT
+  for m in dev proc sys; do mount --rbind "/$m" "$sr/$m"; mount --make-rslave "$sr/$m"; done
+  mount --bind "$vp" "$sr/hostrepo"
   ln -sfn / masterdir
-  export XBPS_CHROOT_CMD=ethereal XBPS_ALLOW_CHROOT_BREAKOUT=yes
-  for p in "${pkgs[@]}"; do ./xbps-src -m masterdir pkg "$p"; done
+  for p in "${pkgs[@]}"; do
+    chroot "$sr" /usr/bin/env -i HOME=/root PATH=/usr/bin:/usr/sbin:/bin:/sbin TERM="${TERM:-xterm}" \
+      XBPS_CHROOT_CMD=ethereal XBPS_ALLOW_CHROOT_BREAKOUT=yes \
+      /bin/bash -c 'cd /hostrepo && ./xbps-src -m masterdir pkg "$1"' _ "$p"
+  done
 else
   # A real Void system: xbps-src's normal, isolated way, as the user who ran sudo.
   user=${SUDO_USER:-}
