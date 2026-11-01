@@ -70,7 +70,8 @@ WIKI_FOR = {
     "nmcli": "network", "nmtui": "network", "ufw": "network", "ip": "network",
     "wpctl": "sound", "pipewire": "sound", "pamixer": "sound",
     "vainfo": "graphics", "xrandr": "graphics",
-    "fwupdmgr": "firmware", "framework_tool": "firmware",
+    "fwupdmgr": "firmware", "framework_tool": "framework", "void-docs": "handbook",
+    "pustota-handbook": "handbook",
     "pacman": "from-arch", "systemctl": "from-arch", "journalctl": "from-arch",
 }
 MANUALS = {

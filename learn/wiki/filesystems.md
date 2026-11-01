@@ -26,9 +26,10 @@ Things XFS cannot do: shrink, and snapshots (there is no rollback; see pustota-l
 recovery for the way back from a bad update).
 
 ## TRIM
-SSDs stay fast when told which blocks are free. Void runs no TRIM on its own:
-  sudo fstrim -av                now (takes seconds)
-To do it weekly, see time (snooze-weekly and /etc/cron.weekly/fstrim).
+SSDs stay fast when told which blocks are free. Void runs no TRIM on its own, so Pustota does
+it weekly: /etc/cron.weekly/fstrim, run by the snooze-weekly service (see: time).
+  sudo fstrim -av                now, by hand (takes seconds)
+  ls -l /var/cache/snooze/       when the weekly jobs last ran
 
 ## USB sticks and drives
 udiskie (started with the session) mounts them as they are plugged in, under

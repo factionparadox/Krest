@@ -87,7 +87,7 @@ class Desktop(unittest.TestCase):
     def test_programs_bound_to_keys_are_installed(self):
         provided = {'pustota-menu', 'pustota-acme', 'pustota-keys', 'pustota-screenshot', 'loginctl',
                     'networkmanager_dmenu', 'dmenu_run', 'pustota-open', 'pustota-overview',
-                    'pustota-width', 'pustota-workstations', 'pustota-term', 'pustota-nightlight',
+                    'pustota-width', 'pustota-workstations', 'pustota-term', 'pustota-nightlight', 'pustota-handbook',
                     'clipmenu'}
         for script in provided:
             if script.startswith('pustota-'):
@@ -131,7 +131,7 @@ class Desktop(unittest.TestCase):
             self.assertIn(key, sheet)
             self.assertIn(f'definekey top {bind} ', self.rc)
         # the Ctrl+Super chords for programs
-        for letter in 'wtdveapcrnbm':
+        for letter in 'wtdveapcrnbmo':
             column = ' '.join(l[43:55] for l in sheet.splitlines())     # the PROGRAMS column
             self.assertRegex(column, rf'(^|\s){letter}(\s|$)', letter)
             self.assertIn(f'definekey top C-s-{letter} exec ', self.rc)
@@ -153,7 +153,7 @@ class Desktop(unittest.TestCase):
             self.assertIn(prog, opener)
         for pkg in ('firefox', 'mpv', 'mc', 'ani-cli', 'x-terminal', 'xterm'):
             self.assertIn(pkg, PACKAGES)
-        for opt in ('web', 'terminal', 'discord', 'video', 'files', 'anime', 'vpn'):
+        for opt in ('web', 'terminal', 'discord', 'video', 'files', 'anime', 'vpn', 'office'):
             self.assertIn(f'pustota-open {opt}', self.rc)
             self.assertRegex(opener, rf'(?m)^  {opt}\)')
         self.assertIn('NetworkManager', PACKAGES)               # pustota-vpn uses nmcli
@@ -448,4 +448,25 @@ class Wiki(unittest.TestCase):
 
     def test_packaged(self):
         self.assertIn('learn/wiki/*.md', (ROOT / 'build/build-packages.sh').read_text())
+
+
+class FrameworkAndOffice(unittest.TestCase):
+    """What nixos-hardware's Framework 13 (Intel Core Ultra Series 3) module does, and the rest."""
+    def test_framework_fixes(self):
+        self.assertIn('blacklist cros_usbpd_charger',
+                      (DESK / 'etc/modprobe.d/pustota-framework.conf').read_text())
+        rules = (DESK / 'etc/udev/rules.d/50-pustota-framework.rules').read_text()
+        self.assertIn('ATTR{idVendor}=="0bda", ATTR{idProduct}=="8156"', rules)
+        trim = DESK / 'etc/cron.weekly/fstrim'
+        self.assertTrue(trim.stat().st_mode & 0o111)
+        self.assertIn('fstrim -a', trim.read_text())
+        self.assertTrue({'snooze', 'run-parts', 'fwupd', 'fprintd', 'framework-system'} <= PACKAGES)
+
+    def test_handbook_and_office(self):
+        hb = (DESK / 'usr/bin/pustota-handbook').read_text()
+        self.assertIn('mc "$docs/markdown" /usr/share/pustota/learn/wiki', hb)
+        self.assertIn('void-docs', PACKAGES)
+        self.assertIn('pustota-handbook', (DESK / 'usr/bin/pustota-menu').read_text())
+        self.assertTrue({'libreoffice-writer', 'libreoffice-calc', 'libreoffice-i18n-en-GB',
+                         'libreoffice-i18n-ru', 'hunspell-en_GB-all', 'hunspell-ru_RU'} <= PACKAGES)
 

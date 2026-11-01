@@ -18,6 +18,7 @@ Terminal	pustota-term
 Files (Midnight Commander)	pustota-term Files mc
 Write (acme)	pustota-acme
 Web	firefox
+Office (LibreOffice)	libreoffice
 Russian ›	pustota-menu russian
 Learn the system ›	pustota-menu learn
 Wi-Fi	networkmanager_dmenu
@@ -49,7 +50,9 @@ Wiki page…	pustota-menu wikipage
 Search the lessons and the wiki…	pustota-menu search
 System map (what is running)	pustota-term 'System map' sh -c 'pustota-learn doctor; read -r -p "Enter to close " _'
 Explain a command…	pustota-menu explain
-Void Handbook	pustota-term Handbook void-docs
+Void Handbook (in mc, beside the wiki)	pustota-handbook
+Void Handbook (PDF book)	pustota-handbook pdf
+Void Handbook (web pages, offline)	pustota-handbook web
 Manual page…	pustota-menu manual
 Where things come from	pustota-term Sources sh -c 'pustota-learn sources | less'
 M

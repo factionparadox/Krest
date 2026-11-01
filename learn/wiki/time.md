@@ -19,11 +19,10 @@ Void installs no cron daemon; choose one if you want scheduled jobs. The common 
   cronie     the classic cron with crontab -e (and anacron for missed jobs)
   fcron      cron that also catches up on missed jobs
 
-With snooze, for example, a weekly TRIM (see: filesystems):
-  sudo xbps-install snooze run-parts
-  printf '#!/bin/sh\nfstrim -a\n' | sudo tee /etc/cron.weekly/fstrim
-  sudo chmod +x /etc/cron.weekly/fstrim
-  sudo ln -s /etc/sv/snooze-weekly /var/service/
+Pustota installs snooze and enables snooze-weekly, for the weekly TRIM (see: filesystems).
+To run your own script every day, put it in /etc/cron.daily (executable, a name of letters,
+digits, - and _ only: run-parts skips names with dots) and enable that schedule:
+  sudo ln -s /etc/sv/snooze-daily /var/service/
 
 A single job at a set time can also be its own runit service:  exec snooze -H3 -M30 backup.sh
 (every day at 03:30; man snooze).

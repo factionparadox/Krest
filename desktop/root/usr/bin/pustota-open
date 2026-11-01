@@ -12,5 +12,6 @@ case "${1:-}" in
   files)    exec pustota-term Files mc ;;
   anime)    exec pustota-term ani-cli ani-cli ;;
   vpn)      exec pustota-vpn ;;
-  *)        echo "usage: pustota-open web|terminal|discord|video|files|anime|vpn" >&2; exit 2 ;;
+  office)   exec libreoffice ;;
+  *)        echo "usage: pustota-open web|terminal|discord|video|files|anime|vpn|office" >&2; exit 2 ;;
 esac

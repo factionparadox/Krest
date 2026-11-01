@@ -28,11 +28,13 @@ In acme:          the pages are plain text in /usr/share/pustota/learn/wiki/
   repositories    current, nonfree, multilib, debug; mirrors; Pustota's signed repository
 
 ## Hardware and devices
+  framework       this laptop: what it needs, what Pustota sets for it and why, known issues
   filesystems     fstab, XFS, TRIM, USB drives, exFAT/NTFS
   network         NetworkManager, DNS, Wi-Fi, ufw
   sound           PipeWire and WirePlumber on Void
   graphics        Intel: Mesa, VA-API video decoding, Vulkan
   firmware        linux-firmware, microcode, fwupd, framework_tool
+  handbook        the Void Handbook, offline: in mc beside this wiki, as a PDF, in Firefox
 
 Every page ends with its sources: the Void Handbook (offline: void-docs), the manual pages and
 upstream documentation. When a page and a manual disagree, the manual is right; please fix the page.

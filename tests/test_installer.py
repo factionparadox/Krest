@@ -49,6 +49,15 @@ class Files(unittest.TestCase):
         self.assertIn('GRUB_CMDLINE_LINUX_DEFAULT="resume=UUID=abcd-1234 loglevel=4"', once)
         self.assertEqual(inst.with_resume(once, 'abcd-1234'), once)
         self.assertEqual(inst.with_resume(grub, ''), grub)          # no swap, no resume
+
+    def test_kernel_options(self):
+        grub = 'GRUB_DEFAULT=0\nGRUB_CMDLINE_LINUX_DEFAULT="loglevel=4"\n'
+        once = inst.with_kernel_options(grub)
+        self.assertIn('GRUB_CMDLINE_LINUX_DEFAULT="loglevel=4 nvme.noacpi=1"', once)
+        self.assertEqual(inst.with_kernel_options(once), once)
+        both = inst.with_resume(once, 'abcd')
+        self.assertIn('"resume=UUID=abcd loglevel=4 nvme.noacpi=1"', both)
+        self.assertIn('GRUB_CMDLINE_LINUX_DEFAULT="nvme.noacpi=1"', inst.with_kernel_options('X=1\n'))
         self.assertIn('resume=UUID=x', inst.with_resume('GRUB_DEFAULT=0\n', 'x'))
 
     def test_autologin(self):
@@ -218,6 +227,8 @@ class WholeInstall(unittest.TestCase):
                          sorted(inst.SERVICES_REQUIRED + inst.SERVICES_OPTIONAL))      # dhcpcd gone
         self.assertIn('--autologin stephen', (t / 'etc/sv/agetty-tty1/conf').read_text())
         self.assertIn('resume=UUID=SWAP-UUID', (t / 'etc/default/grub').read_text())
+        self.assertIn('nvme.noacpi=1', (t / 'etc/default/grub').read_text())
+        self.assertTrue((t / 'etc/runit/runsvdir/default/snooze-weekly').is_symlink())   # weekly TRIM
         self.assertIn('suspend-then-hibernate',
                       (t / 'etc/elogind/logind.conf.d/60-pustota-hibernate.conf').read_text())
         useradd = next(c for c in self.ran if 'useradd' in c)

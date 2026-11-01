@@ -12,6 +12,7 @@
  WINDOWS                                   a      ani-cli
  Super+q            close the window       p      VPN on/off (Proton etc.)
  Super+f            this window full size  c      acme (write)
+                                           o      office (LibreOffice)
  Super+r            width 33/50/67/100%    r      Russian menu
  Super+`            next window            n / b / m   Wi-Fi / Bluetooth / sound mixer
  Super+Shift+Tab    previous window        Space  the Pustota menu

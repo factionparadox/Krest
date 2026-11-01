@@ -33,6 +33,13 @@ x-terminal font-go-ttf
 clipmenu redshift ufw fprintd
 # Japanese text (the IPA fonts: reading, not typing)
 ipafont-fonts-otf
+# LibreOffice (Ctrl+Super+o): documents, spreadsheets, slides, drawing, maths; British English and
+# Russian menus, spelling, hyphenation and thesaurus
+libreoffice-writer libreoffice-calc libreoffice-impress libreoffice-draw libreoffice-math
+libreoffice-gnome libreoffice-i18n-en-GB libreoffice-i18n-ru
+hunspell-en_GB-all hunspell-ru_RU hyphen-en hyphen-ru mythes-en mythes-ru
+# weekly TRIM for the SSD (snooze-weekly runs /etc/cron.weekly/fstrim)
+snooze run-parts
 # files, writing and Plan 9
 mc plan9port neovim
 # fonts with full Cyrillic

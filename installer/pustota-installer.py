@@ -54,7 +54,7 @@ GROUPS = ["wheel", "audio", "video", "input", "network", "bluetooth", "storage",
 # if missing rather than stopping the install.
 SERVICES_REQUIRED = ["dbus", "elogind", "NetworkManager"]
 SERVICES_OPTIONAL = ["bluetoothd", "tlp", "thermald", "chronyd", "socklog-unix", "nanoklogd",
-                     "zramen", "earlyoom", "ufw"]
+                     "zramen", "earlyoom", "ufw", "snooze-weekly"]
 # Base live images start these; NetworkManager and elogind do their jobs on Pustota.
 SERVICES_OFF = ["dhcpcd", "wpa_supplicant", "acpid"]
 LOCALES = ["en_GB.UTF-8 UTF-8", "ru_RU.UTF-8 UTF-8", "en_US.UTF-8 UTF-8"]
@@ -106,6 +106,27 @@ def with_resume(grub_default, swap_uuid):
     if pattern.search(grub_default):
         return pattern.sub(r'\1resume=UUID=' + swap_uuid + ' ', grub_default, count=1)
     return grub_default + f'\nGRUB_CMDLINE_LINUX_DEFAULT="resume=UUID={swap_uuid} loglevel=4"\n'
+
+
+# Kernel options for the Framework Laptop 13 (Intel), as nixos-hardware's
+# framework/13-inch/common/intel.nix sets them for every Intel board, the 13 Pro included:
+# nvme.noacpi=1 lowers the SSD's power use (less battery drain, also while suspended).
+KERNEL_OPTIONS = ["nvme.noacpi=1"]
+
+
+def with_kernel_options(grub_default, options=None):
+    """Add each option to GRUB_CMDLINE_LINUX_DEFAULT, once."""
+    pattern = re.compile(r'^GRUB_CMDLINE_LINUX_DEFAULT="([^"]*)"', re.M)
+    for option in options if options is not None else KERNEL_OPTIONS:
+        m = pattern.search(grub_default)
+        if not m:
+            grub_default = grub_default.rstrip("\n") + f'\nGRUB_CMDLINE_LINUX_DEFAULT="{option}"\n'
+            continue
+        if option in m.group(1).split():
+            continue
+        new = (m.group(1) + " " + option).strip()
+        grub_default = grub_default[:m.start(1)] + new + grub_default[m.end(1):]
+    return grub_default
 
 
 def firewall_on(conf):
@@ -421,6 +442,8 @@ def install(disk, hostname, username, password, timezone, autologin):
 
     stage("6/6  Locales, initramfs and GRUB (xbps-reconfigure -fa, grub-install)")
     grub = TARGET / "etc/default/grub"
+    if grub.exists():
+        grub.write_text(with_kernel_options(grub.read_text()))
     if swap_gib and grub.exists():
         grub.write_text(with_resume(grub.read_text(), uuid_of(swap)))
     if swap_gib:

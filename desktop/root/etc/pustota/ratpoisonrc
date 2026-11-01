@@ -64,6 +64,7 @@ definekey top C-s-v exec pustota-open video
 definekey top C-s-e exec pustota-open files
 definekey top C-s-a exec pustota-open anime
 definekey top C-s-p exec pustota-open vpn
+definekey top C-s-o exec pustota-open office
 definekey top C-s-c exec pustota-acme
 definekey top C-s-r exec pustota-menu russian
 definekey top C-s-n exec networkmanager_dmenu
