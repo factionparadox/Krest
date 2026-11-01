@@ -184,6 +184,8 @@ class SourcePackages(unittest.TestCase):
             for s in sums:
                 self.assertRegex(s, r'^[0-9a-f]{64}$')
             self.assertLessEqual(len(f['short_desc']), 72, path.name)
+            # archs lists target machines; "noarch" matches none, so xbps-src refuses the package
+            self.assertNotIn('noarch', f.get('archs', ''), path.name)
 
     def test_ollama_is_the_pinned_release_with_a_service(self):
         text, f = self.template('ollama-bin')

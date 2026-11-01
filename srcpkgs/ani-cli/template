@@ -5,7 +5,6 @@ pkgname=ani-cli
 version=5.1
 revision=1
 _commit=c99221dcecb35c66815a7a77e5ebebde16c8d06a
-archs=noarch
 depends="bash grep sed curl fzf mpv yt-dlp ffmpeg patch aria2"
 short_desc="Browse and watch anime from the command line"
 maintainer="Pustota <pustota@localhost>"
