@@ -94,7 +94,7 @@ tests/       python3 -m unittest discover tests
 
 This is version 0.1, written on 31 October 2026. **Nothing has been built or booted yet.**
 
-- **Tested here:** 80 automated tests pass. They cover:
+- **Tested here:** 79 automated tests pass. They cover:
   - the templates, signing order, zstd level 3, and the fastfetch config and logo;
   - the installer's whole sequence against a fake system, from partitions to GRUB, plus every one of its decisions;
   - the Russian kit's downloader, checksums and tutor (Constellation's 37 tests, ported);
