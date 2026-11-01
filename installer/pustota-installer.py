@@ -32,7 +32,13 @@ import urllib.request
 TITLE = "Пустота / Pustota installer"
 TARGET = Path("/mnt/target")
 REPO = Path("/usr/lib/pustota/repo")
-MIRROR = "https://repo-default.voidlinux.org/current"
+# Void's mirrors (https://xmirror.voidlinux.org): the first that answers is used, and written
+# into the new system if it is not the default.
+MIRRORS = ["https://repo-default.voidlinux.org", "https://repo-de.voidlinux.org",
+           "https://repo-fi.voidlinux.org", "https://repo-fastly.voidlinux.org",
+           "https://mirrors.dotsrc.org/voidlinux", "https://ftp.lysator.liu.se/pub/voidlinux",
+           "https://mirrors.summithq.com/voidlinux"]
+MIRROR = MIRRORS[0] + "/current"
 LOGFILE = Path("/tmp/pustota-install.log")
 TRUSTED_KEYS = Path("/var/db/xbps/keys")
 MOUNTS = []
@@ -236,12 +242,19 @@ def uuid_of(device):
 
 
 def check_repository():
-    try:
-        with urllib.request.urlopen(MIRROR + "/x86_64-repodata", timeout=18) as response:
-            response.read(1)
-    except (urllib.error.URLError, TimeoutError, OSError) as error:
-        raise RuntimeError("Cannot reach Void's package repository. Connect Wi-Fi (nmtui) "
-                           "or Ethernet first; no disk has been touched.\n\n" + str(error)) from error
+    """Choose the first Void mirror that answers (sets MIRROR); fail before touching a disk."""
+    global MIRROR
+    errors = []
+    for base in MIRRORS:
+        try:
+            with urllib.request.urlopen(base + "/current/x86_64-repodata", timeout=12) as response:
+                response.read(1)
+            MIRROR = base + "/current"
+            return base
+        except (urllib.error.URLError, TimeoutError, OSError) as error:
+            errors.append(f"{base}: {error}")
+    raise RuntimeError("No Void mirror answered. Connect Wi-Fi (nmtui) or Ethernet first; no disk "
+                       "has been touched.\n\n" + "\n".join(errors[:3]))
 
 
 def failure_dialog(error):
@@ -259,6 +272,7 @@ def failure_dialog(error):
 def install(disk, hostname, username, password, timezone, autologin):
     efi_gib, swap_gib, root_gib = plan(int(sp.check_output(
         ["lsblk", "-b", "-d", "-n", "-o", "SIZE", disk], text=True)), ram_bytes())
+    log(f"Void mirror: {MIRROR}")
     efi, swap = partition_path(disk, 1), partition_path(disk, 2)
     root = partition_path(disk, 3 if swap_gib else 2)
 
@@ -301,6 +315,11 @@ def install(disk, hostname, username, password, timezone, autologin):
     # Keep Void's default kernel (6.x) out: linux-mainline (7.x) is the one this laptop needs.
     xbpsd = TARGET / "etc/xbps.d"
     xbpsd.mkdir(parents=True, exist_ok=True)
+    if not MIRROR.startswith(MIRRORS[0]):
+        # the default mirror did not answer: the new system uses the one that did
+        (xbpsd / "00-repository-main.conf").write_text(
+            "# chosen by the Pustota installer (the default mirror did not answer)\n"
+            f"repository={MIRROR}\n")
     (xbpsd / "10-pustota-kernel.conf").write_text(
         "# Pustota: the Framework 13 Pro needs Linux 7.x; Void's default 'linux' is older.\n"
         "# linux-mainline follows Void's newest kernel series instead.\n"

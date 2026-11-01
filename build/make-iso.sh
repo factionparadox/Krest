@@ -15,6 +15,10 @@ trap 'echo "Pustota: stopped at line $LINENO (exit $?)" >&2' ERR
 
 work=$root/build/work
 mkdir -p "$work" "$root/out"
+. "$root/build/void-mirrors.sh"
+VOID_MIRROR=$(pick_void_mirror) || die "no Void mirror answered (set VOID_MIRROR=https://...)"
+export VOID_MIRROR
+echo "    Void mirror: $VOID_MIRROR"
 exec 8>"$work/.make-iso.lock"
 flock -n 8 || die "make-iso.sh is already running"
 

@@ -22,6 +22,10 @@ if [[ ! -d $vp/.git ]]; then
 fi
 git -C "$vp" fetch -q --depth=1 origin "$rev"
 git -C "$vp" checkout -q --force --detach "$rev"
+# xbps-src fetches from the mirror the build chose (as Void's own CI swaps its mirror)
+if [[ -n ${VOID_MIRROR:-} ]]; then
+  sed -i "s|https://repo-default.voidlinux.org|$VOID_MIRROR|g" "$vp"/etc/xbps.d/repos-remote*.conf
+fi
 for p in "${pkgs[@]}"; do                       # ours, on top of Void's tree
   rm -rf "$vp/srcpkgs/$p"
   cp -a "$root/srcpkgs/$p" "$vp/srcpkgs/$p"

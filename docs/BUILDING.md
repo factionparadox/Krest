@@ -39,6 +39,14 @@ To add one, write `srcpkgs/NAME/template` (see Void's [Manual.md](https://github
 
 `branding/pustota-original.png` is the roundel. `python3 build/make-branding.py` (needs Pillow) makes the cropped logo and icon sizes, the wallpaper, and fastfetch's true-colour half-block logo (`desktop/root/usr/share/pustota/fastfetch-logo.txt`, 44×22).
 
+## Void mirrors
+
+Every download from Void (the build root, xbps-src, void-mklive and the installer) uses the first of Void's mirrors that answers. The list is `build/void-mirrors.sh` and the installer's `MIRRORS`, taken from <https://xmirror.voidlinux.org>: `repo-default`, then the Tier 1 mirrors in Germany and Finland, Fastly's CDN, Tier 2 mirrors in Denmark and Sweden, and Chicago. To force one:
+
+    VOID_MIRROR=https://repo-de.voidlinux.org bash build/build-iso.sh
+
+When the installer has to use a mirror other than the default, it writes that mirror into the new system's `/etc/xbps.d/00-repository-main.conf`.
+
 ## Tests
 
     python3 -m unittest discover tests

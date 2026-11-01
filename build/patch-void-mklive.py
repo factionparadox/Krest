@@ -26,8 +26,9 @@ repos_old = ('XBPS_REPOSITORY="$XBPS_REPOSITORY '
              '--repository=https://repo-default.voidlinux.org/current '
              '--repository=https://repo-default.voidlinux.org/current/musl '
              '--repository=https://repo-default.voidlinux.org/current/aarch64"')
+# Pustota: and from the mirror the build chose (VOID_MIRROR), not always repo-default
 repos_new = ('XBPS_REPOSITORY="$XBPS_REPOSITORY '
-             '--repository=https://repo-default.voidlinux.org/current"')
+             '--repository=${VOID_MIRROR:-https://repo-default.voidlinux.org}/current"')
 if source.count(repos_old) != 1:
     raise SystemExit("Unsupported void-mklive repository anchor")
 # Pustota: zstd at level 3 for the live image (fast to build, quick to boot). void-mklive

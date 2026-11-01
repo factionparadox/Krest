@@ -36,7 +36,8 @@ class Scripts(unittest.TestCase):
         for path in [*(DESK / 'usr/bin').iterdir(), ROOT / 'learn/pustota-learn',
                      ROOT / 'russian/pustota-russian', ROOT / 'russian/pustota-content',
                      ROOT / 'srcpkgs/ollama-bin/files/ollama/run', ROOT / 'installer/pustota-installer',
-                     *ROOT.glob('build/*.sh'), ROOT / 'build/make-branding.py']:
+                     *(p for p in ROOT.glob('build/*.sh') if p.name != 'void-mirrors.sh'),
+                     ROOT / 'build/make-branding.py']:
             self.assertTrue(path.stat().st_mode & 0o111, path)
 
 
@@ -214,6 +215,24 @@ class SourcePackages(unittest.TestCase):
         repo = (DESK / 'usr/share/xbps.d/20-pustota-repository.conf').read_text()
         self.assertIn('repository=https://github.com/factionparadox/Pustota/releases/download/repo-x86_64', repo)
         self.assertIn('repo-x86_64', (ROOT / 'build/publish-repo.sh').read_text())
+
+
+class Mirrors(unittest.TestCase):
+    def test_every_download_from_void_goes_through_the_chosen_mirror(self):
+        for script in ('build/build-iso.sh', 'build/make-iso.sh', 'build/build-srcpkgs.sh',
+                       'build/patch-void-mklive.py', 'installer/pustota-installer.py'):
+            text = (ROOT / script).read_text()
+            hits = [l for l in text.splitlines() if 'repo-default.voidlinux.org' in l
+                    and 'VOID_MIRROR' not in l and 'MIRRORS' not in l and not l.lstrip().startswith(('#', "'--repository"))]
+            self.assertEqual(hits, [], script)
+
+    def test_pick_void_mirror(self):
+        r = subprocess.run(['bash', '-c', '. build/void-mirrors.sh; VOID_MIRROR=https://example/void/ pick_void_mirror'],
+                           cwd=ROOT, capture_output=True, text=True)
+        self.assertEqual(r.stdout.strip(), 'https://example/void')
+        r = subprocess.run(['bash', '-c', '. build/void-mirrors.sh; VOID_MIRRORS="http://127.0.0.1:9"; pick_void_mirror'],
+                           cwd=ROOT, capture_output=True, text=True)
+        self.assertNotEqual(r.returncode, 0)
 
 
 class Compression(unittest.TestCase):

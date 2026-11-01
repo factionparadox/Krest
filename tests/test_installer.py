@@ -89,6 +89,34 @@ if __name__ == '__main__':
     unittest.main()
 
 
+class Mirrors(unittest.TestCase):
+    def test_first_mirror_that_answers_is_used(self):
+        import urllib.error
+        from unittest import mock
+        tried = []
+        class Answer:
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+            def read(self, n): return b'x'
+        def fake(url, timeout):
+            tried.append(url)
+            if 'repo-default' in url or 'repo-de.' in url:
+                raise urllib.error.URLError('connection refused')
+            return Answer()
+        saved = inst.MIRROR
+        try:
+            with mock.patch.object(inst.urllib.request, 'urlopen', fake):
+                self.assertEqual(inst.check_repository(), 'https://repo-fi.voidlinux.org')
+            self.assertEqual(inst.MIRROR, 'https://repo-fi.voidlinux.org/current')
+            self.assertEqual(len(tried), 3)
+            with mock.patch.object(inst.urllib.request, 'urlopen',
+                                   lambda url, timeout: (_ for _ in ()).throw(urllib.error.URLError('down'))):
+                with self.assertRaisesRegex(RuntimeError, 'No Void mirror answered'):
+                    inst.check_repository()
+        finally:
+            inst.MIRROR = saved
+
+
 class WholeInstall(unittest.TestCase):
     """install() from start to finish against a temporary folder, with every command faked.
     Checks the order of the steps and the files the installed system ends up with."""
@@ -164,6 +192,7 @@ class WholeInstall(unittest.TestCase):
         xbps = next(c for c in self.ran if c[0] == 'xbps-install')
         self.assertEqual(xbps[-4:], ['base-system', 'pustota-desktop', 'pustota-learn', 'pustota-russian'])
         self.assertIn('ignorepkg=linux', (t / 'etc/xbps.d/10-pustota-kernel.conf').read_text())
+        self.assertFalse((t / 'etc/xbps.d/00-repository-main.conf').exists())   # default mirror worked
         self.assertEqual((t / 'var/db/xbps/keys/void.plist').read_text(), 'key')
         self.assertIn('/boot/efi', (t / 'etc/fstab').read_text())
         self.assertIn('\nru_RU.UTF-8 UTF-8', '\n' + (t / 'etc/default/libc-locales').read_text())
@@ -181,6 +210,19 @@ class WholeInstall(unittest.TestCase):
         self.assertIn('wheel,audio,video', useradd)              # only groups that exist
         self.assertNotIn('secret', ' '.join(' '.join(c) for c in self.ran))   # password only on stdin
         self.assertEqual((t / 'etc/sudoers.d/10-pustota-wheel').stat().st_mode & 0o777, 0o440)
+
+    def test_another_mirror_is_written_into_the_new_system(self):
+        inst.dialog = lambda *a, **k: 0
+        saved = inst.MIRROR
+        inst.MIRROR = 'https://repo-fi.voidlinux.org/current'
+        try:
+            inst.install(self.disk, 'pustota', 'u', 'pw', 'Europe/London', autologin=False)
+        finally:
+            inst.MIRROR = saved
+        conf = (self.target / 'etc/xbps.d/00-repository-main.conf').read_text()
+        self.assertIn('repository=https://repo-fi.voidlinux.org/current', conf)
+        xbps = next(c for c in self.ran if c[0] == 'xbps-install')
+        self.assertIn('https://repo-fi.voidlinux.org/current', xbps)
 
     def test_missing_kernel_stops_the_install(self):
         original = self.fake_run

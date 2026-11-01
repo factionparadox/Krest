@@ -25,9 +25,14 @@ done
   { echo "NetworkManager failed to become ready." >&2; exit 2; }
 
 check_repository() {
-  # Same URL as the target installer. No disk operations or installs.
-  python3 -c 'import urllib.request; urllib.request.urlopen("https://repo-default.voidlinux.org/current/x86_64-repodata", timeout=18).read(1)' \
-    >/dev/null 2>&1
+  # Any of Void's mirrors will do (the installer picks the same way). No disk operations.
+  for m in https://repo-default.voidlinux.org https://repo-de.voidlinux.org https://repo-fi.voidlinux.org \
+           https://repo-fastly.voidlinux.org https://mirrors.dotsrc.org/voidlinux \
+           https://ftp.lysator.liu.se/pub/voidlinux https://mirrors.summithq.com/voidlinux; do
+    python3 -c "import urllib.request; urllib.request.urlopen('$m/current/x86_64-repodata', timeout=10).read(1)" \
+      >/dev/null 2>&1 && return 0
+  done
+  return 1
 }
 
 while :; do

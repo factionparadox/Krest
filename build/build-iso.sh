@@ -34,6 +34,10 @@ mkdir -p "$cache"
 exec 9>"$cache/.build.lock"
 flock -n 9 || die "a Pustota build is already running"
 base=$cache/void-glibc-rootfs
+. "$project/build/void-mirrors.sh"
+say "Finding a Void mirror"
+mirror=$(pick_void_mirror) || die "no Void mirror answered; check the connection, or set VOID_MIRROR=https://..."
+echo "    using $mirror"
 file=void-x86_64-ROOTFS-20250202.tar.xz
 sum=3f48e6673ac5907a897d913c97eb96edbfb230162731b4016562c51b3b8f1876
 pubkey=$project/build/keys/void-release-20250202.pub
@@ -46,8 +50,8 @@ if [[ ! -x $base/usr/bin/xbps-install ]]; then
     for item in "$file" sha256sum.txt sha256sum.sig; do
       [[ -s $item ]] && continue
       # the dated folder first; "current" while the 2025 images are still the current ones
-      curl -fL --retry 3 -o "$item.part" "https://repo-default.voidlinux.org/live/20250202/$item" ||
-        curl -fL --retry 3 -o "$item.part" "https://repo-default.voidlinux.org/live/current/$item"
+      curl -fL --retry 3 -o "$item.part" "$mirror/live/20250202/$item" ||
+        curl -fL --retry 3 -o "$item.part" "$mirror/live/current/$item"
       mv "$item.part" "$item"
     done
     minisign -V -p "$pubkey" -x sha256sum.sig -m sha256sum.txt
@@ -58,7 +62,9 @@ if [[ ! -x $base/usr/bin/xbps-install ]]; then
 fi
 [[ -x $base/usr/bin/xbps-install ]] || die "incomplete Void rootfs in $base"
 
-sudo mkdir -p "$base/work" "$base/dev" "$base/proc" "$base/sys"
+sudo mkdir -p "$base/work" "$base/dev" "$base/proc" "$base/sys" "$base/etc/xbps.d"
+# the build root's XBPS uses the same mirror (this file overrides Void's default one)
+echo "repository=$mirror/current" | sudo tee "$base/etc/xbps.d/00-repository-main.conf" >/dev/null
 sudo cp -L /etc/resolv.conf "$base/etc/resolv.conf"
 cleanup() {
   sudo rm -f "$base/root/pustota-repo-key.pem"
@@ -73,7 +79,7 @@ for item in dev proc sys; do
 done
 sudo mount --bind "$project" "$base/work"
 inroot() {
-  sudo chroot "$base" /usr/bin/env -i HOME=/root TERM="${TERM:-xterm}" \
+  sudo chroot "$base" /usr/bin/env -i HOME=/root TERM="${TERM:-xterm}" VOID_MIRROR="$mirror" \
     PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin "$@"
 }
 # This root is disposable: xbps-src may build in it directly ("ethereal" style).
