@@ -277,3 +277,18 @@ class Branding(unittest.TestCase):
             self.assertGreater((DESK / rel).stat().st_size, 1000, rel)
         self.assertIn('pustota-wallpaper.png', (DESK / 'usr/bin/pustota-session').read_text())
         self.assertIn('feh', PACKAGES)
+
+
+class NonfreeTests(unittest.TestCase):
+    """intel-ucode is in Void's nonfree repository: the ISO build, installer and system need it."""
+
+    def test_iso_build_uses_nonfree_and_not_musl_or_aarch64(self):
+        src = (ROOT / 'build/make-iso.sh').read_text()
+        self.assertIn('export XBPS_REPOSITORY="--repository=$VOID_MIRROR/current/nonfree"', src)
+        self.assertLess(src.index('export XBPS_REPOSITORY'), src.index('./mkiso.sh'))
+
+    def test_installed_system_keeps_nonfree(self):
+        words = (ROOT / 'packages.txt').read_text().split()
+        self.assertIn('intel-ucode', words)
+        self.assertIn('void-repo-nonfree', words)
+

@@ -223,6 +223,9 @@ class WholeInstall(unittest.TestCase):
         self.assertIn('repository=https://repo-fi.voidlinux.org/current', conf)
         xbps = next(c for c in self.ran if c[0] == 'xbps-install')
         self.assertIn('https://repo-fi.voidlinux.org/current', xbps)
+        self.assertIn('https://repo-fi.voidlinux.org/current/nonfree', xbps)   # intel-ucode
+        self.assertIn('repository=https://repo-fi.voidlinux.org/current/nonfree',
+                      (self.target / 'etc/xbps.d/10-repository-nonfree.conf').read_text())
 
     def test_missing_kernel_stops_the_install(self):
         original = self.fake_run

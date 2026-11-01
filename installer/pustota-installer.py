@@ -320,12 +320,15 @@ def install(disk, hostname, username, password, timezone, autologin):
         (xbpsd / "00-repository-main.conf").write_text(
             "# chosen by the Pustota installer (the default mirror did not answer)\n"
             f"repository={MIRROR}\n")
+        (xbpsd / "10-repository-nonfree.conf").write_text(
+            "# chosen by the Pustota installer (the default mirror did not answer)\n"
+            f"repository={MIRROR}/nonfree\n")
     (xbpsd / "10-pustota-kernel.conf").write_text(
         "# Pustota: the Framework 13 Pro needs Linux 7.x; Void's default 'linux' is older.\n"
         "# linux-mainline follows Void's newest kernel series instead.\n"
         "ignorepkg=linux\nignorepkg=linux-headers\n")
     run("xbps-install", "-r", TARGET, "-C", "etc/xbps.d", "-S", "-y",
-        "-R", REPO, "-R", MIRROR, *PACKAGES)
+        "-R", REPO, "-R", MIRROR, "-R", MIRROR + "/nonfree", *PACKAGES)
     for pkg in PACKAGES + ["linux-mainline"]:
         run("xbps-query", "-r", TARGET, "-p", "pkgver", pkg)
 

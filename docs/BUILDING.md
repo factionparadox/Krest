@@ -13,7 +13,7 @@
 Output: `out/pustota-x86_64.iso` and `out/pustota-x86_64.iso.sha256`. Work files stay in `build/work/` (packages, the void-mklive clone, downloads) and `~/.cache/pustota/` (the Void root). Delete either to start fresh.
 
 The live ISO contains Void's base live image, plus:
-- `linux-mainline`, `linux-firmware-intel`, `linux-firmware-network`, `sof-firmware` and `intel-ucode`;
+- `linux-mainline`, `linux-firmware-intel`, `linux-firmware-network`, `sof-firmware` and `intel-ucode`; (`intel-ucode` comes from Void's **nonfree** repository, which the ISO build, the installer and the installed system (`void-repo-nonfree`) all enable);
 - NetworkManager, with dhcpcd, wpa_supplicant and sshd switched off;
 - `dialog gptfdisk xfsprogs dosfstools parted xtools`;
 - `/usr/lib/pustota/` (the installer and the package repository).

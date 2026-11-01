@@ -76,6 +76,10 @@ say "Building the ISO (kernel: linux-mainline; squashfs and initramfs: zstd leve
 live_pkgs="python3 dialog gptfdisk xfsprogs dosfstools parted util-linux xtools
   NetworkManager linux-firmware-network linux-firmware-intel sof-firmware intel-ucode"
 cd "$stage/mklive"
+# void-mklive's lib.sh would otherwise default to repo-default current + musl + aarch64 (404s on
+# x86_64). Set the list ourselves: nonfree (intel-ucode) here, and the patched mklive.sh adds
+# $VOID_MIRROR/current.
+export XBPS_REPOSITORY="--repository=$VOID_MIRROR/current/nonfree"
 ./mkiso.sh -a x86_64 -b base -- \
   -v linux-mainline -i zstd -s zstd \
   -p "$(echo $live_pkgs)" \

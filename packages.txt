@@ -7,6 +7,8 @@
 
 # kernel and firmware: Void's newest series (7.x) for the Panther Lake Framework 13 Pro
 linux-mainline linux-firmware-intel linux-firmware-network sof-firmware intel-ucode
+# intel-ucode lives in Void's nonfree repository: this keeps it enabled for updates
+void-repo-nonfree
 # boot, filesystems, logs, time, memory
 grub-x86_64-efi efibootmgr dracut xfsprogs dosfstools exfatprogs ntfs-3g
 socklog-void chrony zramen earlyoom xtools
