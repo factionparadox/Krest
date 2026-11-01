@@ -17,9 +17,9 @@ material is downloaded. Super+r opens its menu.
 Everything goes to /var/lib/pustota/russian. Interrupted downloads resume.
 
 ## The tutor
-Void does not package Ollama, so the tutor pack downloads Ollama's official release (a pinned
-version, checked against its SHA-256) into /opt/ollama, adds an "ollama" user and a runit
-service (/etc/sv/ollama), then the model: Qwen3.6 35B-A3B, about 24 GB. It is a
+Void does not package Ollama, so Pustota does: ollama-bin, its official release (pinned and
+checked) built with xbps-src, with a "_ollama" user and a runit service (/etc/sv/ollama). The
+tutor pack switches that service on and downloads the model: Qwen3.6 35B-A3B, about 24 GB. It is a
 mixture-of-experts model: 35 billion parameters, of which only about 3 billion work on each
 word, so it answers quickly on the CPU. The service lets the model go a minute after the last
 answer, so it costs no memory or battery when you are not using it.

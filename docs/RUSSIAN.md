@@ -17,13 +17,13 @@ From Constellation (and Kirin before it). `pustota-russian path` lays out the ro
 | Pack | Size | From | Checked against |
 | --- | --- | --- | --- |
 | `ru-voices` | 0.25 GB | content mirror, else Hugging Face | mirror checksums, else hashes pinned on first download |
-| `ai-tutor` | about 24 GB | Ollama v0.40.13 from GitHub, then the model from the Ollama registry | the release's pinned SHA-256, then Ollama's blob digests |
+| `ai-tutor` | about 24 GB | the model from the Ollama registry (Ollama itself is the `ollama-bin` package) | Ollama's blob digests |
 | `ru-course` | 1.2 GB | content mirror, else the original sites; Между нами from mezhdunami.org | mirror checksums, else pinned hashes |
 | `ru-dictionaries` | ~9 GB | Kiwix | Kiwix's SHA-256 |
 | `ru-reading` | ~6 GB | Kiwix | Kiwix's SHA-256 |
 | `ru-audiobooks` | ~5 GB | content mirror, else the Internet Archive | mirror checksums, else the Archive's MD5 and SHA-1 |
 
-Downloads go to `/var/lib/pustota/russian`, Ollama to `/opt/ollama` and the model to `/var/lib/ollama` (Ollama runs as the `ollama` user under runit: `/etc/sv/ollama`, unloading the model a minute after its last answer). Interrupted downloads resume.
+Downloads go to `/var/lib/pustota/russian`, and the model to `/var/lib/ollama` (Ollama runs as `_ollama` under runit, `/etc/sv/ollama`, switched on by the `ai-tutor` pack, unloading the model a minute after its last answer). Interrupted downloads resume.
 
 *Между нами* (University of Kansas) is CC BY-NC-ND: it is copied for your personal use on your own computer and never mirrored. The course library is US government work (public domain), the audiobooks are LibriVox (public domain), the voices are MIT, and the word list is CC BY-SA 4.0 (`VOCAB-SOURCES.md`).
 

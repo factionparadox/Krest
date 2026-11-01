@@ -14,6 +14,7 @@ can also type. Super+Return opens a terminal.
     lsblk -f                         disks and filesystems
     sv status /var/service/*         services (needs sudo for some)
     xbps-query -x pustota-desktop    every package Pustota added
+    fastfetch                        the system at a glance, with the Пустота logo
 
 ## Keeping up to date
     sudo xbps-install -Su            (or Super+Space -> System -> Update everything)

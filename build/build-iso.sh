@@ -26,7 +26,7 @@ for cmd in sudo pacman mount umount mountpoint chroot flock; do
 done
 sudo -v
 say "Arch packages the build needs"
-sudo pacman -S --needed --noconfirm curl minisign xz tar ca-certificates
+sudo pacman -S --needed --noconfirm curl minisign xz tar ca-certificates openssl
 
 cache=$HOME/.cache/pustota
 [[ ! -L $cache ]] || die "refusing a symlinked $cache"
@@ -61,6 +61,7 @@ fi
 sudo mkdir -p "$base/work" "$base/dev" "$base/proc" "$base/sys"
 sudo cp -L /etc/resolv.conf "$base/etc/resolv.conf"
 cleanup() {
+  sudo rm -f "$base/root/pustota-repo-key.pem"
   for item in work sys proc dev; do
     if mountpoint -q "$base/$item"; then sudo umount -R "$base/$item" || echo "could not unmount $item" >&2; fi
   done
@@ -75,13 +76,25 @@ inroot() {
   sudo chroot "$base" /usr/bin/env -i HOME=/root TERM="${TERM:-xterm}" \
     PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin "$@"
 }
+# This root is disposable: xbps-src may build in it directly ("ethereal" style).
+sudo touch "$base/.pustota-build-root"
+# The repository signing key lives in your home, never in the project. Made on the first build;
+# keep it (installed systems trust it), and back it up.
+key=$HOME/.config/pustota/repo-key.pem
+if [[ ! -s $key ]]; then
+  mkdir -p "$(dirname "$key")"
+  (umask 077; openssl genrsa -out "$key" 4096 2>/dev/null)
+  say "New repository signing key: $key  (back it up: installed systems trust it)"
+fi
+sudo install -m600 "$key" "$base/root/pustota-repo-key.pem"
 say "Updating the build root (XBPS first, then everything: no partial upgrades)"
 inroot /bin/sh -ec 'xbps-install -Suy xbps'
 inroot /bin/sh -ec 'xbps-install -Suy'
-inroot /bin/sh -ec 'xbps-install -Sy bash make git curl python3 xz zstd'
+inroot /bin/sh -ec 'xbps-install -Sy bash make git curl python3 xz zstd openssl'
 say "Building inside Void"
 inroot /bin/bash /work/build/make-iso.sh
 out=$project/out/pustota-x86_64.iso
 [[ -s $out ]] || die "no ISO was produced"
 sudo chown -R "$(id -u):$(id -g)" "$project/out" "$project/build/work" 2>/dev/null || true
+sudo rm -f "$base/root/pustota-repo-key.pem"
 say "Done: $out ($(du -h "$out" | cut -f1))"

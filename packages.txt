@@ -1,5 +1,6 @@
 # Everything Pustota installs on top of Void's base-system, grouped by job.
-# Each name is a Void package (checked against void-packages, 31 Oct 2026).
+# Each name is a Void package (checked against void-packages, 31 Oct 2026), or one of
+# Pustota's own built from srcpkgs/ (marked below) into Pustota's signed repository.
 # They become the dependencies of the pustota-desktop package, so on an installed system
 #   xbps-query -x pustota-desktop
 # lists them, and removing one is an ordinary xbps-remove.
@@ -17,6 +18,8 @@ NetworkManager networkmanager-dmenu iw bluez libspa-bluetooth bluetuith
 pipewire wireplumber alsa-pipewire pamixer pulsemixer
 # battery and heat
 tlp thermald powertop brightnessctl
+# the Framework's own tool: battery charge limit, fans, expansion cards (framework_tool)
+framework-system
 # X11 and Intel graphics
 xorg-minimal xinit xrdb setxkbmap xset xsetroot xprop xinput xdpyinfo
 xf86-input-libinput mesa-dri mesa-vulkan-intel vulkan-loader intel-media-driver libva-utils
@@ -28,7 +31,9 @@ mc plan9port neovim
 dejavu-fonts-ttf noto-fonts-ttf noto-fonts-emoji terminus-font font-ibm-plex-ttf
 # everyday programs
 firefox mpv yt-dlp zathura zathura-pdf-mupdf udiskie htop curl wget git rsync unzip p7zip
-openssh fwupd
+openssh fwupd fastfetch
+# anime in the terminal (Pustota's own package: srcpkgs/ani-cli)
+ani-cli
 # reading the system: Void's handbook and manuals, offline
 void-docs void-docs-browse man-pages mdocml
 # Russian kit runtime (the material itself downloads after installing)

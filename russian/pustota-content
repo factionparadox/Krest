@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """pustota-content: download the large Russian learning material, checking every file.
 
-The AI tutor: Ollama's official release (Void does not package it), pinned and checked against
-its SHA-256, run as the 'ollama' user by a runit service; then the model, which Ollama verifies
-blob by blob. Kiwix ZIMs are checked against Kiwix's
+The AI tutor: Ollama is Pustota's ollama-bin package (built with xbps-src from Ollama's pinned,
+checksummed release); this switches on its runit service and pulls the model, which Ollama
+verifies blob by blob. Kiwix ZIMs are checked against Kiwix's
 published SHA-256; audiobooks against the Internet Archive's MD5 and SHA-1; course
 files and voices against hashes pinned on their first download. Openly licensed packs
 come first from the content mirror (GitHub release assets), so they cannot vanish.
@@ -33,14 +33,8 @@ CONFIG = DATA / 'russian.json'
 KIWIX = os.environ.get('PUSTOTA_CONTENT_KIWIX', 'https://download.kiwix.org/zim')
 ARCHIVE = os.environ.get('PUSTOTA_CONTENT_ARCHIVE', 'https://archive.org/')
 MEZHDUNAMI = os.environ.get('PUSTOTA_CONTENT_MEZHDUNAMI', 'https://mezhdunami.org/')
-OLLAMA_VERSION = 'v0.40.13'
-OLLAMA_SHA256 = os.environ.get('PUSTOTA_CONTENT_OLLAMA_SHA256',
-                               'c9490e0f520be21271d969e6703f012268b1d39f8b70dd58854e5bfef7a75bb6')
-OLLAMA_URL = os.environ.get('PUSTOTA_CONTENT_OLLAMA_URL',
-                            f'https://github.com/ollama/ollama/releases/download/{OLLAMA_VERSION}/ollama-linux-amd64.tar.zst')
-OLLAMA_HOME = ROOT / 'opt/ollama'
-OLLAMA = os.environ.get('PUSTOTA_CONTENT_OLLAMA', '/opt/ollama/bin/ollama')
-SV_SOURCE = ROOT / 'usr/lib/pustota/sv/ollama'
+OLLAMA = os.environ.get('PUSTOTA_CONTENT_OLLAMA', 'ollama')
+XBPS_INSTALL = os.environ.get('PUSTOTA_CONTENT_XBPS_INSTALL', 'xbps-install')
 YTDLP = os.environ.get('PUSTOTA_CONTENT_YTDLP', 'yt-dlp')
 MIRROR_BASE = os.environ.get('PUSTOTA_CONTENT_MIRROR', '')   # tests only
 
@@ -84,62 +78,35 @@ def ollama_has(tag: str) -> bool:
 
 
 def ensure_ollama() -> bool:
-    """Ollama itself, the first time the tutor is installed: download the pinned release, check
-    it, unpack it to /opt/ollama, add the 'ollama' system user and start its runit service."""
-    import hashlib
+    """Ollama is Pustota's ollama-bin package (installed with pustota-russian; from Pustota's
+    repository if it was removed). Its runit service is switched on here, when the tutor is."""
     import time
-    import urllib.request
+
     def answers() -> bool:
         try:
             return subprocess.run([OLLAMA, 'list'], capture_output=True, timeout=10).returncode == 0
         except (OSError, subprocess.TimeoutExpired):
             return False
-    if answers():                                    # already installed and running
+    if answers():                                    # already running
         return True
-    binary = OLLAMA_HOME / 'bin/ollama'
-    if not binary.is_file():
-        say(f'    Ollama {OLLAMA_VERSION} (about 1.5 GB to download)')
-        part = DATA / '.downloads' / f'ollama-{OLLAMA_VERSION}.tar.zst'
-        part.parent.mkdir(parents=True, exist_ok=True)
-        if not part.is_file():
-            tmp = part.with_suffix('.part')
-            if not run(['curl', '-fL', '--retry', '3', '-C', '-', '-o', str(tmp), OLLAMA_URL]):
-                return False
-            tmp.rename(part)
-        digest = hashlib.sha256()
-        with part.open('rb') as fh:
-            for block in iter(lambda: fh.read(1 << 20), b''):
-                digest.update(block)
-        if digest.hexdigest() != OLLAMA_SHA256:
-            part.unlink()
-            say('    the Ollama download did not match its published SHA-256 (deleted; run again)')
-            return False
-        OLLAMA_HOME.mkdir(parents=True, exist_ok=True)
-        if not run(['tar', '--zstd', '-xf', str(part), '-C', str(OLLAMA_HOME)]):
-            return False
-        part.unlink()
-    live = ROOT == Path('/')                         # (tests use a fake root: no users, no runit)
-    if live and subprocess.run(['id', 'ollama'], capture_output=True).returncode != 0:
-        run(['useradd', '-r', '-d', '/var/lib/ollama', '-s', '/bin/false', '-c', 'Ollama', 'ollama'])
-    home = ROOT / 'var/lib/ollama'
-    home.mkdir(parents=True, exist_ok=True)
-    if live:
-        shutil.chown(home, 'ollama', 'ollama')
+    if not shutil.which(OLLAMA) and not run([XBPS_INSTALL, '-Sy', 'ollama-bin']):
+        return False
     service = ROOT / 'etc/sv/ollama'
-    if not service.exists():
-        shutil.copytree(SV_SOURCE, service, symlinks=True)
+    if not service.is_dir():
+        say('    /etc/sv/ollama is missing: sudo xbps-reconfigure -f ollama-bin')
+        return False
     (service / 'down').unlink(missing_ok=True)       # a removed tutor left it switched off
     link = ROOT / 'var/service/ollama'
     link.parent.mkdir(parents=True, exist_ok=True)
     if not link.exists() and not link.is_symlink():
-        link.symlink_to('/etc/sv/ollama')            # runit notices and starts it
-    if live:
+        link.symlink_to('/etc/sv/ollama')            # runit notices the link and starts it
+    if ROOT == Path('/'):
         subprocess.run(['sv', 'up', 'ollama'], capture_output=True)
     for _ in range(60):
         if answers():
             return True
         time.sleep(1)
-    say('    Ollama did not start; see: sudo sv status ollama ; tail /var/log/socklog/everything/current')
+    say('    Ollama did not start: sudo sv status ollama ; sudo tail /var/log/socklog/everything/current')
     return False
 
 

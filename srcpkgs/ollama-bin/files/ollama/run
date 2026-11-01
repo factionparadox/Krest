@@ -1,0 +1,9 @@
+#!/bin/sh
+# Ollama for Pustota's Russian tutor. It listens on this computer only, keeps one model in
+# memory and lets it go a minute after the last answer, so the tutor costs nothing while idle.
+exec 2>&1
+export HOME=/var/lib/ollama OLLAMA_MODELS=/var/lib/ollama/models OLLAMA_HOST=127.0.0.1:11434
+export OLLAMA_KEEP_ALIVE=1m OLLAMA_MAX_LOADED_MODELS=1 OLLAMA_NUM_PARALLEL=1
+# 32 GB shared with the graphics: a shorter conversation memory keeps the model inside it
+export OLLAMA_CONTEXT_LENGTH=8192
+exec chpst -u _ollama:_ollama /usr/bin/ollama serve

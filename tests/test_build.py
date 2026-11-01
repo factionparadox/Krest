@@ -15,7 +15,7 @@ PACKAGES = set(' '.join(l for l in (ROOT / 'packages.txt').read_text().splitline
 
 def shell_scripts():
     for path in [*ROOT.glob('build/*.sh'), *ROOT.glob('installer/*'), *(DESK / 'usr/bin').iterdir(),
-                 *ROOT.glob('russian/sv/**/run')]:
+                 *ROOT.glob('srcpkgs/*/files/*/run')]:
         if path.is_file() and path.read_text(errors='ignore').startswith('#!') and 'python' not in path.read_text().splitlines()[0]:
             yield path
 
@@ -35,7 +35,8 @@ class Scripts(unittest.TestCase):
     def test_executables_are_executable(self):
         for path in [*(DESK / 'usr/bin').iterdir(), ROOT / 'learn/pustota-learn',
                      ROOT / 'russian/pustota-russian', ROOT / 'russian/pustota-content',
-                     ROOT / 'russian/sv/ollama/run', ROOT / 'installer/pustota-installer']:
+                     ROOT / 'srcpkgs/ollama-bin/files/ollama/run', ROOT / 'installer/pustota-installer',
+                     *ROOT.glob('build/*.sh'), ROOT / 'build/make-branding.py']:
             self.assertTrue(path.stat().st_mode & 0o111, path)
 
 
@@ -102,7 +103,7 @@ class Desktop(unittest.TestCase):
         for prog, pkg in (('xss-lock', 'xss-lock'), ('slock', 'slock'), ('dunst', 'dunst'),
                           ('pipewire', 'pipewire'), ('udiskie', 'udiskie'), ('xbanish', 'xbanish'),
                           ('polybar', 'polybar'), ('ratpoison', 'ratpoison'), ('xrdb', 'xrdb'),
-                          ('xsetroot', 'xsetroot'), ('xset', 'xset')):
+                          ('xsetroot', 'xsetroot'), ('xset', 'xset'), ('feh', 'feh')):
             self.assertIn(prog, session)
             self.assertIn(pkg, PACKAGES)
 
@@ -161,3 +162,88 @@ class Learn(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class SourcePackages(unittest.TestCase):
+    """srcpkgs/: xbps-src templates for what Void lacks."""
+
+    def template(self, name):
+        text = (ROOT / 'srcpkgs' / name / 'template').read_text()
+        return text, dict(re.findall(r'^(\w+)=["]?([^"\n]*)', text, re.M))
+
+    def test_every_template_pins_its_sources(self):
+        for path in (ROOT / 'srcpkgs').iterdir():
+            text, f = self.template(path.name)
+            for field in ('pkgname', 'version', 'revision', 'short_desc', 'license', 'homepage', 'distfiles'):
+                self.assertIn(field, f, (path.name, field))
+            self.assertEqual(f['pkgname'], path.name)
+            dist = re.search(r'^distfiles="([^"]*)"', text, re.M | re.S).group(1).split()
+            sums = re.search(r'^checksum="?([^"\n]*(?:\n [^"\n]*)*)"?', text, re.M).group(1).split()
+            self.assertEqual(len(dist), len(sums), path.name)
+            for s in sums:
+                self.assertRegex(s, r'^[0-9a-f]{64}$')
+            self.assertLessEqual(len(f['short_desc']), 72, path.name)
+
+    def test_ollama_is_the_pinned_release_with_a_service(self):
+        text, f = self.template('ollama-bin')
+        self.assertIn('c9490e0f520be21271d969e6703f012268b1d39f8b70dd58854e5bfef7a75bb6', text)
+        self.assertIn('vsv ollama', text)
+        self.assertIn('system_accounts="_ollama"', text)
+        run = (ROOT / 'srcpkgs/ollama-bin/files/ollama/run').read_text()
+        self.assertIn('127.0.0.1', run)
+        self.assertIn('chpst -u _ollama:_ollama /usr/bin/ollama serve', run)
+        self.assertIn('ollama-bin', (ROOT / 'build/build-packages.sh').read_text())
+
+    def test_ani_cli_is_installed_and_pinned(self):
+        text, f = self.template('ani-cli')
+        self.assertEqual(f['version'], '5.1')
+        self.assertIn('c99221dcecb35c66815a7a77e5ebebde16c8d06a', text)
+        for pkg in ('ani-cli', 'fastfetch', 'framework-system'):
+            self.assertIn(pkg, PACKAGES)
+
+    def test_build_uses_xbps_src_and_signs(self):
+        srcpkgs = (ROOT / 'build/build-srcpkgs.sh').read_text()
+        self.assertIn('rev=7be87667ad95aff4124fdcccb68e2c22b5453a26', srcpkgs)
+        self.assertIn('XBPS_CHROOT_CMD=ethereal', srcpkgs)
+        self.assertIn('/.pustota-build-root', srcpkgs)       # ethereal only in the disposable root
+        make = (ROOT / 'build/make-iso.sh').read_text()
+        steps = [make.index(f'bash "$root/build/{s}"') for s in ('build-srcpkgs.sh', 'build-packages.sh', 'sign-repo.sh')]
+        self.assertEqual(steps, sorted(steps))
+        self.assertIn('var/db/xbps/keys', make)
+        self.assertIn('--sign-pkg', (ROOT / 'build/sign-repo.sh').read_text())
+        repo = (DESK / 'usr/share/xbps.d/20-pustota-repository.conf').read_text()
+        self.assertIn('repository=https://github.com/factionparadox/Pustota/releases/download/repo-x86_64', repo)
+        self.assertIn('repo-x86_64', (ROOT / 'build/publish-repo.sh').read_text())
+
+
+class Compression(unittest.TestCase):
+    def test_iso_is_zstd_level_3(self):
+        make = (ROOT / 'build/make-iso.sh').read_text()
+        self.assertIn('-i zstd -s zstd', make)
+        self.assertNotRegex(make, r'-[is] (xz|gzip)')
+        patch = (ROOT / 'build/patch-void-mklive.py').read_text()
+        self.assertIn('-Xcompression-level 3', patch)
+        self.assertIn('--compress=zstd -3 -q -T0', patch)
+
+
+class Branding(unittest.TestCase):
+    def test_fastfetch_config_and_logo(self):
+        import json
+        raw = (DESK / 'etc/xdg/fastfetch/config.jsonc.in').read_text()
+        config = json.loads(re.sub(r'^\s*//.*$', '', raw, flags=re.M))
+        logo = config['logo']
+        self.assertEqual(logo['type'], 'file-raw')
+        art = (DESK / 'usr/share/pustota/fastfetch-logo.txt').read_text(encoding='utf-8').splitlines()
+        self.assertEqual(len(art), logo['height'])
+        for line in art:
+            self.assertEqual(len(re.sub(r'\x1b\[[0-9;]*m', '', line)), logo['width'])
+        self.assertTrue(any('Пустота' in str(m) for m in config['modules']))
+        self.assertIn('@VERSION@', raw)
+        self.assertIn('config.jsonc.in', (ROOT / 'build/build-packages.sh').read_text())
+
+    def test_logo_files(self):
+        for rel in ('usr/share/pustota/pustota-wallpaper.png', 'usr/share/pustota/pustota-logo.png',
+                    'usr/share/pixmaps/pustota.png'):
+            self.assertGreater((DESK / rel).stat().st_size, 1000, rel)
+        self.assertIn('pustota-wallpaper.png', (DESK / 'usr/bin/pustota-session').read_text())
+        self.assertIn('feh', PACKAGES)

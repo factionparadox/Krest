@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Pustota's own files as three ordinary XBPS packages, made with Void's xbps-create and indexed
-# with xbps-rindex into build/work/repo. XBPS then owns every file Pustota adds:
+# Pustota's package repository, build/work/repo: its own files as three ordinary XBPS packages
+# made with Void's xbps-create, plus the packages built from srcpkgs/ (build-srcpkgs.sh), all
+# indexed with xbps-rindex and signed (sign-repo.sh). XBPS then owns every file Pustota adds:
 #   xbps-query -f pustota-desktop      lists them; xbps-remove takes them away again.
 #   pustota-desktop  configuration, session and scripts; depends on everything in packages.txt
 #   pustota-learn    pustota-learn and its lessons
@@ -26,6 +27,8 @@ create() {  # create NAME DESTDIR "short description" "deps"
 # ---------------------------------------------------------------- pustota-desktop
 d=$work/pkgroot/desktop
 cp -a "$root/desktop/root" "$d"
+sed "s/@VERSION@/$(cat "$root/VERSION")/" "$d/etc/xdg/fastfetch/config.jsonc.in" > "$d/etc/xdg/fastfetch/config.jsonc"
+rm "$d/etc/xdg/fastfetch/config.jsonc.in"
 install -Dm644 "$root/packages.txt" "$d/usr/share/pustota/packages.txt"
 install -Dm644 "$root/VERSION" "$d/usr/share/pustota/VERSION"
 mapfile -t pkgs < <(grep -v '^#' "$root/packages.txt" | tr ' ' '\n' | grep .)
@@ -46,7 +49,6 @@ install -d "$r/usr/lib/pustota/content" "$r/usr/share/pustota/russian" "$r/var/l
 install -m644 "$root"/russian/fetch-*.py "$root/russian/mirror.json" "$r/usr/lib/pustota/content/"
 install -m644 "$root"/russian/{vocab,library,audiobooks,voices}.tsv "$root/russian/VOCAB-SOURCES.md" \
   "$r/usr/share/pustota/russian/"
-cp -a "$root/russian/sv" "$r/usr/lib/pustota/sv"     # runit service for Ollama, linked once installed
 # Piper (MIT): a self-contained speech engine, pinned to the release Constellation used.
 piper=$work/downloads/piper_linux_x86_64-2023.11.14-2.tar.gz
 mkdir -p "$work/downloads"
@@ -58,7 +60,11 @@ echo "a50cb45f355b7af1f6d758c1b360717877ba0a398cc8cbe6d2a7a3a26e225992  $piper" 
 tar -xzf "$piper" -C "$r/usr/lib/pustota"
 [[ -x $r/usr/lib/pustota/piper/piper ]] || die "Piper archive has no piper binary"
 create pustota-russian "$r" "Pustota Russian kit: A1 to B2, offline" \
-  "$(deps python3 kiwix-tools mpv yt-dlp zstd pipewire)"
+  "$(deps python3 kiwix-tools mpv yt-dlp zstd pipewire ollama-bin)"
 
+# packages Void does not have, built from srcpkgs/ by build-srcpkgs.sh
+for pkg in "$work"/void-packages/hostdir/binpkgs/*.xbps; do
+  [[ -e $pkg ]] && cp "$pkg" "$repo/"
+done
 xbps-rindex -a "$repo"/*.xbps
 ls -l "$repo"

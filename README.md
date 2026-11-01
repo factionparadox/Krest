@@ -1,3 +1,5 @@
+<p align="center"><img src="branding/pustota-256.png" width="200" alt="Пустота"></p>
+
 # Пустота · Pustota
 
 *Pustota* is Russian for "void" or "emptiness". It's a light, keyboard-driven laptop system built on **Void Linux**. It's made for writing and for learning Russian, and to last a long time on battery. It's built for the Framework Laptop 13 Pro (Intel Core Ultra series 3, Panther Lake), and runs on most UEFI laptops.
@@ -7,11 +9,12 @@
 | Base | Void Linux x86_64 glibc, **runit**, XBPS. **Linux 7.x** (`linux-mainline`: Void's newest kernel series, which the 13 Pro needs) |
 | Disk | GPT: 1 GiB EFI, swap the size of the RAM (for hibernation), **XFS** root |
 | Desktop | X11: **ratpoison** (each window fills the screen), **polybar** (the X11 counterpart of Waybar), **dmenu** menus, dunst notifications, slock screen lock, xterm |
-| Tools | **Midnight Commander** for files, **acme** and the rest of **Plan 9** (sam, rc, the plumber), Firefox, mpv, zathura |
+| Tools | **Midnight Commander** for files, **acme** and the rest of **Plan 9** (sam, rc, the plumber), Firefox, mpv, zathura, ani-cli, fastfetch (with the Пустота logo), `framework_tool` |
 | Laptop | Wi-Fi and Bluetooth menus, PipeWire sound, brightness and volume keys, TLP and thermald, zram, suspend that turns into hibernation after two hours, low-battery hibernation, tap-to-click |
 | Russian | Constellation's kit: a 10,000-word drill, the AI tutor (Qwen3.6 35B-A3B, on the laptop), Piper voices, FSI/DLI/Peace Corps courses, *Между нами*, Wiktionary, audiobooks. English (UK) and Russian phonetic keyboard; Alt+Shift switches |
 | Learning | `pustota-learn`: 22 lessons on how this system works, `explain` (shows what a command would do, without running it), `doctor` (a read-only map of the running system), and Void's Handbook offline |
 | Installer | Automatic: five questions, one Yes/No, then the whole Void chroot install by itself |
+| Packages | Void's repository, plus Pustota's own signed one: its packages, and what Void lacks (`ani-cli`, `ollama-bin`), built with xbps-src from `srcpkgs/` |
 
 ## Installing
 
@@ -57,12 +60,28 @@ git clone https://github.com/factionparadox/Pustota && cd Pustota
 bash build/build-iso.sh            # -> out/pustota-x86_64.iso and its .sha256
 ```
 
-On Arch, it downloads Void's official root filesystem and checks it against Void's release key and a pinned SHA-256. It then builds inside it, so it needs no Docker and changes nothing on Arch beyond installing `curl minisign xz tar`. Nothing is compiled, so the build takes minutes, not hours. See [docs/BUILDING.md](docs/BUILDING.md).
+On Arch, it downloads Void's official root filesystem and checks it against Void's release key and a pinned SHA-256, then builds inside it. It needs no Docker and changes nothing on Arch beyond installing `curl minisign xz tar openssl`. Then it:
+
+1. builds the packages Void lacks from `srcpkgs/` with Void's own xbps-src;
+2. makes Pustota's three packages;
+3. signs the repository with your key, `~/.config/pustota/repo-key.pem`, made on the first build. Back it up: installed systems trust it;
+4. writes the ISO, its squashfs and initramfs compressed with **zstd at level 3**.
+
+Nothing large is compiled (Ollama is repackaged from its official release), so it takes minutes, not hours. See [docs/BUILDING.md](docs/BUILDING.md).
+
+**Publishing the repository**, so installed systems get updates with `sudo xbps-install -Su`:
+
+```sh
+bash build/publish-repo.sh         # uploads build/work/repo to the release "repo-x86_64" (needs gh auth login)
+```
 
 ## Layout
 
 ```
-build/       build-iso.sh (Arch or Void), make-iso.sh (inside Void), build-packages.sh, Void's key
+build/       build-iso.sh (Arch or Void), make-iso.sh (inside Void), build-srcpkgs.sh, build-packages.sh,
+             sign-repo.sh, publish-repo.sh, make-branding.py, Void's key
+srcpkgs/     xbps-src templates for what Void lacks: ani-cli, ollama-bin
+branding/    the Пустота roundel (the original and the sizes made from it)
 installer/   pustota-installer.py and the live image's network setup
 desktop/root the pustota-desktop package: /etc/pustota, /etc/skel, /usr/bin/pustota-*
 learn/       pustota-learn and its lessons
@@ -75,14 +94,16 @@ tests/       python3 -m unittest discover tests
 
 This is version 0.1, written on 31 October 2026. **Nothing has been built or booted yet.**
 
-- **Tested here:** 67 automated tests pass (one more is skipped because this sandbox has no `zstd`). They cover:
+- **Tested here:** 75 automated tests pass. They cover:
+  - the templates, signing order, zstd level 3, and the fastfetch config and logo;
   - the installer's whole sequence against a fake system, from partitions to GRUB, plus every one of its decisions;
   - the Russian kit's downloader, checksums and tutor (Constellation's 37 tests, ported);
   - the menu and the learning tool;
   - the wiring: every file the build copies exists, every key runs an installed program, and every bar module is defined.
-- **Checked against Void itself:** every package name was checked against void-packages, and `linux-mainline` is 7.3. The void-mklive options were read at the pinned commit. The Ollama and Piper downloads were checked against their published checksums.
+- **Checked against Void itself:** every package name was checked against void-packages, and `linux-mainline` is 7.3. The void-mklive options were read at the pinned commit, and the patch was applied to that exact file. The templates follow Void's conventions, checked against existing templates. Every distfile checksum was taken from the published checksum or from git at the pinned commit.
 - **Not yet tested:**
-  - the ISO build;
+  - the ISO build, including the first xbps-src run in ethereal mode;
+  - XBPS reading the repository from a GitHub release;
   - booting on the 13 Pro (including whether polybar's battery `BAT1` and `intel_backlight` names match);
   - the real install;
   - suspend, hibernate and resume;

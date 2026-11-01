@@ -112,40 +112,33 @@ class ContentTests(unittest.TestCase):
         """build-packages.sh puts every kit file in the pustota-russian package."""
         build = (PKG.parent / 'build/build-packages.sh').read_text()
         for name in ('fetch-files.py', 'fetch-kiwix.py', 'fetch-archive.py', 'fetch-mezhdunami.py', 'fetch-mirror.py',
-                     'library.tsv', 'audiobooks.tsv', 'voices.tsv', 'vocab.tsv', 'mirror.json', 'sv/ollama/run'):
+                     'library.tsv', 'audiobooks.tsv', 'voices.tsv', 'vocab.tsv', 'mirror.json'):
             self.assertTrue((PKG / name).is_file(), name)
-        for pattern in ('fetch-*.py', 'mirror.json', '{vocab,library,audiobooks,voices}.tsv', 'russian/sv',
-                        'pustota-russian', 'pustota-content'):
+        for pattern in ('fetch-*.py', 'mirror.json', '{vocab,library,audiobooks,voices}.tsv',
+                        'pustota-russian', 'pustota-content', 'ollama-bin'):
             self.assertIn(pattern, build, pattern)
 
-    @unittest.skipUnless(shutil.which('zstd'), 'needs zstd (Void and the builder have it)')
-    def test_ollama_itself_is_downloaded_checked_and_given_a_service(self):
-        """Void has no ollama package: the tutor pack fetches the pinned release first."""
-        import tarfile, io
-        stub = (b'#!/bin/sh\nS="$(dirname "$0")/pulled"\ncase "$1" in list) echo NAME; [ ! -f "$S" ] || cat "$S";;'
-                b' pull) echo "$2" >> "$S";; esac\n')
-        raw = io.BytesIO()
-        with tarfile.open(fileobj=raw, mode='w') as tar:
-            info = tarfile.TarInfo('bin/ollama'); info.size = len(stub); info.mode = 0o755
-            tar.addfile(info, io.BytesIO(stub))
-        archive = self.site / 'ollama-linux-amd64.tar.zst'
-        archive.write_bytes(subprocess.run(['zstd', '-q', '-c'], input=raw.getvalue(), capture_output=True,
-                                           check=True).stdout)
-        shutil.copytree(PKG / 'sv', self.root / 'usr/lib/pustota/sv')
-        binary = self.root / 'opt/ollama/bin/ollama'
-        env = {'PUSTOTA_CONTENT_OLLAMA': str(binary),
-               'PUSTOTA_CONTENT_OLLAMA_URL': self.url + '/ollama-linux-amd64.tar.zst'}
-        # a wrong checksum is refused and nothing is unpacked
-        bad = self.run_tool('install', 'ai-tutor', env={**env, 'PUSTOTA_CONTENT_OLLAMA_SHA256': '0' * 64})
-        self.assertNotEqual(bad.returncode, 0)
-        self.assertFalse(binary.exists())
-        good = self.run_tool('install', 'ai-tutor', env={**env, 'PUSTOTA_CONTENT_OLLAMA_SHA256':
-                                                       hashlib.sha256(archive.read_bytes()).hexdigest()})
-        self.assertEqual(good.returncode, 0, good.stdout + good.stderr)
-        self.assertTrue(binary.is_file())
+    def test_tutor_switches_on_the_ollama_package_and_its_service(self):
+        """Ollama is the ollama-bin package: installed if missing, then its runit service linked."""
+        binary = self.root / 'usr/bin/ollama'
+        xbps = self.root.parent / 'xbps-install'
+        # a stand-in xbps-install: "installs" ollama-bin (the binary and its service definition)
+        xbps.write_text('#!/bin/sh\necho "$@" > "$(dirname "$0")/xbps-args"\n'
+                        f'mkdir -p "{binary.parent}" "{self.root}/etc/sv/ollama"\n'
+                        f'cp "{self.ollama}" "{binary}"\n')
+        xbps.chmod(0o755)
+        (self.root / 'etc/sv/ollama').mkdir(parents=True, exist_ok=True)
+        (self.root / 'etc/sv/ollama/down').touch()          # as left by removing the tutor
+        r = self.run_tool('install', 'ai-tutor', env={'PUSTOTA_CONTENT_OLLAMA': str(binary),
+                                                      'PUSTOTA_CONTENT_XBPS_INSTALL': str(xbps)})
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual((xbps.parent / 'xbps-args').read_text().split(), ['-Sy', 'ollama-bin'])
         self.assertIn('qwen3.6:35b-a3b', (binary.parent / 'pulled').read_text())
-        self.assertTrue((self.root / 'etc/sv/ollama/run').is_file())
         self.assertEqual(os.readlink(self.root / 'var/service/ollama'), '/etc/sv/ollama')
+        self.assertFalse((self.root / 'etc/sv/ollama/down').exists())
+        # removing the tutor removes the model and keeps the service off, even after a reboot
+        self.run_tool('remove', 'ai-tutor', env={'PUSTOTA_CONTENT_OLLAMA': str(binary)})
+        self.assertNotIn('qwen3.6', (binary.parent / 'pulled').read_text())
 
 
 def sys_python():

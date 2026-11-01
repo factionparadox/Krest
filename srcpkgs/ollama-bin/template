@@ -1,0 +1,42 @@
+# Template file for 'ollama-bin'
+# Pustota: Void does not package Ollama. This repackages Ollama's official Linux release
+# (pinned, SHA-256 checked) without its CUDA and ROCm libraries: the Framework 13 Pro has Intel
+# graphics, so the CPU (and Vulkan) back ends are what it uses. The service runs as _ollama,
+# listens on 127.0.0.1 only and is not enabled until the Russian tutor is installed
+# (sudo pustota-content install ai-tutor).
+pkgname=ollama-bin
+version=0.40.13
+revision=1
+archs="x86_64"
+create_wrksrc=yes
+short_desc="Run large language models locally (upstream build, CPU and Vulkan)"
+maintainer="Pustota <pustota@localhost>"
+license="MIT"
+homepage="https://ollama.com"
+distfiles="https://github.com/ollama/ollama/releases/download/v${version}/ollama-linux-amd64.tar.zst
+ https://raw.githubusercontent.com/ollama/ollama/v${version}/LICENSE"
+checksum="c9490e0f520be21271d969e6703f012268b1d39f8b70dd58854e5bfef7a75bb6
+ 5934ed2ce0d15154bcdb9c85203210abac0da4314af34081e36df4599f90b226"
+skip_extraction="LICENSE"
+provides="ollama-${version}_${revision}"
+nostrip=yes
+nopie=yes
+noshlibprovides=yes
+system_accounts="_ollama"
+_ollama_homedir="/var/lib/ollama"
+make_dirs="/var/lib/ollama 0750 _ollama _ollama"
+
+do_install() {
+	local f
+	vbin bin/ollama
+	vmkdir usr/lib/ollama
+	# ollama finds its libraries at ../lib/ollama, relative to itself
+	for f in lib/ollama/*; do
+		case "${f##*/}" in
+			cuda*|rocm*|*hip*|mlx*) continue ;;
+		esac
+		cp -a "$f" "${DESTDIR}/usr/lib/ollama/"
+	done
+	vsv ollama
+	vlicense "${XBPS_SRCDISTDIR}/${pkgname}-${version}/LICENSE"
+}

@@ -12,9 +12,11 @@ it off, remove --autologin YOU from that file. Without disk encryption, anyone w
 can read the disk anyway: Pustota does not encrypt it (yet).
 
 ## Software
-Void's repositories are signed, and XBPS checks every package. Pustota's own packages came
-from the ISO. Anything downloaded later (Ollama, the Russian material) is checked against a
-pinned or published checksum before use. Add third-party repositories only if you trust them.
+Void's repositories are signed, and XBPS checks every package. Pustota's repository is signed
+too, with a key that stays on the computer that builds Pustota; the installer trusted its
+public half (ls /var/db/xbps/keys). Packages built from Pustota's templates download only
+pinned sources with checksums, and the Russian material is checked the same way. Add
+third-party repositories only if you trust them.
 
 ## Network
 Nothing listens on the network by default except what you start; the tutor (Ollama) and the
