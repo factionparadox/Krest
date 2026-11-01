@@ -2,3 +2,5 @@ out/
 build/work/
 __pycache__/
 *.pyc
+# Your own files for a personal ISO (music and so on); never committed or published.
+local/

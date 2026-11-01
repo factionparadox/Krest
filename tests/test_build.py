@@ -470,3 +470,16 @@ class FrameworkAndOffice(unittest.TestCase):
         self.assertTrue({'libreoffice-writer', 'libreoffice-calc', 'libreoffice-i18n-en-GB',
                          'libreoffice-i18n-ru', 'hunspell-en_GB-all', 'hunspell-ru_RU'} <= PACKAGES)
 
+
+class PersonalIso(unittest.TestCase):
+    def test_music_never_committed_and_wired_through(self):
+        self.assertIn('local/', (ROOT / '.gitignore').read_text().split())
+        build = (ROOT / 'build/build-iso.sh').read_text()
+        self.assertIn('music=$project/local/music', build)
+        self.assertIn('--no-music', build)
+        self.assertIn('PUSTOTA_MUSIC="$inmusic"', build)
+        self.assertIn('pustota-personal-x86_64.iso', build)
+        make = (ROOT / 'build/make-iso.sh').read_text()
+        self.assertIn('"$ov/usr/lib/pustota/music/"', make)
+        self.assertIn('iso=pustota-personal-x86_64.iso', make)
+

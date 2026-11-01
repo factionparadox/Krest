@@ -32,6 +32,8 @@ import urllib.request
 TITLE = "Пустота / Pustota installer"
 TARGET = Path("/mnt/target")
 REPO = Path("/usr/lib/pustota/repo")
+# a personal ISO (build-iso.sh with local/music) carries your music here
+MUSIC = Path("/usr/lib/pustota/music")
 # Void's mirrors (https://xmirror.voidlinux.org): the first that answers is used, and written
 # into the new system if it is not the default.
 MIRRORS = ["https://repo-default.voidlinux.org", "https://repo-de.voidlinux.org",
@@ -412,6 +414,11 @@ def install(disk, hostname, username, password, timezone, autologin):
     sudoers.parent.mkdir(parents=True, exist_ok=True)
     sudoers.write_text("%wheel ALL=(ALL:ALL) ALL\n")
     sudoers.chmod(0o440)
+    if MUSIC.is_dir() and any(MUSIC.iterdir()):
+        log(f"copying your music into /home/{username}/Music")
+        (TARGET / "home" / username / "Music").mkdir(parents=True, exist_ok=True)
+        run("cp", "-a", f"{MUSIC}/.", TARGET / "home" / username / "Music")
+        chroot("chown", "-R", f"{username}:{username}", f"/home/{username}/Music")
 
     stage("5/6  Services (runit)")
     enabled = TARGET / "etc/runit/runsvdir/default"

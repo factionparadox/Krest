@@ -60,6 +60,8 @@ On Arch Linux (WSL2 works) or on Void, with about 10 GB free:
 ```sh
 git clone https://github.com/factionparadox/Pustota && cd Pustota
 bash build/build-iso.sh            # -> out/pustota-x86_64.iso and its .sha256
+# with your own music in local/music (git-ignored): -> out/pustota-personal-x86_64.iso,
+# copied to ~/Music at install; that ISO is for you only. See docs/BUILDING.md.
 ```
 
 On Arch, it downloads Void's official root filesystem and checks it against Void's release key and a pinned SHA-256, then builds inside it. It needs no Docker and changes nothing on Arch beyond installing `curl minisign xz tar openssl`. Then it:
@@ -96,7 +98,7 @@ tests/       python3 -m unittest discover tests
 
 This is version 0.1, written on 31 October 2026. **Nothing has been built or booted yet.**
 
-- **Tested here:** 101 automated tests pass. They cover:
+- **Tested here:** 107 automated tests pass. They cover:
   - the templates, signing order, zstd level 3, and the fastfetch config and logo;
   - the installer's whole sequence against a fake system, from partitions to GRUB, plus every one of its decisions;
   - the Russian kit's downloader, checksums and tutor (Constellation's 37 tests, ported);

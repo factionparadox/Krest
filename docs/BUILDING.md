@@ -53,3 +53,16 @@ Edit `packages.txt`; each name must be a Void package (search: `xbps-query -Rs N
 ## The Russian content mirror
 
 `build/publish-content.sh` (from Constellation) packs downloaded material into release assets and writes `russian/mirror.json`. The mirror is currently the `content-v1` release on factionparadox/Kirin.
+
+## A personal ISO (your music)
+
+Files of your own, such as music you have bought, go in `local/music` (git ignores everything
+under `local/`, so they are never committed or pushed). If that folder exists and is not empty,
+`build/build-iso.sh` puts it on the ISO, names it `out/pustota-personal-x86_64.iso`, and the
+installer copies it into `~/Music` (owned by you). A personal ISO is for your own machines only:
+do not share or publish it. `--no-music` builds the ordinary ISO even when `local/music` exists;
+`--music DIR` takes the music from another folder. `local/music` may be a link: the same albums
+can serve Constellation and Pustota, for example
+
+    mkdir -p local && ln -sfn ~/Constellation/local/music local/music
+

@@ -2,6 +2,13 @@
 # Pustota: build the installer ISO on Arch Linux (WSL2 is fine), or natively on Void.
 #
 #   bash build/build-iso.sh            -> out/pustota-x86_64.iso
+#   bash build/build-iso.sh --music DIR   your music on it too (default: local/music, if any)
+#   bash build/build-iso.sh --no-music    the ordinary ISO even when local/music exists
+#
+# Personal files (as in Constellation): if local/music exists (git ignores local/, so it is
+# never committed or published), it goes on the ISO and the installer copies it into your
+# Music folder. That ISO is named pustota-personal-x86_64.iso and is for your own machines:
+# never share or publish it.
 #
 # On Arch it builds inside a verified Void glibc root filesystem (no Docker, nothing changed
 # on Arch beyond a few packages): Void's signed February 2025 rootfs, checked with Void's
@@ -13,11 +20,28 @@ say() { printf '\n==> %s\n' "$*"; }
 die() { printf '\nPustota: %s\n' "$*" >&2; exit 2; }
 trap 'echo "Pustota: stopped at line $LINENO (exit $?)" >&2' ERR
 
+music=$project/local/music
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --music) [[ $# -ge 2 ]] || die "--music needs a folder"; music=$(realpath -m "$2"); shift 2 ;;
+    --no-music) music=; shift ;;
+    *) die "unknown option: $1 (use --music DIR or --no-music)" ;;
+  esac
+done
+if [[ -n $music ]]; then
+  if [[ -d $music && -n $(ls -A "$music" 2>/dev/null) ]]; then
+    say "Your music: $music ($(du -sh "$music" | cut -f1)): this makes a PERSONAL ISO, not for sharing"
+  else
+    [[ $music == "$project/local/music" ]] || die "no music in $music"
+    music=
+  fi
+fi
+
 [[ $(uname -m) == x86_64 ]] || die "an x86_64 builder is needed"
 os=$(. /etc/os-release; echo "$ID")
 if [[ $os == void ]]; then
   [[ $EUID -eq 0 ]] || exec sudo bash "$0" "$@"
-  exec bash "$project/build/make-iso.sh"
+  PUSTOTA_MUSIC=$music exec bash "$project/build/make-iso.sh"
 fi
 [[ $os == arch ]] || die "build on Arch (WSL2 works) or on Void glibc"
 [[ $EUID -ne 0 ]] || die "run as yourself; it asks for sudo when needed"
@@ -62,13 +86,13 @@ if [[ ! -x $base/usr/bin/xbps-install ]]; then
 fi
 [[ -x $base/usr/bin/xbps-install ]] || die "incomplete Void rootfs in $base"
 
-sudo mkdir -p "$base/work" "$base/dev" "$base/proc" "$base/sys" "$base/etc/xbps.d"
+sudo mkdir -p "$base/work" "$base/music" "$base/dev" "$base/proc" "$base/sys" "$base/etc/xbps.d"
 # the build root's XBPS uses the same mirror (this file overrides Void's default one)
 echo "repository=$mirror/current" | sudo tee "$base/etc/xbps.d/00-repository-main.conf" >/dev/null
 sudo cp -L /etc/resolv.conf "$base/etc/resolv.conf"
 cleanup() {
   sudo rm -f "$base/root/pustota-repo-key.pem"
-  for item in work sys proc dev; do
+  for item in music work sys proc dev; do
     if mountpoint -q "$base/$item"; then sudo umount -R "$base/$item" || echo "could not unmount $item" >&2; fi
   done
 }
@@ -78,10 +102,18 @@ for item in dev proc sys; do
   sudo mount --make-rslave "$base/$item"
 done
 sudo mount --bind "$project" "$base/work"
+# your music, read-only, at /music inside the build root (only for a personal ISO)
+inmusic=
+if [[ -n $music ]]; then
+  sudo mount --bind "$music" "$base/music"
+  sudo mount -o remount,bind,ro "$base/music"
+  inmusic=/music
+fi
 # GIT_CONFIG_*: git (2.35.2 and later) refuses repositories owned by another user. Inside the
 # build root, root works in folders your user owns (the project is bind-mounted), so trust them.
 inroot() {
   sudo chroot "$base" /usr/bin/env -i HOME=/root TERM="${TERM:-xterm}" VOID_MIRROR="$mirror" \
+    PUSTOTA_MUSIC="$inmusic" \
     GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0='*' \
     PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin "$@"
 }
@@ -106,7 +138,9 @@ inroot /bin/sh -ec 'need=; for p in bash make git curl python3 xz zstd openssl; 
 say "Building inside Void"
 inroot /bin/bash /work/build/make-iso.sh
 out=$project/out/pustota-x86_64.iso
+[[ -z $music ]] || out=$project/out/pustota-personal-x86_64.iso
 [[ -s $out ]] || die "no ISO was produced"
 sudo chown -R "$(id -u):$(id -g)" "$project/out" "$project/build/work" 2>/dev/null || true
 sudo rm -f "$base/root/pustota-repo-key.pem"
 say "Done: $out ($(du -h "$out" | cut -f1))"
+[[ -z $music ]] || echo "    It holds your music: keep it to yourself (do not share or publish it)."

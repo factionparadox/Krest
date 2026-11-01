@@ -71,6 +71,15 @@ install -d "$ov/usr/lib/pustota/repo" "$ov/var/db/xbps/keys"
 cp "$repo"/*.xbps "$repo"/*.sig2 "$repo/x86_64-repodata" "$ov/usr/lib/pustota/repo/"
 cp "$work"/keys/*.plist "$ov/var/db/xbps/keys/"      # the installer copies these to the new system
 cp "$root/packages.txt" "$ov/usr/lib/pustota/packages.txt"
+# A personal ISO: your music (build-iso.sh --music, or local/music), copied to ~/Music by the
+# installer. (It goes into the live image with everything else; FLAC hardly compresses further.)
+iso=pustota-x86_64.iso
+if [[ -n ${PUSTOTA_MUSIC:-} && -d $PUSTOTA_MUSIC && -n $(ls -A "$PUSTOTA_MUSIC") ]]; then
+  say "Your music ($(du -sh "$PUSTOTA_MUSIC" | cut -f1)): a PERSONAL ISO, not for sharing"
+  install -d "$ov/usr/lib/pustota/music"
+  cp -a "$PUSTOTA_MUSIC/." "$ov/usr/lib/pustota/music/"
+  iso=pustota-personal-x86_64.iso
+fi
 
 say "Building the ISO (kernel: linux-mainline; squashfs and initramfs: zstd level 3)"
 live_pkgs="python3 dialog gptfdisk xfsprogs dosfstools parted util-linux xtools
@@ -89,6 +98,6 @@ export XBPS_REPOSITORY="--repository=$VOID_MIRROR/current/nonfree"
   -T "Pustota" -I "$ov" \
   -o "$stage/pustota.iso"
 [[ -s $stage/pustota.iso ]] || die "void-mklive produced no ISO"
-mv -f "$stage/pustota.iso" "$root/out/pustota-x86_64.iso"
-(cd "$root/out" && sha256sum pustota-x86_64.iso > pustota-x86_64.iso.sha256)
-say "Built out/pustota-x86_64.iso"
+mv -f "$stage/pustota.iso" "$root/out/$iso"
+(cd "$root/out" && sha256sum "$iso" > "$iso.sha256")
+say "Built out/$iso"

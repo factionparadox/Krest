@@ -273,3 +273,31 @@ class Helpers(unittest.TestCase):
     def test_firewall_on(self):
         self.assertEqual(inst.firewall_on('ENABLED=no\nLOGLEVEL=low\n'), 'LOGLEVEL=low\nENABLED=yes\n')
 
+
+class PersonalMusic(WholeInstall):
+    """A personal ISO's music goes to the user's Music folder (Constellation's way)."""
+    def test_music_is_copied_and_owned(self):
+        music = self.target.parent / 'music'
+        (music / 'Кино').mkdir(parents=True)
+        (music / 'Кино' / 'Группа крови.flac').write_text('flac')
+        saved = inst.MUSIC
+        inst.MUSIC = music
+        try:
+            inst.dialog = lambda *a, **k: 0
+            inst.install(self.disk, 'pustota', 'stephen', 'pw', 'Europe/London', autologin=False)
+        finally:
+            inst.MUSIC = saved
+        self.assertIn(['cp', '-a', f'{music}/.', str(self.target / 'home/stephen/Music')], self.ran)
+        self.assertIn(['chroot', str(self.target), 'chown', '-R', 'stephen:stephen', '/home/stephen/Music'],
+                      self.ran)
+
+    def test_no_music_no_copy(self):
+        inst.dialog = lambda *a, **k: 0
+        saved = inst.MUSIC
+        inst.MUSIC = self.target.parent / 'nothing-here'
+        try:
+            inst.install(self.disk, 'pustota', 'stephen', 'pw', 'Europe/London', autologin=False)
+        finally:
+            inst.MUSIC = saved
+        self.assertFalse(any('Music' in ' '.join(c) for c in self.ran))
+
