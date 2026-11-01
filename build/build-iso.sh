@@ -78,8 +78,11 @@ for item in dev proc sys; do
   sudo mount --make-rslave "$base/$item"
 done
 sudo mount --bind "$project" "$base/work"
+# GIT_CONFIG_*: git (2.35.2 and later) refuses repositories owned by another user. Inside the
+# build root, root works in folders your user owns (the project is bind-mounted), so trust them.
 inroot() {
   sudo chroot "$base" /usr/bin/env -i HOME=/root TERM="${TERM:-xterm}" VOID_MIRROR="$mirror" \
+    GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0='*' \
     PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin "$@"
 }
 # This root is disposable: xbps-src may build in it directly ("ethereal" style).

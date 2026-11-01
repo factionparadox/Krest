@@ -60,6 +60,7 @@ if [[ -f /.pustota-build-root ]]; then
   for p in "${pkgs[@]}"; do
     chroot "$sr" /usr/bin/env -i HOME=/root PATH=/usr/bin:/usr/sbin:/bin:/sbin TERM="${TERM:-xterm}" \
       XBPS_CHROOT_CMD=ethereal XBPS_ALLOW_CHROOT_BREAKOUT=yes \
+      GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0='*' \
       /bin/bash -c 'cd /hostrepo && ./xbps-src pkg "$1"' _ "$p"
   done
 else

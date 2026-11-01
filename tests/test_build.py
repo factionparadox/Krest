@@ -390,3 +390,10 @@ class Extras(unittest.TestCase):
         finally:
             tab.unlink()
 
+
+class GitOwnership(unittest.TestCase):
+    """root runs git in folders the builder's user owns: both chroots must trust them."""
+    def test_safe_directory(self):
+        for f in ('build/build-iso.sh', 'build/build-srcpkgs.sh'):
+            self.assertIn("GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0='*'", (ROOT / f).read_text(), f)
+
