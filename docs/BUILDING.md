@@ -37,7 +37,13 @@ To add one, write `srcpkgs/NAME/template` (see Void's [Manual.md](https://github
 
 ## Branding
 
-`branding/pustota-original.png` is the roundel. `python3 build/make-branding.py` (needs Pillow) makes the cropped logo and icon sizes, the wallpaper, and fastfetch's true-colour half-block logo (`desktop/root/usr/share/pustota/fastfetch-logo.txt`, 44×22).
+`branding/pustota-original.png` is the roundel, and `branding/pustota-ascii.txt` is its hand-drawn ASCII version, in neofetch's format: a `colors` line of six 256-colour codes, then the art with `${c1}`…`${c6}`.
+
+`python3 build/make-branding.py` (needs Pillow) makes:
+- fastfetch's default logo `fastfetch-logo.txt`, converted to fastfetch's `$1`…`$6`. It prints the colour codes for the `"color"` block in `config.jsonc.in`; a test checks the two match;
+- the cropped logo and icon sizes;
+- the wallpaper;
+- a true-colour half-block version, `fastfetch-logo-blocks.txt` (44×22, for `--logo-type file-raw`).
 
 ## Void mirrors
 

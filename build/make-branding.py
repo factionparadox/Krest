@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
-"""Make Pustota's logo files from branding/pustota-original.png (run after changing the logo):
+"""Make Pustota's logo files (run after changing the logo):
+  from branding/pustota-ascii.txt (the hand-drawn ASCII roundel, neofetch format):
+  desktop/root/usr/share/pustota/fastfetch-logo.txt      fastfetch's default logo ($1..$6)
+  from branding/pustota-original.png:
   branding/pustota-logo.png and -512/-256/-128/-64.png   cropped to the roundel, transparent
-  desktop/root/usr/share/pustota/fastfetch-logo.txt      true-colour half blocks, 44 x 22
+  desktop/root/usr/share/pustota/fastfetch-logo-blocks.txt  true-colour half blocks, 44 x 22
   desktop/root/usr/share/pustota/pustota-wallpaper.png   the roundel on Pustota's background
   desktop/root/usr/share/pixmaps/pustota.png             256 px icon
 Needs Pillow:  python3 build/make-branding.py
 """
 from pathlib import Path
+import re
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -46,6 +50,32 @@ def fastfetch_logo(sq):
     return '\n'.join(lines) + '\n'
 
 
+def ascii_logo():
+    """neofetch's format (a "colors" line, ${c1}..${c6}, \\\\ for a backslash) to fastfetch's
+    ($1..$6, $$ for a dollar sign), without the blank margin. Returns (logo, colour codes)."""
+    lines = (B / 'pustota-ascii.txt').read_text(encoding='utf-8').splitlines()
+    codes, art = lines[0].split()[1:], lines[1:]
+    while art and not art[0].strip():
+        art.pop(0)
+    while art and not art[-1].strip():
+        art.pop()
+    art = [line.rstrip().replace('\\\\', '\\') for line in art]
+    visible = lambda line: re.sub(r'\$\{c\d\}', '', line)
+    indent = min(len(visible(l)) - len(visible(l).lstrip()) for l in art if visible(l).strip())
+    out = []
+    for line in art:
+        skip, i, res = indent, 0, ''
+        while i < len(line):
+            m = re.match(r'\$\{c(\d)\}', line[i:])
+            if m:
+                res += '$' + m.group(1); i += m.end(); continue
+            if skip and line[i] == ' ':
+                skip -= 1; i += 1; continue
+            res += '$$' if line[i] == '$' else line[i]; i += 1
+        out.append(res)
+    return '\n'.join(out) + '\n', codes
+
+
 def main():
     sq = roundel()
     sq.save(B / 'pustota-logo.png', optimize=True)
@@ -53,7 +83,10 @@ def main():
         sq.resize((n, n), Image.LANCZOS).save(B / f'pustota-{n}.png', optimize=True)
     (SHARE / 'pustota').mkdir(parents=True, exist_ok=True)
     (SHARE / 'pixmaps').mkdir(parents=True, exist_ok=True)
-    (SHARE / 'pustota/fastfetch-logo.txt').write_text(fastfetch_logo(sq), encoding='utf-8')
+    (SHARE / 'pustota/fastfetch-logo-blocks.txt').write_text(fastfetch_logo(sq), encoding='utf-8')
+    logo, codes = ascii_logo()
+    (SHARE / 'pustota/fastfetch-logo.txt').write_text(logo, encoding='utf-8')
+    print('fastfetch colours (config.jsonc.in "color"):', ', '.join(f'"{i + 1}": "38;5;{c}"' for i, c in enumerate(codes)))
     wall = Image.new('RGBA', (2880, 1920), BACKGROUND + (255,))
     logo = sq.resize((880, 880), Image.LANCZOS)
     wall.paste(logo, ((wall.width - 880) // 2, (wall.height - 880) // 2), logo)
