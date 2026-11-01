@@ -96,7 +96,10 @@ sudo install -m600 "$key" "$base/root/pustota-repo-key.pem"
 say "Updating the build root (XBPS first, then everything: no partial upgrades)"
 inroot /bin/sh -ec 'xbps-install -Suy xbps'
 inroot /bin/sh -ec 'xbps-install -Suy'
-inroot /bin/sh -ec 'xbps-install -Sy bash make git curl python3 xz zstd openssl'
+# only what is missing (asking XBPS to install an installed package is an error)
+inroot /bin/sh -ec 'need=; for p in bash make git curl python3 xz zstd openssl; do
+  xbps-query -p pkgver "$p" >/dev/null 2>&1 || need="$need $p"; done
+  [ -z "$need" ] || xbps-install -Sy $need'
 say "Building inside Void"
 inroot /bin/bash /work/build/make-iso.sh
 out=$project/out/pustota-x86_64.iso

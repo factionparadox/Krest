@@ -35,7 +35,9 @@ cd "$vp"
 if [[ -f /.pustota-build-root ]]; then
   # Pustota's disposable build root (made by build-iso.sh): the ethereal style, as Void's CI
   # containers use it: the root itself is the masterdir.
-  xbps-install -Sy base-chroot git >/dev/null
+  # base-chroot lives in Void's separate "bootstrap" repository (repository=bootstrap)
+  mirror=${VOID_MIRROR:-https://repo-default.voidlinux.org}
+  xbps-install -Sy -R "$mirror/current/bootstrap" -R "$mirror/current" base-chroot git
   xbps-uhelper arch > /.xbps_chroot_init
   ln -sfn / masterdir
   export XBPS_CHROOT_CMD=ethereal XBPS_ALLOW_CHROOT_BREAKOUT=yes
