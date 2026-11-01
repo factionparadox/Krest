@@ -14,7 +14,7 @@ That is the whole of "systemctl enable": a link, which you can see with ls.
 
 ## Pustota's services
 dbus (messages between programs) · elogind (sessions, suspend, lid) · NetworkManager (Wi-Fi) ·
-bluetoothd · tlp (battery tuning) · thermald (heat) · chronyd (clock) · socklog-unix and nologd
+bluetoothd · tlp (battery tuning) · thermald (heat) · chronyd (clock) · socklog-unix and nanoklogd
 (the system log) · zramen (compressed swap in RAM) · earlyoom (stops a runaway program before
 memory runs out) · agetty-tty1 ... (the text consoles). ollama appears once the tutor is installed.
 

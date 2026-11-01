@@ -39,6 +39,8 @@ l=$work/pkgroot/learn
 install -Dm755 "$root/learn/pustota-learn" "$l/usr/bin/pustota-learn"
 install -d "$l/usr/share/pustota/learn/topics"
 install -m644 "$root"/learn/topics/*.md "$l/usr/share/pustota/learn/topics/"
+install -d "$l/usr/share/pustota/learn/wiki"
+install -m644 "$root"/learn/wiki/*.md "$l/usr/share/pustota/learn/wiki/"
 create pustota-learn "$l" "Pustota Learn: understand and inspect the system" "$(deps python3 man-pages void-docs)"
 
 # ---------------------------------------------------------------- pustota-russian

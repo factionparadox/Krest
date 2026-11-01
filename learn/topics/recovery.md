@@ -19,6 +19,7 @@ so the version you had before an update is still on the disk.
 
 1. Find what changed. The update's own output, or the log of what XBPS did:
        grep -h 'xbps' /var/log/socklog/everything/current | tail -n 50
+       xilog | tail -n 30                         what was installed or updated last (xtools)
        ls -t /var/cache/xbps | head -n 20          the newest downloads first
 2. Put the old version back. xdowngrade (from xtools) installs a package file from the cache:
        ls /var/cache/xbps/firefox-*                 the versions you still have

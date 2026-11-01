@@ -397,3 +397,55 @@ class GitOwnership(unittest.TestCase):
         for f in ('build/build-iso.sh', 'build/build-srcpkgs.sh'):
             self.assertIn("GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0='*'", (ROOT / f).read_text(), f)
 
+
+class Wiki(unittest.TestCase):
+    """learn/wiki: the reference pages behind pustota-learn wiki."""
+    root = ROOT / 'learn/wiki'
+
+    def setUp(self):
+        loader = importlib.machinery.SourceFileLoader('learnw', str(ROOT / 'learn/pustota-learn'))
+        spec = importlib.util.spec_from_loader('learnw', loader)
+        self.learn = importlib.util.module_from_spec(spec)
+        loader.exec_module(self.learn)
+        self.learn.DOC_ROOT = ROOT / 'learn'
+
+    def test_pages_are_whole(self):
+        pages = {p.stem for p in self.root.glob('*.md')}
+        self.assertGreaterEqual(len(pages), 18)
+        index = (self.root / 'index.md').read_text()
+        for name in pages - {'index'}:
+            text = (self.root / f'{name}.md').read_text()
+            self.assertTrue(text.startswith('# '), name)
+            self.assertIn('See also:', text, name)
+            self.assertRegex(index, rf'(?m)^  {re.escape(name)} ', name)       # listed in the index
+            for line in text.splitlines():
+                self.assertLessEqual(len(line), 100, (name, line))
+
+    def test_commands_point_at_real_pages(self):
+        pages = {p.stem for p in self.root.glob('*.md')}
+        for command, page in self.learn.WIKI_FOR.items():
+            self.assertIn(page, pages, command)
+
+    def test_logging_services_are_the_real_names(self):
+        # Void's Handbook: socklog-unix and nanoklogd (there is no "nologd")
+        import importlib.util as u
+        spec = u.spec_from_file_location('inst', ROOT / 'installer/pustota-installer.py')
+        inst = u.module_from_spec(spec); spec.loader.exec_module(inst)
+        self.assertIn('nanoklogd', inst.SERVICES_OPTIONAL)
+        self.assertIn('socklog', inst.GROUPS)
+        for path in [*self.root.glob('*.md'), *(ROOT / 'learn/topics').glob('*.md')]:
+            self.assertNotIn('nologd', path.read_text().replace('nanoklogd', ''), path.name)
+
+    def test_wiki_and_search_work(self):
+        import contextlib, io
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(self.learn.wiki('sv'), 0)            # a command finds its page
+            self.assertEqual(self.learn.search(['vkpurge']), 0)
+        self.assertIn('# runit', out.getvalue())
+        self.assertIn('wiki kernel:', out.getvalue())
+        self.assertEqual(self.learn.wiki('../../etc/passwd'), 2)
+
+    def test_packaged(self):
+        self.assertIn('learn/wiki/*.md', (ROOT / 'build/build-packages.sh').read_text())
+

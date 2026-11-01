@@ -49,11 +49,11 @@ MIN_ROOT_GIB = 20
 USERNAME = re.compile(r"^[a-z_][a-z0-9_-]{0,30}$")
 HOSTNAME = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9-]{0,62}$")
 PACKAGES = ["base-system", "pustota-desktop", "pustota-learn", "pustota-russian"]
-GROUPS = ["wheel", "audio", "video", "input", "network", "bluetooth", "storage", "users"]
+GROUPS = ["wheel", "audio", "video", "input", "network", "bluetooth", "storage", "socklog", "users"]
 # runit services. The first three are required for a working desktop; the rest are logged
 # if missing rather than stopping the install.
 SERVICES_REQUIRED = ["dbus", "elogind", "NetworkManager"]
-SERVICES_OPTIONAL = ["bluetoothd", "tlp", "thermald", "chronyd", "socklog-unix", "nologd",
+SERVICES_OPTIONAL = ["bluetoothd", "tlp", "thermald", "chronyd", "socklog-unix", "nanoklogd",
                      "zramen", "earlyoom", "ufw"]
 # Base live images start these; NetworkManager and elogind do their jobs on Pustota.
 SERVICES_OFF = ["dhcpcd", "wpa_supplicant", "acpid"]

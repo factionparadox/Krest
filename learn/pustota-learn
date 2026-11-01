@@ -50,6 +50,29 @@ ALIASES = {
     "kiwix-serve": "russian",
     "xchroot": "recovery",
 }
+# commands whose wiki page goes deeper than the lesson (pustota-learn wiki PAGE)
+WIKI_FOR = {
+    "sv": "runit", "runit": "runit", "runsv": "runit", "runsvdir": "runit", "chpst": "runit",
+    "svlogd": "logging", "vlogger": "logging", "svlogtail": "logging", "dmesg": "logging",
+    "loginctl": "elogind", "elogind": "elogind",
+    "xbps-install": "xbps", "xbps-query": "xbps", "xbps-remove": "xbps", "xbps-pkgdb": "xbps",
+    "xbps-reconfigure": "xbps", "xbps-alternatives": "xbps", "xbps-rindex": "repositories",
+    "xmirror": "repositories", "xbps-src": "xbps-src",
+    "xi": "xtools", "xq": "xtools", "xrs": "xtools", "xlocate": "xtools", "xdowngrade": "xtools",
+    "xcheckrestart": "xtools", "xchroot": "xtools", "xgenfstab": "xtools", "xilog": "xtools",
+    "vkpurge": "kernel", "modprobe": "kernel", "lsmod": "kernel", "uname": "kernel",
+    "grub-mkconfig": "boot", "grub-install": "boot", "dracut": "boot", "efibootmgr": "boot",
+    "useradd": "users", "usermod": "users", "sudo": "users", "visudo": "users",
+    "chronyc": "time", "snooze": "time", "date": "time",
+    "locale": "locale", "setxkbmap": "locale", "setfont": "locale",
+    "fstrim": "filesystems", "mkfs.xfs": "filesystems", "xfs_repair": "filesystems",
+    "xfs_growfs": "filesystems", "lsblk": "filesystems", "mount": "filesystems",
+    "nmcli": "network", "nmtui": "network", "ufw": "network", "ip": "network",
+    "wpctl": "sound", "pipewire": "sound", "pamixer": "sound",
+    "vainfo": "graphics", "xrandr": "graphics",
+    "fwupdmgr": "firmware", "framework_tool": "firmware",
+    "pacman": "from-arch", "systemctl": "from-arch", "journalctl": "from-arch",
+}
 MANUALS = {
     "xbps-install": "man 1 xbps-install", "xbps-query": "man 1 xbps-query",
     "xbps-remove": "man 1 xbps-remove", "xbps-reconfigure": "man 1 xbps-reconfigure",
@@ -111,6 +134,7 @@ def learn(name=None):
             print(f"  {key:<16} {heading}")
         print("\nRead: pustota-learn learn packages")
         print("Browse: pustota-learn browse")
+        print("The wiki (Void in depth): pustota-learn wiki ; search: pustota-learn search WORD")
         print("Explain without running: pustota-learn explain \"sv status dbus\"")
         return 0
     page = read_topic(name)
@@ -119,6 +143,59 @@ def learn(name=None):
               file=sys.stderr)
         return 2
     print(page)
+    return 0
+
+
+def wiki_pages():
+    root = DOC_ROOT / "wiki"
+    if not root.is_dir():
+        return {}
+    return {p.stem: p for p in sorted(root.glob("*.md"))
+            if p.is_file() and TOPIC_NAME.fullmatch(p.stem)}
+
+
+def show(text):
+    """Long pages go through less in a terminal; otherwise print them."""
+    pager = shutil.which("less")
+    if pager and sys.stdout.isatty() and text.count("\n") > 40:
+        subprocess.run([pager, "-R"], input=text, text=True, check=False)
+    else:
+        print(text)
+
+
+def wiki(name=None):
+    pages = wiki_pages()
+    if not pages:
+        print("The Pustota wiki is missing (pustota-learn package).", file=sys.stderr)
+        return 2
+    if name is None:
+        name = "index"
+    name = WIKI_FOR.get(name, name)
+    if not TOPIC_NAME.fullmatch(name) or name not in pages:
+        print(f"No wiki page '{name}'. The index: pustota-learn wiki ; "
+              f"search: pustota-learn search {name}", file=sys.stderr)
+        return 2
+    show(pages[name].read_text(encoding="utf-8"))
+    return 0
+
+
+def search(words):
+    """Every line in the lessons and the wiki containing all the words (any case)."""
+    words = [w.lower() for w in words if w.strip()]
+    if not words:
+        print("Usage: pustota-learn search WORD [WORD...]", file=sys.stderr)
+        return 2
+    found = 0
+    for kind, pages in (("wiki", wiki_pages()), ("learn", topics())):
+        for name, path in pages.items():
+            for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+                if all(w in line.lower() for w in words):
+                    print(f"{kind} {name}:{number}: {line.strip()}")
+                    found += 1
+    if not found:
+        print("Nothing found. The wiki's index: pustota-learn wiki")
+        return 1
+    print(f"\nRead a page: pustota-learn wiki NAME  (or: pustota-learn learn NAME)")
     return 0
 
 
@@ -174,7 +251,9 @@ def explain(parts):
     if command in ("mkfs.xfs", "mkfs.vfat", "wipefs", "sgdisk", "grub-install", "xbps-remove",
                    "xfs_repair", "dd"):
         print("\nCAUTION: this command can change or destroy system state.")
-    print("\nReference: " + MANUALS.get(command, "man " + command))
+    if command in WIKI_FOR:
+        print("\nIn depth: pustota-learn wiki " + WIKI_FOR[command])
+    print("Reference: " + MANUALS.get(command, "man " + command))
     return 0
 
 
@@ -272,6 +351,10 @@ def main(argv=None):
     ex = sub.add_parser("explain", help="explain without executing")
     ex.add_argument("command", nargs=argparse.REMAINDER)
     sub.add_parser("browse", help="browse offline chapters interactively")
+    wk = sub.add_parser("wiki", help="the Pustota wiki: Void explained, page by page")
+    wk.add_argument("page", nargs="?")
+    se = sub.add_parser("search", help="search the lessons and the wiki")
+    se.add_argument("words", nargs="+")
     sub.add_parser("doctor", help="show read-only system state")
     sub.add_parser("handbook", help="open locally installed Void Handbook")
     sub.add_parser("sources", help="show authoritative reference links")
@@ -282,6 +365,10 @@ def main(argv=None):
         return learn(getattr(args, "topic", None))
     if args.action == "browse":
         return browse()
+    if args.action == "wiki":
+        return wiki(args.page)
+    if args.action == "search":
+        return search(args.words)
     if args.action == "doctor":
         return doctor()
     if args.action == "explain":
