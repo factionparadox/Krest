@@ -16,6 +16,8 @@ pipewire &                                         # sound (starts WirePlumber a
 udiskie --automount --notify &                     # USB sticks and drives
 xbanish &                                          # hide the pointer while typing
 pustota-battery &                                  # low-battery warnings, hibernate when empty
+clipmenud &                                        # clipboard history (Super+v)
+pustota-nightlight &                               # warmer screen after sunset (redshift)
 polybar pustota >/dev/null 2>&1 &                  # the bar at the top
 [ -x "$HOME/.config/pustota/autostart" ] && "$HOME/.config/pustota/autostart" &
 

@@ -1,0 +1,7 @@
+#!/bin/sh
+# Right-click a word in X-терминал: Plan 9's plumber decides what it is and opens it: a file in
+# acme, a man page reference like ls(1), a URL in Firefox. Rules: /usr/lib/plan9/plumb/basic.
+export PLAN9=/usr/lib/plan9
+case ":$PATH:" in *":$PLAN9/bin:"*) ;; *) PATH=$PATH:$PLAN9/bin ;; esac
+pgrep -u "$(id -u)" -x plumber >/dev/null || { 9 plumber; sleep 0.3; }
+exec 9 plumb -w "$PWD" "$@"   # -w: the shell's folder, so relative file names work

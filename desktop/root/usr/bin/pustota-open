@@ -4,13 +4,13 @@
 have() { command -v "$1" >/dev/null 2>&1; }
 case "${1:-}" in
   web)      exec firefox ;;
-  terminal) have kitty && exec kitty; exec xterm ;;
+  terminal) have kitty && exec kitty; exec pustota-term ;;
   discord)  have discord && exec discord
             exec firefox --new-window https://discord.com/app ;;
   video)    have vlc && exec vlc
             exec mpv --player-operation-mode=pseudo-gui ;;   # drop a file or link on the window
-  files)    exec xterm -title Files -e mc ;;
-  anime)    exec xterm -title ani-cli -e ani-cli ;;
+  files)    exec pustota-term Files mc ;;
+  anime)    exec pustota-term ani-cli ani-cli ;;
   vpn)      exec pustota-vpn ;;
   *)        echo "usage: pustota-open web|terminal|discord|video|files|anime|vpn" >&2; exit 2 ;;
 esac

@@ -240,8 +240,8 @@ def open_in_browser(target):
 
 def open_folder_in_mc(folder):
     """A folder opens in Midnight Commander (in its own terminal when in the desktop)."""
-    if os.environ.get('DISPLAY') and shutil.which('xterm'):
-        subprocess.Popen(['xterm', '-title', Path(folder).name, '-e', 'mc', str(folder)],
+    if os.environ.get('DISPLAY') and shutil.which('pustota-term'):
+        subprocess.Popen(['pustota-term', Path(folder).name, 'mc', str(folder)],
                          start_new_session=True)
         return 0
     return subprocess.call(['mc', str(folder)])

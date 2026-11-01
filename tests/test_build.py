@@ -87,7 +87,8 @@ class Desktop(unittest.TestCase):
     def test_programs_bound_to_keys_are_installed(self):
         provided = {'pustota-menu', 'pustota-acme', 'pustota-keys', 'pustota-screenshot', 'loginctl',
                     'networkmanager_dmenu', 'dmenu_run', 'pustota-open', 'pustota-overview',
-                    'pustota-width', 'pustota-workstations'}
+                    'pustota-width', 'pustota-workstations', 'pustota-term', 'pustota-nightlight',
+                    'clipmenu'}
         for script in provided:
             if script.startswith('pustota-'):
                 self.assertTrue((DESK / 'usr/bin' / script).is_file(), script)
@@ -148,9 +149,10 @@ class Desktop(unittest.TestCase):
 
     def test_chord_programs_are_installed(self):
         opener = (DESK / 'usr/bin/pustota-open').read_text()
-        for prog in ('firefox', 'xterm', 'mpv', 'mc', 'ani-cli'):
+        for prog in ('firefox', 'pustota-term', 'mpv', 'mc', 'ani-cli'):
             self.assertIn(prog, opener)
-            self.assertIn(prog, PACKAGES)
+        for pkg in ('firefox', 'mpv', 'mc', 'ani-cli', 'x-terminal', 'xterm'):
+            self.assertIn(pkg, PACKAGES)
         for opt in ('web', 'terminal', 'discord', 'video', 'files', 'anime', 'vpn'):
             self.assertIn(f'pustota-open {opt}', self.rc)
             self.assertRegex(opener, rf'(?m)^  {opt}\)')
@@ -206,15 +208,20 @@ class SourcePackages(unittest.TestCase):
     def test_every_template_pins_its_sources(self):
         for path in (ROOT / 'srcpkgs').iterdir():
             text, f = self.template(path.name)
-            for field in ('pkgname', 'version', 'revision', 'short_desc', 'license', 'homepage', 'distfiles'):
+            for field in ('pkgname', 'version', 'revision', 'short_desc', 'license', 'homepage'):
                 self.assertIn(field, f, (path.name, field))
             self.assertEqual(f['pkgname'], path.name)
+            self.assertLessEqual(len(f['short_desc']), 72, path.name)
+            if 'distfiles' not in f:
+                # fetched with git instead (do_fetch): pinned to a full commit, checked after checkout
+                self.assertRegex(f.get('_commit', ''), r'^[0-9a-f]{40}$', path.name)
+                self.assertIn('rev-parse HEAD', text, path.name)
+                continue
             dist = re.search(r'^distfiles="([^"]*)"', text, re.M | re.S).group(1).split()
             sums = re.search(r'^checksum="?([^"\n]*(?:\n [^"\n]*)*)"?', text, re.M).group(1).split()
             self.assertEqual(len(dist), len(sums), path.name)
             for s in sums:
                 self.assertRegex(s, r'^[0-9a-f]{64}$')
-            self.assertLessEqual(len(f['short_desc']), 72, path.name)
             # archs lists target machines; "noarch" matches none, so xbps-src refuses the package
             self.assertNotIn('noarch', f.get('archs', ''), path.name)
 
@@ -322,4 +329,64 @@ class NonfreeTests(unittest.TestCase):
         words = (ROOT / 'packages.txt').read_text().split()
         self.assertIn('intel-ucode', words)
         self.assertIn('void-repo-nonfree', words)
+
+
+class Terminal(unittest.TestCase):
+    """X-терминал: st through st-flexipatch, Plan 9 look, installed as x-terminal."""
+    d = ROOT / 'srcpkgs/x-terminal'
+
+    def test_patches_switched_on(self):
+        patches = (self.d / 'files/patches.h').read_text()
+        for p in ('SCROLLBACK_PATCH', 'SCROLLBACK_MOUSE_ALTSCREEN_PATCH', 'CLIPBOARD_PATCH',
+                  'ANYSIZE_PATCH', 'BOXDRAW_PATCH', 'RIGHTCLICKTOPLUMB_PATCH',
+                  'SELECTION_COLORS_PATCH', 'BOLD_IS_NOT_BRIGHT_PATCH'):
+            self.assertIn(f'#define {p} 1\n', patches)
+
+    def test_plan9_look(self):
+        config = (self.d / 'files/config.h').read_text()
+        self.assertIn('"Go Mono:size=11', config)
+        self.assertIn('"#ffffea", /* 258 -> bg', config)
+        self.assertIn('"#eeee9e", /* 260 -> selection', config)
+        self.assertIn('unsigned int selectionbg = 260;', config)
+        self.assertIn('static char *plumb_cmd = "pustota-plumb";', config)
+        self.assertTrue((DESK / 'usr/bin/pustota-plumb').is_file())
+        self.assertIn('font-go-ttf', PACKAGES)
+
+    def test_never_clashes_with_st(self):
+        t = (self.d / 'template').read_text()
+        self.assertIn('usr/bin/x-terminal', t)
+        self.assertIn('st-terminfo', t)
+        self.assertIn('X-терминал', t)
+
+    def test_every_terminal_goes_through_pustota_term(self):
+        for f in (DESK / 'usr/bin').iterdir():
+            if f.name != 'pustota-term':
+                self.assertNotIn('xterm', f.read_text(), f.name)
+        self.assertNotIn('xterm', (DESK / 'etc/pustota/ratpoisonrc').read_text())
+
+
+class Extras(unittest.TestCase):
+    def test_packages(self):
+        for pkg in ('ufw', 'clipmenu', 'redshift', 'fprintd', 'ipafont-fonts-otf'):
+            self.assertIn(pkg, PACKAGES)
+
+    def test_session_and_keys(self):
+        session = (DESK / 'usr/bin/pustota-session').read_text()
+        self.assertIn('clipmenud &', session)
+        self.assertIn('pustota-nightlight &', session)
+        self.assertIn('definekey top s-v exec clipmenu', (DESK / 'etc/pustota/ratpoisonrc').read_text())
+        self.assertIn('Super+v', (DESK / 'usr/share/pustota/keys.txt').read_text())
+
+    def test_nightlight_finds_the_timezone_city(self):
+        tab = ROOT / 'tests' / '_zone1970.tab'
+        script = (DESK / 'usr/bin/pustota-nightlight').read_text()
+        awk = re.search(r"place=\$\(awk -F'\\t' -v z=\"\$zone\" '(.*?)' /usr/share", script, re.S).group(1)
+        tab.write_text('GB,GG\t+513030-0000731\tEurope/London\nJP\t+353916+1394441\tAsia/Tokyo\n')
+        try:
+            for zone, want in (('Europe/London', '51.51:-0.13'), ('Asia/Tokyo', '35.65:139.74')):
+                out = subprocess.run(['awk', '-F\t', '-v', f'z={zone}', awk, str(tab)],
+                                     capture_output=True, text=True, check=True).stdout
+                self.assertEqual(out, want)
+        finally:
+            tab.unlink()
 

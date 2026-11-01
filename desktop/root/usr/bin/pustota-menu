@@ -14,15 +14,15 @@ run() { [ -n "$1" ] && setsid -f sh -c "$1" >/dev/null 2>&1; }
 case "${1:-main}" in
 main)
   run "$(pick 'Пустота' <<'M'
-Terminal	xterm
-Files (Midnight Commander)	xterm -title Files -e mc
+Terminal	pustota-term
+Files (Midnight Commander)	pustota-term Files mc
 Write (acme)	pustota-acme
 Web	firefox
 Russian ›	pustota-menu russian
 Learn the system ›	pustota-menu learn
 Wi-Fi	networkmanager_dmenu
-Bluetooth	xterm -title Bluetooth -e bluetuith
-Sound	xterm -title Sound -e pulsemixer
+Bluetooth	pustota-term Bluetooth bluetuith
+Sound	pustota-term Sound pulsemixer
 System ›	pustota-menu system
 Screenshot	pustota-screenshot
 Keys	pustota-keys
@@ -31,40 +31,43 @@ M
 )" ;;
 russian)
   run "$(pick 'Русский' <<'M'
-Where to start (the route to B2)	xterm -title Russian -e pustota-russian --pause path
-Words (10 minutes, spaced repetition)	xterm -title Слова -e pustota-russian --pause words
-Tutor (AI, on this laptop)	xterm -title Репетитор -e pustota-russian --pause tutor
-Listen (audiobooks)	xterm -title Listen -e pustota-russian --pause listen --pick
+Where to start (the route to B2)	pustota-term Russian pustota-russian --pause path
+Words (10 minutes, spaced repetition)	pustota-term Слова pustota-russian --pause words
+Tutor (AI, on this laptop)	pustota-term Репетитор pustota-russian --pause tutor
+Listen (audiobooks)	pustota-term Listen pustota-russian --pause listen --pick
 Course library (FSI, DLI, Peace Corps)	pustota-russian library --open
 Textbook: Между нами	pustota-russian read mezhdunami
 Dictionary (Wiktionary)	pustota-russian read wiktionary
-Download material…	xterm -title Downloads -e sh -c 'sudo pustota-content; read -r -p "Enter to close " _'
+Download material…	pustota-term Downloads sh -c 'sudo pustota-content; read -r -p "Enter to close " _'
 M
 )" ;;
 learn)
   run "$(pick 'Learn' <<'M'
-Lessons	xterm -title Learn -e pustota-learn browse
-System map (what is running)	xterm -title 'System map' -e sh -c 'pustota-learn doctor; read -r -p "Enter to close " _'
+Lessons	pustota-term Learn pustota-learn browse
+System map (what is running)	pustota-term 'System map' sh -c 'pustota-learn doctor; read -r -p "Enter to close " _'
 Explain a command…	pustota-menu explain
-Void Handbook	xterm -title Handbook -e void-docs
+Void Handbook	pustota-term Handbook void-docs
 Manual page…	pustota-menu manual
-Where things come from	xterm -title Sources -e sh -c 'pustota-learn sources | less'
+Where things come from	pustota-term Sources sh -c 'pustota-learn sources | less'
 M
 )" ;;
 explain)
   cmd=$(printf '' | dm 'Explain (nothing is run):') || exit 0
-  [ -n "$cmd" ] && setsid -f xterm -title Explain -e sh -c 'pustota-learn explain "$1" | less' _ "$cmd" ;;
+  [ -n "$cmd" ] && setsid -f pustota-term Explain sh -c 'pustota-learn explain "$1" | less' _ "$cmd" ;;
 manual)
   page=$(printf '' | dm 'man') || exit 0
-  [ -n "$page" ] && setsid -f xterm -title "man $page" -e man "$page" ;;
+  [ -n "$page" ] && setsid -f pustota-term "man $page" man "$page" ;;
 system)
   run "$(pick 'System' <<'M'
-Update everything (xbps-install -Su)	xterm -title Update -e sh -c 'sudo xbps-install -Su; read -r -p "Enter to close " _'
-Services (sv status)	xterm -title Services -e sh -c 'sudo sv status /var/service/* | less'
-Processes (htop)	xterm -title htop -e htop
-Battery report (powertop)	xterm -title powertop -e sudo powertop
-Disks	xterm -title Disks -e sh -c 'lsblk -f; df -h -x tmpfs -x devtmpfs; read -r -p "Enter to close " _'
-Firmware updates (fwupd)	xterm -title Firmware -e sh -c 'fwupdmgr refresh; fwupdmgr get-updates; read -r -p "Enter to close " _'
+Update everything (xbps-install -Su)	pustota-term Update sh -c 'sudo xbps-install -Su; read -r -p "Enter to close " _'
+Services (sv status)	pustota-term Services sh -c 'sudo sv status /var/service/* | less'
+Processes (htop)	pustota-term htop htop
+Battery report (powertop)	pustota-term powertop sudo powertop
+Disks	pustota-term Disks sh -c 'lsblk -f; df -h -x tmpfs -x devtmpfs; read -r -p "Enter to close " _'
+Night light on/off	pustota-nightlight toggle
+Fingerprint: add a finger (for sudo)	pustota-term Fingerprint sh -c 'fprintd-enroll; read -r -p "Enter to close " _'
+Firewall status (ufw)	pustota-term Firewall sh -c 'sudo ufw status verbose; read -r -p "Enter to close " _'
+Firmware updates (fwupd)	pustota-term Firmware sh -c 'fwupdmgr refresh; fwupdmgr get-updates; read -r -p "Enter to close " _'
 M
 )" ;;
 power)

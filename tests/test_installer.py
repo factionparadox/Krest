@@ -162,6 +162,13 @@ class WholeInstall(unittest.TestCase):
             (t / 'usr/share/zoneinfo/Europe').mkdir(parents=True, exist_ok=True)
             (t / 'usr/share/zoneinfo/Europe/London').write_text('tz')
             (t / 'var/log').mkdir(parents=True, exist_ok=True)
+            (t / 'etc/ufw').mkdir(parents=True, exist_ok=True)
+            (t / 'etc/ufw/ufw.conf').write_text('# /etc/ufw/ufw.conf\nENABLED=no\nLOGLEVEL=low\n')
+            (t / 'etc/pam.d').mkdir(parents=True, exist_ok=True)
+            (t / 'etc/pam.d/sudo').write_text('#%PAM-1.0\nauth      include   system-auth\n'
+                                              'account   include   system-auth\n')
+            (t / 'usr/lib/security').mkdir(parents=True, exist_ok=True)
+            (t / 'usr/lib/security/pam_fprintd.so').write_text('')
         if cmd[0] == 'xgenfstab':
             return 'UUID=r / xfs rw 0 1\nUUID=e /boot/efi vfat rw 0 2\nUUID=s none swap sw 0 0\n'
         if cmd[:2] == ['chroot', str(t)] and cmd[2] == 'xbps-reconfigure':
@@ -198,6 +205,13 @@ class WholeInstall(unittest.TestCase):
         self.assertIn('\nru_RU.UTF-8 UTF-8', '\n' + (t / 'etc/default/libc-locales').read_text())
         self.assertIn('LANG=en_GB.UTF-8', (t / 'etc/locale.conf').read_text())
         self.assertIn('KEYMAP="uk"', (t / 'etc/rc.conf').read_text())
+        ufw = (t / 'etc/ufw/ufw.conf').read_text()
+        self.assertIn('ENABLED=yes', ufw)
+        self.assertNotIn('ENABLED=no', ufw)
+        self.assertTrue((t / 'etc/runit/runsvdir/default/ufw').is_symlink())
+        pam = (t / 'etc/pam.d/sudo').read_text().splitlines()
+        self.assertEqual(pam[1], 'auth      sufficient pam_fprintd.so')     # before the password
+        self.assertEqual(pam[2], 'auth      include   system-auth')
         self.assertEqual(Path((t / 'etc/localtime').readlink()).as_posix(), '/usr/share/zoneinfo/Europe/London')
         enabled = t / 'etc/runit/runsvdir/default'
         self.assertEqual(sorted(p.name for p in enabled.iterdir()),
@@ -237,3 +251,14 @@ class WholeInstall(unittest.TestCase):
         inst.run = no_kernel
         with self.assertRaisesRegex(RuntimeError, 'no 7.x kernel'):
             inst.install(self.disk, 'p', 'u', 'pw', 'Europe/London', autologin=False)
+
+
+class Helpers(unittest.TestCase):
+    def test_fingerprint_line_is_added_once(self):
+        once = inst.with_fingerprint('#%PAM-1.0\nauth include system-auth\n')
+        self.assertEqual(inst.with_fingerprint(once), once)
+        self.assertEqual(once.count('pam_fprintd.so'), 1)
+
+    def test_firewall_on(self):
+        self.assertEqual(inst.firewall_on('ENABLED=no\nLOGLEVEL=low\n'), 'LOGLEVEL=low\nENABLED=yes\n')
+

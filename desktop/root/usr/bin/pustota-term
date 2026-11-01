@@ -1,0 +1,10 @@
+#!/bin/sh
+# pustota-term [TITLE [COMMAND ARGS...]]: a terminal window, titled, running COMMAND (or a shell).
+# X-терминал (x-terminal) is Pustota's; xterm stays installed as the fallback.
+title=Пустота; [ $# -gt 0 ] && { title=$1; shift; }
+if command -v x-terminal >/dev/null 2>&1; then
+  [ $# -gt 0 ] && exec x-terminal -t "$title" -e "$@"
+  exec x-terminal -t "$title"
+fi
+[ $# -gt 0 ] && exec xterm -title "$title" -e "$@"
+exec xterm -title "$title"

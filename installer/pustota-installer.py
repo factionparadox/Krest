@@ -54,7 +54,7 @@ GROUPS = ["wheel", "audio", "video", "input", "network", "bluetooth", "storage",
 # if missing rather than stopping the install.
 SERVICES_REQUIRED = ["dbus", "elogind", "NetworkManager"]
 SERVICES_OPTIONAL = ["bluetoothd", "tlp", "thermald", "chronyd", "socklog-unix", "nologd",
-                     "zramen", "earlyoom"]
+                     "zramen", "earlyoom", "ufw"]
 # Base live images start these; NetworkManager and elogind do their jobs on Pustota.
 SERVICES_OFF = ["dhcpcd", "wpa_supplicant", "acpid"]
 LOCALES = ["en_GB.UTF-8 UTF-8", "ru_RU.UTF-8 UTF-8", "en_US.UTF-8 UTF-8"]
@@ -106,6 +106,30 @@ def with_resume(grub_default, swap_uuid):
     if pattern.search(grub_default):
         return pattern.sub(r'\1resume=UUID=' + swap_uuid + ' ', grub_default, count=1)
     return grub_default + f'\nGRUB_CMDLINE_LINUX_DEFAULT="resume=UUID={swap_uuid} loglevel=4"\n'
+
+
+def firewall_on(conf):
+    """ufw.conf with ENABLED=yes: the ufw service then loads the rules at boot. ufw's defaults
+    (/etc/default/ufw) already drop everything coming in and allow everything going out."""
+    lines = [l for l in conf.splitlines() if not l.strip().startswith("ENABLED=")]
+    return "\n".join(lines + ["ENABLED=yes"]) + "\n"
+
+
+def with_fingerprint(pam):
+    """/etc/pam.d/sudo trying the fingerprint reader first; with no finger enrolled (or no
+    reader) pam_fprintd steps aside and the password is asked as usual."""
+    line = "auth      sufficient pam_fprintd.so"
+    if "pam_fprintd.so" in pam:
+        return pam
+    out, done = [], False
+    for l in pam.splitlines():
+        if not done and l.split()[:1] == ["auth"]:
+            out.append(line)
+            done = True
+        out.append(l)
+    if not done:
+        out.insert(1 if out and out[0].startswith("#%PAM") else 0, line)
+    return "\n".join(out) + "\n"
 
 
 def autologin_conf(conf, username):
@@ -383,6 +407,14 @@ def install(disk, hostname, username, password, timezone, autologin):
             log(f"service not available, skipped: {svc}")
     for svc in SERVICES_OFF:
         (enabled / svc).unlink(missing_ok=True)
+    ufw = TARGET / "etc/ufw/ufw.conf"
+    if ufw.exists():
+        ufw.write_text(firewall_on(ufw.read_text()))
+        log("firewall: ufw on (incoming dropped, outgoing allowed)")
+    pam_sudo = TARGET / "etc/pam.d/sudo"
+    if pam_sudo.exists() and (TARGET / "usr/lib/security/pam_fprintd.so").exists():
+        pam_sudo.write_text(with_fingerprint(pam_sudo.read_text()))
+        log("sudo: fingerprint first, then password")
     if autologin:
         conf = TARGET / "etc/sv/agetty-tty1/conf"
         conf.write_text(autologin_conf(conf.read_text() if conf.exists() else "", username))

@@ -1,0 +1,46 @@
+# Template file for 'x-terminal'
+# X-терминал, Pustota's terminal: st 0.9.3 (suckless) through st-flexipatch, which carries the
+# suckless patches behind switches. files/patches.h picks the patches, files/config.h is the
+# look (Plan 9: acme's pale yellow, Go Mono) and the keys. Installs as x-terminal, so it never
+# clashes with Void's own st.
+pkgname=x-terminal
+version=0.9.3
+revision=1
+_commit=9c733c4b78bf3a145f25a737beac38c52ad63b76
+build_style=gnu-makefile
+make_use_env=compliant
+hostmakedepends="pkg-config git"
+makedepends="fontconfig-devel libX11-devel libXft-devel"
+depends="ncurses st-terminfo font-go-ttf"
+short_desc="X-терминал: Pustota's terminal (st with scrollback, Plan 9 look)"
+maintainer="Pustota <pustota@localhost>"
+license="MIT"
+homepage="https://github.com/factionparadox/Pustota"
+
+# st-flexipatch publishes no release files: fetch the pinned commit with git, and check it.
+do_fetch() {
+	git clone -q https://github.com/bakkeby/st-flexipatch.git "${wrksrc}"
+	git -C "${wrksrc}" checkout -q --detach "${_commit}"
+	[ "$(git -C "${wrksrc}" rev-parse HEAD)" = "${_commit}" ] || msg_error "st-flexipatch is not at ${_commit}\n"
+}
+
+pre_build() {
+	cp "${FILESDIR}/config.h" "${FILESDIR}/patches.h" .
+	# the window's name and class: X-терминал, not st
+	vsed -i x.c -e 's#(opt_line || !opt_cmd) ? "st" : opt_cmd\[0\]#(opt_line || !opt_cmd) ? "X-терминал" : opt_cmd[0]#' \
+		-e 's#opt_name ? opt_name : "st"#opt_name ? opt_name : "x-terminal"#'
+	grep -q '"X-терминал"' x.c || msg_error "x.c: the title line changed upstream\n"
+}
+
+pre_install() {
+	export TERMINFO="${wrksrc}/terminfo-unused"    # st-terminfo (Void) supplies st-256color
+}
+
+post_install() {
+	mv "${DESTDIR}/usr/bin/st" "${DESTDIR}/usr/bin/x-terminal"
+	sed -e 's/^\.TH ST 1 st/.TH X-TERMINAL 1 x-terminal/' -e 's/^\.B st$/.B x-terminal/' \
+		"${DESTDIR}/usr/share/man/man1/st.1" > "${DESTDIR}/usr/share/man/man1/x-terminal.1"
+	rm -f "${DESTDIR}/usr/share/man/man1/st.1"
+	rm -rf "${DESTDIR}/usr/share/applications"
+	vlicense LICENSE
+}

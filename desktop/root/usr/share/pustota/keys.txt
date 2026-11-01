@@ -5,7 +5,7 @@
 
  WORKSTATIONS                              PROGRAMS  (Ctrl+Super + ...)
  Super+1 … 9        go to workstation 1-9  w      web (Firefox)
- Super+Shift+1 … 9  send the window there  t      terminal (kitty if installed, else xterm)
+ Super+Shift+1 … 9  send the window there  t      terminal (X-терминал)
  Super+Tab          overview: pick a       d      Discord (in Firefox unless installed)
                     window or workstation  v      video (VLC if installed, else mpv)
                                            e      files (mc)
@@ -27,6 +27,11 @@
  Print / Shift+Print  whole screen / area  Super+Shift+r  reload the settings
 
  No floating windows: ratpoison gives every window a frame, so there is nothing to drag.
+
+ CLIPBOARD     Super+v: what you copied lately; pick one and it is on the clipboard again.
+ X-ТЕРМИНАЛ    select text = copied · Ctrl+Shift+v paste · Shift+PgUp/PgDn or the wheel: scroll
+               back · double-click a word, then right-click it: open it (a file in acme, a URL,
+               a man page like ls(1)) · Ctrl+Shift+PgUp/PgDn: bigger / smaller text
 
  LANGUAGE      Alt+Shift switches English / Russian (phonetic: я on q, в on w, ж on v ...)
  LAPTOP KEYS   volume, mute, microphone and brightness keys work as marked.

@@ -27,6 +27,12 @@ xorg-minimal xinit xrdb setxkbmap xset xsetroot xprop xinput xdpyinfo
 xf86-input-libinput mesa-dri mesa-vulkan-intel vulkan-loader intel-media-driver libva-utils
 # the desktop: ratpoison, polybar, dmenu, notifications, lock, terminal
 ratpoison polybar dmenu dunst libnotify slock xss-lock xbanish xclip maim xterm feh
+# X-терминал (Pustota's own, srcpkgs/x-terminal: st with a Plan 9 look) and its font
+x-terminal font-go-ttf
+# clipboard history (Super+v), night light, firewall, fingerprint reader
+clipmenu redshift ufw fprintd
+# Japanese text (the IPA fonts: reading, not typing)
+ipafont-fonts-otf
 # files, writing and Plan 9
 mc plan9port neovim
 # fonts with full Cyrillic

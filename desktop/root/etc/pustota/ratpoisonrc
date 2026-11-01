@@ -67,11 +67,13 @@ definekey top C-s-p exec pustota-open vpn
 definekey top C-s-c exec pustota-acme
 definekey top C-s-r exec pustota-menu russian
 definekey top C-s-n exec networkmanager_dmenu
-definekey top C-s-b exec xterm -title Bluetooth -e bluetuith
-definekey top C-s-m exec xterm -title Sound -e pulsemixer
+definekey top C-s-b exec pustota-term Bluetooth bluetuith
+definekey top C-s-m exec pustota-term Sound pulsemixer
 definekey top C-s-space exec pustota-menu
 definekey top s-space exec dmenu_run -i -fn 'DejaVu Sans Mono-12' -nb '#16161c' -sb '#c8323c'
 definekey top s-Return exec pustota-open terminal
+
+definekey top s-v exec clipmenu -i -l 15 -fn 'Go Mono-12' -nb '#16161c' -sb '#c8323c'
 
 # windows
 definekey top s-q delete
