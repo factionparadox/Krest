@@ -208,6 +208,7 @@ class SourcePackages(unittest.TestCase):
         self.assertIn('XBPS_CHROOT_CMD=ethereal', srcpkgs)
         self.assertIn('/.pustota-build-root', srcpkgs)       # ethereal only in the disposable root
         self.assertIn('/current/bootstrap', srcpkgs)          # where base-chroot is published
+        self.assertNotIn('xbps-src -m masterdir', srcpkgs)    # ethereal needs the unresolved default
         make = (ROOT / 'build/make-iso.sh').read_text()
         steps = [make.index(f'bash "$root/build/{s}"') for s in ('build-srcpkgs.sh', 'build-packages.sh', 'sign-repo.sh')]
         self.assertEqual(steps, sorted(steps))

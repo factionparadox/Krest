@@ -52,11 +52,15 @@ if [[ -f /.pustota-build-root ]]; then
   trap unmount EXIT
   for m in dev proc sys; do mount --rbind "/$m" "$sr/$m"; mount --make-rslave "$sr/$m"; done
   mount --bind "$vp" "$sr/hostrepo"
+  # No -m: xbps-src resolves a masterdir given with -m to its real path ("/"), and ethereal mode
+  # then refuses it for not being a link to /. Its default, $XBPS_DISTDIR/masterdir, stays the
+  # link (Void's own example runs plain "xbps-src pkg"). Its "cp: ... are the same file" about
+  # resolv.conf is expected here and harmless.
   ln -sfn / masterdir
   for p in "${pkgs[@]}"; do
     chroot "$sr" /usr/bin/env -i HOME=/root PATH=/usr/bin:/usr/sbin:/bin:/sbin TERM="${TERM:-xterm}" \
       XBPS_CHROOT_CMD=ethereal XBPS_ALLOW_CHROOT_BREAKOUT=yes \
-      /bin/bash -c 'cd /hostrepo && ./xbps-src -m masterdir pkg "$1"' _ "$p"
+      /bin/bash -c 'cd /hostrepo && ./xbps-src pkg "$1"' _ "$p"
   done
 else
   # A real Void system: xbps-src's normal, isolated way, as the user who ran sudo.
