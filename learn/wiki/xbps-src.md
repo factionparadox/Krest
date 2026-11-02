@@ -59,10 +59,10 @@ them as binaries, so they are not in the repositories, but you may build them fo
 
 ## Pustota's own templates
 Pustota's repository has srcpkgs/ with templates for what Void lacks: x-terminal
-(X-терминал), intel-lpmd, webcord, freetube, ani-cli and ollama-bin. Pustota's build copies them
-into a void-packages checkout pinned to one commit, builds them with xbps-src and signs the result into Pustota's
-repository. To change one (X-терминал's colours, for example), edit it and build it like any
-other: pustota-learn learn building has the steps.
+(X-терминал), intel-lpmd, webcord, freetube, ani-cli and ollama-bin. Pustota's build copies
+them into a void-packages checkout pinned to one commit, builds them with xbps-src and signs
+the result into Pustota's repository. To change one (X-терминал's colours, for example), edit
+it and build it like any other: pustota-learn learn building has the steps.
 
 See also: xbps, xtools ; void-packages/README.md and Manual.md (every variable and helper) ;
 https://github.com/void-linux/void-packages ;
