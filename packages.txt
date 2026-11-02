@@ -23,7 +23,7 @@ tlp thermald powertop brightnessctl
 # the Framework's own tool: battery charge limit, fans, expansion cards (framework_tool)
 framework-system
 # X11 and Intel graphics
-xorg-minimal xinit xrdb setxkbmap xset xsetroot xprop xinput xdpyinfo
+xorg-minimal xinit xrdb setxkbmap xset xsetroot xprop xinput xdpyinfo xrandr
 xf86-input-libinput mesa-dri mesa-vulkan-intel vulkan-loader intel-media-driver libva-utils
 # the desktop: ratpoison, polybar, dmenu, notifications, lock, terminal
 ratpoison polybar dmenu dunst libnotify slock xss-lock xbanish xclip maim xterm feh

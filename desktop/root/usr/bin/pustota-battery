@@ -1,8 +1,33 @@
 #!/bin/sh
-# Low-battery watch (started by the session): a warning at 15 %, an urgent one at 7 %, and at
-# 4 % on battery the laptop hibernates (or suspends, if there is no swap to hibernate into).
+# Battery watch, started by the session (a look at /sys every 20 seconds: it costs nothing):
+# - On battery the screen runs at 60 Hz and blanks sooner; on the charger, 120 Hz and the
+#   usual timings. The 13 Pro's panel goes up to 120 Hz; redrawing half as often saves power.
+# - Warnings at 15 % and 7 %; at 4 % on battery the laptop hibernates (or suspends, if there
+#   is no swap to hibernate into).
+# Change the numbers below in a copy: ~/.local/bin/pustota-battery comes first in PATH.
+BAT_HZ=60 AC_HZ=120
+panel() { xrandr --query 2>/dev/null | awk '/^eDP[^ ]* connected/ { print $1; exit }'; }
+on_charger() {
+  for s in /sys/class/power_supply/*; do
+    [ "$(cat "$s/type" 2>/dev/null)" = Mains ] && [ "$(cat "$s/online" 2>/dev/null)" = 1 ] && return 0
+  done
+  return 1
+}
+apply() {   # $1: ac or bat
+  out=$(panel)
+  if [ "$1" = ac ]; then
+    [ -n "$out" ] && xrandr --output "$out" --rate "$AC_HZ" 2>/dev/null
+    xset s 600 600 dpms 600 900 1200          # blank at 10 min, screen off at 15 and 20
+  else
+    [ -n "$out" ] && xrandr --output "$out" --rate "$BAT_HZ" 2>/dev/null
+    xset s 300 300 dpms 300 420 600           # blank at 5 min, screen off at 7 and 10
+  fi
+}
+power=
 warned=0
-while sleep 60; do
+while :; do
+  if on_charger; then now=ac; else now=bat; fi
+  [ "$now" != "$power" ] && { apply "$now"; power=$now; }
   for bat in /sys/class/power_supply/BAT*; do
     [ -r "$bat/capacity" ] || continue
     level=$(cat "$bat/capacity"); state=$(cat "$bat/status")
@@ -17,4 +42,5 @@ while sleep 60; do
       notify-send "Battery at $level %" "Time to find a charger"; warned=1
     fi
   done
+  sleep 20
 done

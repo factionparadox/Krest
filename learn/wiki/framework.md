@@ -33,6 +33,9 @@ which includes the common Framework 13 and Intel settings), Pustota also sets:
   Ethernet card     the Expansion Card (Realtek 0bda:8156) suspends when idle
                     (/etc/udev/rules.d/50-pustota-framework.rules)
   TLP               battery tuning (nixos-hardware uses TLP too unless another tuner is on)
+Pustota's own battery settings for this panel and chip (pustota-learn learn power): 60 Hz on
+battery (120 on the charger), earlier screen blanking, GPU video decoding in mpv and Firefox,
+Wi-Fi power saving kept on.
 
 ## Deliberately left out
   iio-sensor-proxy  the ambient light sensor; only GNOME and KDE use it for automatic
@@ -41,6 +44,8 @@ which includes the common Framework 13 and Intel settings), Pustota also sets:
                     not packaged for Void. framework_tool does the same jobs from the command line
   speaker tuning    nixos-hardware's equaliser preset is for the classic 13's speakers; it says
                     the 13 Pro needs different tuning, and none is published yet
+  intel-lpmd        Intel's low-power daemon for these hybrid chips: it needs systemd's D-Bus
+                    interface to confine work to the low-power cores, and Void has no systemd
   Secure Boot       must stay off: Void's kernels are not signed, and hibernation needs it off
 
 ## Known issues (community reports, autumn 2026)

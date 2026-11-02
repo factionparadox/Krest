@@ -483,3 +483,37 @@ class PersonalIso(unittest.TestCase):
         self.assertIn('"$ov/usr/lib/pustota/music/"', make)
         self.assertIn('iso=pustota-personal-x86_64.iso', make)
 
+
+class Battery(unittest.TestCase):
+    def test_battery_settings(self):
+        watch = (DESK / 'usr/bin/pustota-battery').read_text()
+        self.assertIn('BAT_HZ=60 AC_HZ=120', watch)
+        self.assertIn('xrandr --output "$out" --rate', watch)
+        self.assertIn('xrandr', PACKAGES)
+        self.assertIn('hwdec=auto-safe', (DESK / 'etc/mpv/mpv.conf').read_text())
+        self.assertIn('pref("media.ffmpeg.vaapi.enabled", true);',
+                      (DESK / 'usr/lib/firefox/browser/defaults/preferences/pustota.js').read_text())
+        self.assertIn('wifi.powersave = 3',
+                      (DESK / 'etc/NetworkManager/conf.d/50-pustota-wifi-powersave.conf').read_text())
+
+    def test_watch_switches_on_plug(self):
+        """Run the watcher's power logic against a fake /sys and fake xrandr/xset."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            (d / 'bin').mkdir()
+            for tool, out in (('xrandr', 'echo "eDP-1 connected primary 2880x1920+0+0"; echo "xrandr $*" >> "$LOG"'),
+                              ('xset', 'echo "xset $*" >> "$LOG"')):
+                (d / 'bin' / tool).write_text(f'#!/bin/sh\n[ "$1" = --query ] && {{ echo "eDP-1 connected"; exit; }}\n{out}\n')
+                (d / 'bin' / tool).chmod(0o755)
+            src = (DESK / 'usr/bin/pustota-battery').read_text()
+            funcs = src[src.index('BAT_HZ='):src.index('power=\n')]
+            script = funcs.replace('/sys/class/power_supply', str(d / 'ps')) + 'apply bat\napply ac\n'
+            log = d / 'log'
+            subprocess.run(['sh', '-c', script], env={'PATH': f"{d / 'bin'}:/usr/bin:/bin", 'LOG': str(log)},
+                           check=True)
+            lines = log.read_text().splitlines()
+            self.assertEqual(lines[0], 'xrandr --output eDP-1 --rate 60')
+            self.assertEqual(lines[1], 'xset s 300 300 dpms 300 420 600')
+            self.assertEqual(lines[2], 'xrandr --output eDP-1 --rate 120')
+
