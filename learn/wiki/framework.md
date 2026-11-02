@@ -33,6 +33,17 @@ which includes the common Framework 13 and Intel settings), Pustota also sets:
   Ethernet card     the Expansion Card (Realtek 0bda:8156) suspends when idle
                     (/etc/udev/rules.d/50-pustota-framework.rules)
   TLP               battery tuning (nixos-hardware uses TLP too unless another tuner is on)
+
+And, from Intel rather than nixos-hardware:
+  intel_lpmd        Intel's Energy Optimizer (0.1.0, which added Panther Lake), Pustota's own
+                    package: light work on the 4 low-power cores (pustota-learn learn power)
+
+Tools for this laptop (menu: System):
+  pustota-sleepcheck                     does sleep reach S0ix? (suspends for a minute)
+  framework_tool --touchscreen-enable false|true   the touchscreen off and on
+  framework_tool --kblight 0..100        the keyboard light
+  framework_tool --click-force low|medium|high     the haptic touchpad's click (high: fewer
+                                         false clicks)
 Pustota's own battery settings for this panel and chip (pustota-learn learn power): 60 Hz on
 battery (120 on the charger), earlier screen blanking, GPU video decoding in mpv and Firefox,
 Wi-Fi power saving kept on.
@@ -53,6 +64,8 @@ Wi-Fi power saving kept on.
   driver may bring it back (untested on Pustota):
       sudo modprobe -r hid_multitouch && sudo modprobe hid_multitouch
   If it happens often, report it on the Framework community forum with your BIOS version.
+- If the battery drops a lot overnight, run pustota-sleepcheck: under 80 % in S0ix means a
+  device or driver keeps the chip awake; unplug expansion cards one at a time to find it.
 - Text size: Pustota uses 144 dpi (150%). Framework's own guides suggest 200% for this panel;
   for larger text set  Xft.dpi: 192  in ~/.Xresources and log in again (see: graphics).
 

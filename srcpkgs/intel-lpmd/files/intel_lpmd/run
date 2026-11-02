@@ -1,0 +1,8 @@
+#!/bin/sh
+# Intel's Energy Optimizer (pustota-learn wiki framework). Off: sudo rm /var/service/intel_lpmd
+exec 2>&1
+sv check dbus >/dev/null || exit 1
+# With no power-profiles-daemon (Pustota uses tlp), lpmd waits to be told a mode: once it is
+# up, tell it "auto" (enter low-power mode when the load is light, leave it when it is not).
+( sleep 5; intel_lpmd_control AUTO ) &
+exec intel_lpmd --no-daemon --dbus-enable --loglevel=info

@@ -87,7 +87,7 @@ class Desktop(unittest.TestCase):
     def test_programs_bound_to_keys_are_installed(self):
         provided = {'pustota-menu', 'pustota-acme', 'pustota-keys', 'pustota-screenshot', 'loginctl',
                     'networkmanager_dmenu', 'dmenu_run', 'pustota-open', 'pustota-overview',
-                    'pustota-width', 'pustota-workstations', 'pustota-term', 'pustota-nightlight', 'pustota-handbook',
+                    'pustota-width', 'pustota-workstations', 'pustota-term', 'pustota-nightlight', 'pustota-handbook', 'pustota-sleepcheck',
                     'clipmenu'}
         for script in provided:
             if script.startswith('pustota-'):
@@ -516,4 +516,43 @@ class Battery(unittest.TestCase):
             self.assertEqual(lines[0], 'xrandr --output eDP-1 --rate 60')
             self.assertEqual(lines[1], 'xset s 300 300 dpms 300 420 600')
             self.assertEqual(lines[2], 'xrandr --output eDP-1 --rate 120')
+
+
+class Battery(unittest.TestCase):
+    """intel-lpmd without systemd, the sleep check, uBlock Origin."""
+    d = ROOT / 'srcpkgs/intel-lpmd'
+
+    def test_lpmd_package(self):
+        t = (self.d / 'template').read_text()
+        self.assertIn('_commit=956df747e56aca1739b39bff8cff77e81758af9a', t)     # tag v0.1.0
+        self.assertIn('--with-systemdsystemunitdir=no', t)
+        self.assertIn('elogind-devel', t)                  # libsystemd.pc and sd-bus come from elogind
+        self.assertIn('vsv intel_lpmd', t)
+        run = (self.d / 'files/intel_lpmd/run').read_text()
+        self.assertIn('exec intel_lpmd --no-daemon --dbus-enable', run)
+        self.assertIn('intel_lpmd_control AUTO', run)
+        import xml.dom.minidom
+        conf = xml.dom.minidom.parse(str(self.d / 'files/intel_lpmd_config_F6_M204.xml'))
+        value = lambda tag: conf.getElementsByTagName(tag)[0].firstChild.data
+        self.assertEqual(value('Mode'), '1')               # cgroup v2 isolate: no systemd
+        self.assertEqual(value('BalancedDef'), '0')
+        self.assertEqual(conf.getElementsByTagName('lp_mode_cpus')[0].firstChild, None)  # auto
+        self.assertTrue({'intel-lpmd', 'upower'} <= PACKAGES)
+
+    def test_installer_enables_it(self):
+        import importlib.util as u
+        spec = u.spec_from_file_location('inst2', ROOT / 'installer/pustota-installer.py')
+        inst = u.module_from_spec(spec); spec.loader.exec_module(inst)
+        self.assertIn('intel_lpmd', inst.SERVICES_OPTIONAL)
+
+    def test_sleepcheck_and_firefox(self):
+        sc = (DESK / 'usr/bin/pustota-sleepcheck').read_text()
+        self.assertIn('rtcwake -m mem', sc)
+        self.assertIn('low_power_idle_system_residency_us', sc)
+        import json
+        pol = json.loads((DESK / 'usr/lib/firefox/distribution/policies.json').read_text())
+        self.assertIn('uBlock0@raymondhill.net', pol['policies']['ExtensionSettings'])
+        menu = (DESK / 'usr/bin/pustota-menu').read_text()
+        for opt in ('--touchscreen-enable false', '--kblight 0', '--click-force'):
+            self.assertIn(opt, menu)
 

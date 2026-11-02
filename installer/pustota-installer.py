@@ -56,7 +56,7 @@ GROUPS = ["wheel", "audio", "video", "input", "network", "bluetooth", "storage",
 # if missing rather than stopping the install.
 SERVICES_REQUIRED = ["dbus", "elogind", "NetworkManager"]
 SERVICES_OPTIONAL = ["bluetoothd", "tlp", "thermald", "chronyd", "socklog-unix", "nanoklogd",
-                     "zramen", "earlyoom", "ufw", "snooze-weekly"]
+                     "zramen", "earlyoom", "ufw", "snooze-weekly", "intel_lpmd"]
 # Base live images start these; NetworkManager and elogind do their jobs on Pustota.
 SERVICES_OFF = ["dhcpcd", "wpa_supplicant", "acpid"]
 LOCALES = ["en_GB.UTF-8 UTF-8", "ru_RU.UTF-8 UTF-8", "en_US.UTF-8 UTF-8"]

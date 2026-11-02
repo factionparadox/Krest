@@ -38,6 +38,9 @@ ipafont-fonts-otf
 libreoffice-writer libreoffice-calc libreoffice-impress libreoffice-draw libreoffice-math
 libreoffice-gnome libreoffice-i18n-en-GB libreoffice-i18n-ru
 hunspell-en_GB-all hunspell-ru_RU hyphen-en hyphen-ru mythes-en mythes-ru
+# Intel's Energy Optimizer (Pustota's own, srcpkgs/intel-lpmd): light work on the low-power
+# cores; upower tells it about the charger
+intel-lpmd upower
 # weekly TRIM for the SSD (snooze-weekly runs /etc/cron.weekly/fstrim)
 snooze run-parts
 # files, writing and Plan 9

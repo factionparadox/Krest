@@ -60,6 +60,9 @@ M
 explain)
   cmd=$(printf '' | dm 'Explain (nothing is run):') || exit 0
   [ -n "$cmd" ] && setsid -f pustota-term Explain sh -c 'pustota-learn explain "$1" | less' _ "$cmd" ;;
+clickforce)
+  force=$(printf 'low\nmedium\nhigh\n' | dm 'Touchpad click force (fewer false clicks: high):') || exit 0
+  [ -n "$force" ] && setsid -f pustota-term Touchpad sh -c 'sudo framework_tool --click-force "$1"; read -r -p "Enter to close " _' _ "$force" ;;
 wikipage)
   page=$(ls /usr/share/pustota/learn/wiki | sed 's/\.md$//' | dm 'Wiki page:') || exit 0
   [ -n "$page" ] && setsid -f pustota-term "Wiki: $page" pustota-learn wiki "$page" ;;
@@ -75,6 +78,12 @@ Update everything (xbps-install -Su)	pustota-term Update sh -c 'sudo xbps-instal
 Services (sv status)	pustota-term Services sh -c 'sudo sv status /var/service/* | less'
 Processes (htop)	pustota-term htop htop
 Battery report (powertop)	pustota-term powertop sudo powertop
+Sleep check (suspends for 1 minute)	pustota-term 'Sleep check' sh -c 'pustota-sleepcheck; read -r -p "Enter to close " _'
+Touchscreen off (saves power)	pustota-term Touchscreen sh -c 'sudo framework_tool --touchscreen-enable false; read -r -p "Enter to close " _'
+Touchscreen on	pustota-term Touchscreen sh -c 'sudo framework_tool --touchscreen-enable true; read -r -p "Enter to close " _'
+Keyboard light off	pustota-term 'Keyboard light' sh -c 'sudo framework_tool --kblight 0; read -r -p "Enter to close " _'
+Keyboard light on (50 %)	pustota-term 'Keyboard light' sh -c 'sudo framework_tool --kblight 50; read -r -p "Enter to close " _'
+Touchpad click: light / medium / firm…	pustota-menu clickforce
 Disks	pustota-term Disks sh -c 'lsblk -f; df -h -x tmpfs -x devtmpfs; read -r -p "Enter to close " _'
 Night light on/off	pustota-nightlight toggle
 Fingerprint: add a finger (for sudo)	pustota-term Fingerprint sh -c 'fprintd-enroll; read -r -p "Enter to close " _'
