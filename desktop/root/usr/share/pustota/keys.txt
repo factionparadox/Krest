@@ -10,7 +10,7 @@
                     window or workstation  v      video (VLC if installed, else mpv)
                                            e      files (mc)
  WINDOWS                                   a      ani-cli
- Super+q            close the window       p      VPN on/off (Proton etc.)
+ Super+q            close the window       p      Proton VPN (the app)
  Super+f            this window full size  c      acme (write)
                                            o      office (LibreOffice)
                                            y      YouTube (FreeTube)

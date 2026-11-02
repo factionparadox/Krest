@@ -43,6 +43,8 @@ hunspell-en_GB-all hunspell-ru_RU hyphen-en hyphen-ru mythes-en mythes-ru
 intel-lpmd upower
 # WebCord (Discord, privately) and FreeTube (YouTube, privately): Pustota's own, srcpkgs/
 webcord freetube
+# the Proton VPN app (Pustota's own, srcpkgs/: adopted from ProtonVPN-Void; no kill switch)
+proton-vpn-gtk-app
 # Steam (nonfree). Its 32-bit libraries come from multilib: the installer adds them one by one
 steam void-repo-multilib void-repo-multilib-nonfree
 # weekly TRIM for the SSD (snooze-weekly runs /etc/cron.weekly/fstrim)

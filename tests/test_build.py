@@ -570,3 +570,24 @@ class Apps(unittest.TestCase):
         opener = (DESK / 'usr/bin/pustota-open').read_text()
         self.assertIn('have webcord && exec webcord', opener)
 
+
+class ProtonVpn(unittest.TestCase):
+    PKGS = ('python3-proton-core', 'python3-proton-keyring-linux', 'python3-sentry-sdk',
+            'python3-proton-vpn-api-core', 'proton-vpn-gtk-app')
+
+    def test_adopted_recipes_are_credited_and_pinned(self):
+        for name in self.PKGS:
+            t = (ROOT / 'srcpkgs' / name / 'template').read_text()
+            self.assertIn('d4d093dd57df41f8a3f72f8c89c8417d8b23c21f', t, name)
+            self.assertIn('Tommy Alderson, MIT', t, name)
+            self.assertIn('make_check=no', t, name)
+        api = (ROOT / 'srcpkgs/python3-proton-vpn-api-core/template').read_text()
+        self.assertIn('--features "python,core,local_agent,protun,telemetry"', api)
+        self.assertIn('skip_extraction="v${_protun_version}.tar.gz"', api)
+        self.assertIn('proton-vpn-gtk-app', PACKAGES)
+
+    def test_desktop_wiring(self):
+        self.assertIn('gnome-keyring-daemon --start --components=secrets',
+                      (DESK / 'usr/bin/pustota-session').read_text())
+        self.assertIn('have protonvpn-app && exec protonvpn-app', (DESK / 'usr/bin/pustota-open').read_text())
+

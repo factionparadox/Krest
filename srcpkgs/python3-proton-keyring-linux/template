@@ -1,0 +1,17 @@
+# Template file for 'python3-proton-keyring-linux'
+# Pustota: adopted from ProtonVPN-Void (https://codeberg.org/Alderson/ProtonVPN-Void, commit
+# d4d093dd57df41f8a3f72f8c89c8417d8b23c21f), read and pinned: the Proton VPN app without systemd.
+# Recipe copyright (c) 2026 Tommy Alderson, MIT licence (ProtonVPN-Void/LICENSE).
+pkgname=python3-proton-keyring-linux
+version=0.2.3
+revision=1
+build_style=python3-module
+make_check=no
+hostmakedepends="python3-setuptools"
+depends="python3-proton-core>=0.7.4_1 python3-keyring"
+short_desc="Proton keyring plugins for Linux"
+maintainer="Pustota <pustota@localhost>"
+license="GPL-3.0-only"
+homepage="https://github.com/ProtonVPN/python-proton-keyring-linux"
+distfiles="https://github.com/ProtonVPN/python-proton-keyring-linux/archive/refs/tags/v${version}.tar.gz"
+checksum=6ac94f08057973f16dc14f09a457a578ac1001b75793314bd5245f32fd40048c

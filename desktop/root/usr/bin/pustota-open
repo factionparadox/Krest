@@ -14,7 +14,8 @@ case "${1:-}" in
             exec mpv --player-operation-mode=pseudo-gui ;;   # drop a file or link on the window
   files)    exec pustota-term Files mc ;;
   anime)    exec pustota-term ani-cli ani-cli ;;
-  vpn)      exec pustota-vpn ;;
+  vpn)      have protonvpn-app && exec protonvpn-app   # the Proton VPN app
+            exec pustota-vpn ;;                       # else: WireGuard files in NetworkManager
   office)   exec libreoffice ;;
   *)        echo "usage: pustota-open web|terminal|discord|youtube|games|video|files|anime|vpn|office" >&2; exit 2 ;;
 esac

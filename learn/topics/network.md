@@ -15,7 +15,7 @@ NetworkManager runs WireGuard itself (it is in the kernel), so no VPN app is nee
 in your Proton account, Downloads -> WireGuard configuration, pick a server and download the
 file. Give it a short name (NetworkManager uses it for the interface: 15 characters at most):
     nmcli connection import type wireguard file ~/Downloads/proton-uk.conf
-Then Ctrl+Super+p switches it on and off (pustota-vpn), or:
+Then the menu's "VPN on/off" (pustota-vpn) switches it (Ctrl+Super+p opens the Proton VPN app), or:
     nmcli connection up id proton-uk ; nmcli connection down id proton-uk
 It stays off at boot unless you ask:  nmcli connection modify proton-uk autoconnect yes
 

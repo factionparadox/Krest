@@ -26,9 +26,18 @@ in /usr/share/polkit-1/rules.d/50-org.freedesktop.NetworkManager.rules).
                                      choose your own DNS servers for one connection
 
 ## VPN
-WireGuard is in the kernel, and NetworkManager drives it: Proton VPN's WireGuard files, for
-instance, import with  nmcli connection import type wireguard file proton-uk.conf ; then
-Ctrl+Super+p (pustota-vpn) switches it. The details: pustota-learn learn network.
+Ctrl+Super+p opens the Proton VPN app (protonvpn-app): Proton's own GTK app, which Void does
+not package. Pustota builds it from five recipes adopted from ProtonVPN-Void (srcpkgs/
+proton-vpn-gtk-app and its python3-proton-* libraries), which make it work without systemd:
+- it connects through ProTun, Proton's NetworkManager plugin (/usr/libexec/nm-protun-service);
+- it keeps your login in the Secret Service: gnome-keyring, started by Pustota's session
+  (the first time, it asks you to choose a password for that keyring);
+- not available: the kill switch (its permanent mode is a systemd unit) and split tunnelling.
+Run it as yourself, never with sudo. Its logs: ~/.cache/Proton/VPN/logs/.
+
+Without the app, WireGuard files work too: NetworkManager runs WireGuard itself.
+  nmcli connection import type wireguard file proton-uk.conf
+then menu -> VPN on/off (pustota-vpn). The details: pustota-learn learn network.
 
 ## Firewall: ufw
 ufw ("uncomplicated firewall") writes iptables rules from simple commands. Pustota turns it on

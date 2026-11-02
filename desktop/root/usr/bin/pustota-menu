@@ -25,6 +25,8 @@ Games (Steam)	steam
 Russian ›	pustota-menu russian
 Learn the system ›	pustota-menu learn
 Wi-Fi	networkmanager_dmenu
+Proton VPN	protonvpn-app
+VPN on/off (WireGuard files)	pustota-vpn
 Bluetooth	pustota-term Bluetooth bluetuith
 Sound	pustota-term Sound pulsemixer
 System ›	pustota-menu system

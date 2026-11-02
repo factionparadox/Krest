@@ -17,6 +17,8 @@ udiskie --automount --notify &                     # USB sticks and drives
 xbanish &                                          # hide the pointer while typing
 pustota-battery &                                  # low-battery warnings, hibernate when empty
 clipmenud &                                        # clipboard history (Super+v)
+# the Secret Service, where the Proton VPN app keeps its login (and other apps their passwords)
+command -v gnome-keyring-daemon >/dev/null && gnome-keyring-daemon --start --components=secrets >/dev/null
 pustota-nightlight &                               # warmer screen after sunset (redshift)
 polybar pustota >/dev/null 2>&1 &                  # the bar at the top
 [ -x "$HOME/.config/pustota/autostart" ] && "$HOME/.config/pustota/autostart" &
