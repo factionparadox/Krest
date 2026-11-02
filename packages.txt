@@ -41,6 +41,10 @@ hunspell-en_GB-all hunspell-ru_RU hyphen-en hyphen-ru mythes-en mythes-ru
 # Intel's Energy Optimizer (Pustota's own, srcpkgs/intel-lpmd): light work on the low-power
 # cores; upower tells it about the charger
 intel-lpmd upower
+# WebCord (Discord, privately) and FreeTube (YouTube, privately): Pustota's own, srcpkgs/
+webcord freetube
+# Steam (nonfree). Its 32-bit libraries come from multilib: the installer adds them one by one
+steam void-repo-multilib void-repo-multilib-nonfree
 # weekly TRIM for the SSD (snooze-weekly runs /etc/cron.weekly/fstrim)
 snooze run-parts
 # files, writing and Plan 9

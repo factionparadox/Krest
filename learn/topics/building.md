@@ -6,7 +6,7 @@ in WSL2 works) with:   bash build/build-iso.sh
 1. build-iso.sh downloads Void's official root filesystem (February 2025), checks it with Void's
    release key (minisign) and a pinned SHA-256, updates it, and builds inside it. Almost nothing
    is compiled: Pustota is configuration and scripts on top of Void's packages, plus its terminal.
-2. build-srcpkgs.sh builds what Void lacks (srcpkgs/: x-terminal, intel-lpmd, ani-cli, ollama-bin) with Void's own
+2. build-srcpkgs.sh builds what Void lacks (srcpkgs/: x-terminal, intel-lpmd, webcord, freetube, ani-cli, ollama-bin) with Void's own
    xbps-src, the tool every Void package is built with.
    build-packages.sh turns the desktop/, learn/ and russian/ folders into three XBPS packages
    with Void's xbps-create, indexes them with the others (xbps-rindex) and sign-repo.sh signs

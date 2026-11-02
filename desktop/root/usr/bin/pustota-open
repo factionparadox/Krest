@@ -1,17 +1,20 @@
 #!/bin/sh
 # The programs behind the Ctrl+Super chords. Each uses the bigger program if you have installed
-# it (kitty, Discord, VLC) and Pustota's light one if not.
+# it (kitty, VLC) and Pustota's light one if not. Discord is WebCord.
 have() { command -v "$1" >/dev/null 2>&1; }
 case "${1:-}" in
   web)      exec firefox ;;
   terminal) have kitty && exec kitty; exec pustota-term ;;
-  discord)  have discord && exec discord
+  discord)  have webcord && exec webcord        # WebCord: Discord, with its tracking blocked
+            have discord && exec discord
             exec firefox --new-window https://discord.com/app ;;
+  youtube)  exec freetube ;;
+  games)    exec steam ;;
   video)    have vlc && exec vlc
             exec mpv --player-operation-mode=pseudo-gui ;;   # drop a file or link on the window
   files)    exec pustota-term Files mc ;;
   anime)    exec pustota-term ani-cli ani-cli ;;
   vpn)      exec pustota-vpn ;;
   office)   exec libreoffice ;;
-  *)        echo "usage: pustota-open web|terminal|discord|video|files|anime|vpn|office" >&2; exit 2 ;;
+  *)        echo "usage: pustota-open web|terminal|discord|youtube|games|video|files|anime|vpn|office" >&2; exit 2 ;;
 esac

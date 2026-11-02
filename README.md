@@ -9,12 +9,12 @@
 | Base | Void Linux x86_64 glibc, **runit**, XBPS. **Linux 7.x** (`linux-mainline`: Void's newest kernel series, which the 13 Pro needs) |
 | Disk | GPT: 1 GiB EFI, swap the size of the RAM (for hibernation), **XFS** root |
 | Desktop | X11: **ratpoison** (each window fills the screen), **polybar** (the X11 counterpart of Waybar), **dmenu** menus, dunst notifications, slock screen lock, **X-терминал** (Pustota's own terminal: st with scrollback and a Plan 9 look) |
-| Tools | **Midnight Commander** for files, **acme** and the rest of **Plan 9** (sam, rc, the plumber), Firefox, **LibreOffice** (British English and Russian, with spelling), mpv, zathura, ani-cli, clipboard history, night light, fastfetch (with the Пустота logo), `framework_tool` |
+| Tools | **Midnight Commander** for files, **acme** and the rest of **Plan 9** (sam, rc, the plumber), Firefox, **WebCord** (Discord), **FreeTube** (YouTube), **Steam**, **LibreOffice** (British English and Russian, with spelling), mpv, zathura, ani-cli, clipboard history, night light, fastfetch (with the Пустота logo), `framework_tool` |
 | Laptop | Wi-Fi and Bluetooth menus, PipeWire sound, brightness and volume keys, TLP and thermald, zram, suspend that turns into hibernation after two hours, low-battery hibernation, tap-to-click, ufw firewall, fingerprint for sudo |
 | Russian | Constellation's kit: a 10,000-word drill, the AI tutor (Qwen3.6 35B-A3B, on the laptop), Piper voices, FSI/DLI/Peace Corps courses, *Между нами*, Wiktionary, audiobooks. English (UK) and Russian phonetic keyboard; Alt+Shift switches |
 | Learning | `pustota-learn`: 22 lessons on how this system works, the **Pustota wiki** (Void explained page by page, in the manner of the Arch Wiki: runit, XBPS, xbps-src, elogind, boot, kernels, from-Arch …), `search` across both, `explain` (shows what a command would do, without running it), `doctor` (a read-only map of the running system), and Void's Handbook offline (`pustota-handbook`: in mc beside the wiki, as a PDF or in Firefox) |
 | Installer | Automatic: five questions, one Yes/No, then the whole Void chroot install by itself |
-| Packages | Void's repository, plus Pustota's own signed one: its packages, and what Void lacks (`x-terminal`, `intel-lpmd`, `ani-cli`, `ollama-bin`), built with xbps-src from `srcpkgs/` |
+| Packages | Void's repository, plus Pustota's own signed one: its packages, and what Void lacks (`x-terminal`, `intel-lpmd`, `webcord`, `freetube`, `ani-cli`, `ollama-bin`), built with xbps-src from `srcpkgs/` |
 
 ## Installing
 
@@ -23,7 +23,7 @@
 3. The stick logs in by itself and opens **nmtui**. Connect to Wi-Fi (or just quit if Ethernet is plugged in). The installer starts once it can reach Void's package repository.
 4. Answer: the disk, a computer name, your username, your password (twice), the timezone (London is preselected), and whether to log in automatically.
 5. Read the summary and choose **Erase and install**. That erases the whole chosen disk; it's the only point of no return.
-6. Wait while it downloads about 2 GB from Void (LibreOffice is most of the extra), then reboot.
+6. Wait while it downloads about 2.5 GB from Void (LibreOffice and Steam's 32-bit libraries are most of it), then reboot.
 
 It boots straight into the desktop (or asks for your password, if you chose that). Press **Super+?** for the keys, or **Ctrl+Super+Space** for the menu.
 
@@ -84,7 +84,8 @@ bash build/publish-repo.sh         # uploads build/work/repo to the release "rep
 ```
 build/       build-iso.sh (Arch or Void), make-iso.sh (inside Void), build-srcpkgs.sh, build-packages.sh,
              sign-repo.sh, publish-repo.sh, make-branding.py, Void's key
-srcpkgs/     xbps-src templates for what Void lacks: x-terminal, intel-lpmd, ani-cli, ollama-bin
+srcpkgs/     xbps-src templates for what Void lacks: x-terminal, intel-lpmd, webcord, freetube, ani-cli,
+             ollama-bin
 branding/    the Пустота roundel (the original and the sizes made from it)
 installer/   pustota-installer.py and the live image's network setup
 desktop/root the pustota-desktop package: /etc/pustota, /etc/skel, /usr/bin/pustota-*
@@ -98,7 +99,7 @@ tests/       python3 -m unittest discover tests
 
 This is version 0.1, written on 31 October 2026. **Nothing has been built or booted yet.**
 
-- **Tested here:** 110 automated tests pass. They cover:
+- **Tested here:** 115 automated tests pass. They cover:
   - the templates, signing order, zstd level 3, and the fastfetch config and logo;
   - the installer's whole sequence against a fake system, from partitions to GRUB, plus every one of its decisions;
   - the Russian kit's downloader, checksums and tutor (Constellation's 37 tests, ported);

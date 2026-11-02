@@ -1,0 +1,47 @@
+# Template file for 'freetube'
+# Pustota: FreeTube, a private YouTube client (no Google account, no adverts, no tracking;
+# subscriptions stay on this laptop). Not in Void; oco builds it from source with pnpm, Pustota
+# repacks upstream's portable x86_64 build instead (no network or Node during the build). Its
+# SHA-256 is the one GitHub publishes for the release asset.
+pkgname=freetube
+version=0.25.3
+revision=1
+_tag=v${version}-beta
+archs="x86_64"
+hostmakedepends="unzip"
+depends="alsa-lib gtk+3 libnotify nss libXtst libXScrnSaver libsecret libgbm xdg-utils
+ at-spi2-core libcups libxkbcommon libdrm"
+short_desc="Private YouTube client: no account, adverts or tracking"
+maintainer="Pustota <pustota@localhost>"
+license="AGPL-3.0-only"
+homepage="https://freetubeapp.io"
+distfiles="https://github.com/FreeTubeApp/FreeTube/releases/download/${_tag}/freetube-${version}-beta-linux-x64-portable.zip"
+checksum=e3a671357ac32edcd872c6ea3218c8921bd0fda7318706d8570ece44d2c1fcbf
+create_wrksrc=yes
+nostrip=yes
+nopie=yes
+noshlibprovides=yes
+noverifyrdeps=yes
+
+do_install() {
+	# the zip holds the app either at its top or in one folder: find the executable
+	local dir
+	dir=$(dirname "$(find . -maxdepth 3 -type f -name freetube | head -n 1)")
+	[ -f "$dir/freetube" ] || msg_error "no freetube executable in the zip\n"
+	vmkdir usr/lib/freetube
+	cp -a "$dir"/. "${DESTDIR}/usr/lib/freetube/"
+	chmod 755 "${DESTDIR}/usr/lib/freetube/freetube"
+	vmkdir usr/bin
+	ln -sf /usr/lib/freetube/freetube "${DESTDIR}/usr/bin/freetube"
+	[ -f "$dir/LICENSE.electron.txt" ] && vlicense "$dir/LICENSE.electron.txt"
+	vmkdir usr/share/applications
+	cat > "${DESTDIR}/usr/share/applications/freetube.desktop" <<-DESKTOP
+	[Desktop Entry]
+	Name=FreeTube
+	Comment=Private YouTube client
+	Exec=freetube %U
+	Terminal=false
+	Type=Application
+	Categories=AudioVideo;Video;Network;
+	DESKTOP
+}

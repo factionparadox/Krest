@@ -151,6 +151,8 @@ class WholeInstall(unittest.TestCase):
         for name, value in self.saved.items():
             setattr(inst, name, value)
 
+    fail_pkg = None
+
     def fake_run(self, *cmd, input_text=None, capture=False):
         cmd = [str(c) for c in cmd]
         self.ran.append(cmd)
@@ -158,7 +160,9 @@ class WholeInstall(unittest.TestCase):
         if cmd[0] == 'partprobe':
             for n in (1, 2, 3):
                 Path(inst.partition_path(self.disk, n)).write_text('')
-        if cmd[0] == 'xbps-install':            # a minimal Void system appears
+        if cmd[0] == 'xbps-install' and self.fail_pkg and cmd[-1] == self.fail_pkg:
+            raise inst.sp.CalledProcessError(2, cmd)
+        if cmd[0] == 'xbps-install' and 'base-system' in cmd:   # a minimal Void system appears
             for svc in inst.SERVICES_REQUIRED + inst.SERVICES_OPTIONAL + ['dhcpcd', 'agetty-tty1']:
                 (t / 'etc/sv' / svc).mkdir(parents=True, exist_ok=True)
             (t / 'etc/sv/agetty-tty1/conf').write_text('GETTY_ARGS="--noclear"\n')
@@ -300,4 +304,18 @@ class PersonalMusic(WholeInstall):
         finally:
             inst.MUSIC = saved
         self.assertFalse(any('Music' in ' '.join(c) for c in self.ran))
+
+
+class Steam32bit(WholeInstall):
+    def test_each_32bit_library_is_tried_and_a_missing_one_is_skipped(self):
+        self.fail_pkg = 'mesa-vulkan-intel-32bit'
+        inst.dialog = lambda *a, **k: 0
+        inst.install(self.disk, 'pustota', 'stephen', 'pw', 'Europe/London', autologin=False)
+        tried = [c[-1] for c in self.ran if c[0] == 'xbps-install' and 'base-system' not in c]
+        self.assertEqual(tried, inst.STEAM_32BIT)
+        one = next(c for c in self.ran if c[0] == 'xbps-install' and c[-1] == 'libgcc-32bit')
+        self.assertIn(inst.MIRROR + '/multilib', one)
+        self.assertIn(inst.MIRROR + '/multilib/nonfree', one)
+        log = inst.LOGFILE.read_text() if inst.LOGFILE.exists() else ''
+        self.assertIn('mesa-vulkan-intel-32bit: not available, skipped', log)
 

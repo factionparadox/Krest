@@ -59,6 +59,11 @@ SERVICES_OPTIONAL = ["bluetoothd", "tlp", "thermald", "chronyd", "socklog-unix",
                      "zramen", "earlyoom", "ufw", "snooze-weekly", "intel_lpmd"]
 # Base live images start these; NetworkManager and elogind do their jobs on Pustota.
 SERVICES_OFF = ["dhcpcd", "wpa_supplicant", "acpid"]
+# Steam's 32-bit libraries (Void's multilib repositories; the list is Void's own, from
+# srcpkgs/steam/files/README.voidlinux, plus Intel's 32-bit Vulkan and PipeWire's ALSA plugin).
+# Each is installed on its own: one that is missing is logged and skipped, never fatal.
+STEAM_32BIT = ["libgcc-32bit", "libstdc++-32bit", "libdrm-32bit", "libglvnd-32bit", "libva-32bit",
+               "mesa-dri-32bit", "mesa-vulkan-intel-32bit", "alsa-pipewire-32bit"]
 LOCALES = ["en_GB.UTF-8 UTF-8", "ru_RU.UTF-8 UTF-8", "en_US.UTF-8 UTF-8"]
 TIMEZONES = [
     ("Europe/London", "United Kingdom"),
@@ -367,15 +372,24 @@ def install(disk, hostname, username, password, timezone, autologin):
         (xbpsd / "00-repository-main.conf").write_text(
             "# chosen by the Pustota installer (the default mirror did not answer)\n"
             f"repository={MIRROR}\n")
-        (xbpsd / "10-repository-nonfree.conf").write_text(
-            "# chosen by the Pustota installer (the default mirror did not answer)\n"
-            f"repository={MIRROR}/nonfree\n")
+        for name, path in (("10-repository-nonfree.conf", "nonfree"),
+                           ("10-repository-multilib.conf", "multilib"),
+                           ("10-repository-multilib-nonfree.conf", "multilib/nonfree")):
+            (xbpsd / name).write_text(
+                "# chosen by the Pustota installer (the default mirror did not answer)\n"
+                f"repository={MIRROR}/{path}\n")
     (xbpsd / "10-pustota-kernel.conf").write_text(
         "# Pustota: the Framework 13 Pro needs Linux 7.x; Void's default 'linux' is older.\n"
         "# linux-mainline follows Void's newest kernel series instead.\n"
         "ignorepkg=linux\nignorepkg=linux-headers\n")
     run("xbps-install", "-r", TARGET, "-C", "etc/xbps.d", "-S", "-y",
         "-R", REPO, "-R", MIRROR, "-R", MIRROR + "/nonfree", *PACKAGES)
+    for pkg in STEAM_32BIT:
+        try:
+            run("xbps-install", "-r", TARGET, "-C", "etc/xbps.d", "-y", "-R", MIRROR,
+                "-R", MIRROR + "/multilib", "-R", MIRROR + "/multilib/nonfree", pkg)
+        except sp.CalledProcessError:
+            log(f"Steam's 32-bit {pkg}: not available, skipped (sudo xbps-install {pkg} later)")
     for pkg in PACKAGES + ["linux-mainline"]:
         run("xbps-query", "-r", TARGET, "-p", "pkgver", pkg)
 

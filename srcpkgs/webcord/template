@@ -1,0 +1,38 @@
+# Template file for 'webcord'
+# Pustota: WebCord, a Discord client built on Discord's web app with privacy settings (blocks
+# Discord's tracking, no telemetry). Not in Void. Repacked from the upstream x86_64 RPM; its
+# SHA-256 is the one GitHub publishes for the release asset.
+pkgname=webcord
+version=4.14.0
+revision=1
+archs="x86_64"
+hostmakedepends="bsdtar"
+depends="alsa-lib gtk+3 libnotify nss libXtst libXScrnSaver libsecret libgbm xdg-utils
+ at-spi2-core libcups libxkbcommon libdrm"
+short_desc="Discord client with privacy settings (Discord's web app in Electron)"
+maintainer="Pustota <pustota@localhost>"
+license="MIT"
+homepage="https://github.com/SpacingBat3/WebCord"
+distfiles="https://github.com/SpacingBat3/WebCord/releases/download/v${version}/webcord-${version}-1.x86_64.rpm"
+checksum=e4e96656b3b0f5a6954022c47bbd4af48f49f0838f37ac290ff80ae4f76123ea
+skip_extraction="webcord-${version}-1.x86_64.rpm"
+create_wrksrc=yes
+# Electron brings its own libraries: they are not Void's to provide or check
+nostrip=yes
+nopie=yes
+noshlibprovides=yes
+noverifyrdeps=yes
+
+do_install() {
+	bsdtar -xf "${XBPS_SRCDISTDIR}/${pkgname}-${version}/webcord-${version}-1.x86_64.rpm" -C "${DESTDIR}"
+	rm -rf "${DESTDIR}/usr/lib/.build-id"
+	# electron-forge puts the app in /usr/lib/webcord (or WebCord) with a link in /usr/bin
+	local exe
+	exe=$(cd "${DESTDIR}" && find usr/lib -maxdepth 2 -type f -name webcord | head -n 1)
+	[ -n "$exe" ] || msg_error "no webcord executable in the RPM\n"
+	if [ ! -e "${DESTDIR}/usr/bin/webcord" ]; then
+		vmkdir usr/bin
+		ln -sf "/${exe}" "${DESTDIR}/usr/bin/webcord"
+	fi
+	chmod 755 "${DESTDIR}/${exe}"
+}

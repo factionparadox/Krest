@@ -131,7 +131,7 @@ class Desktop(unittest.TestCase):
             self.assertIn(key, sheet)
             self.assertIn(f'definekey top {bind} ', self.rc)
         # the Ctrl+Super chords for programs
-        for letter in 'wtdveapcrnbmo':
+        for letter in 'wtdveapcrnbmoyg':
             column = ' '.join(l[43:55] for l in sheet.splitlines())     # the PROGRAMS column
             self.assertRegex(column, rf'(^|\s){letter}(\s|$)', letter)
             self.assertIn(f'definekey top C-s-{letter} exec ', self.rc)
@@ -153,7 +153,7 @@ class Desktop(unittest.TestCase):
             self.assertIn(prog, opener)
         for pkg in ('firefox', 'mpv', 'mc', 'ani-cli', 'x-terminal', 'xterm'):
             self.assertIn(pkg, PACKAGES)
-        for opt in ('web', 'terminal', 'discord', 'video', 'files', 'anime', 'vpn', 'office'):
+        for opt in ('web', 'terminal', 'discord', 'youtube', 'games', 'video', 'files', 'anime', 'vpn', 'office'):
             self.assertIn(f'pustota-open {opt}', self.rc)
             self.assertRegex(opener, rf'(?m)^  {opt}\)')
         self.assertIn('NetworkManager', PACKAGES)               # pustota-vpn uses nmcli
@@ -555,4 +555,18 @@ class Battery(unittest.TestCase):
         menu = (DESK / 'usr/bin/pustota-menu').read_text()
         for opt in ('--touchscreen-enable false', '--kblight 0', '--click-force'):
             self.assertIn(opt, menu)
+
+
+class Apps(unittest.TestCase):
+    def test_webcord_freetube_steam(self):
+        for name, digest in (('webcord', 'e4e96656b3b0f5a6954022c47bbd4af48f49f0838f37ac290ff80ae4f76123ea'),
+                             ('freetube', 'e3a671357ac32edcd872c6ea3218c8921bd0fda7318706d8570ece44d2c1fcbf')):
+            t = (ROOT / 'srcpkgs' / name / 'template').read_text()
+            self.assertIn(f'checksum={digest}', t)
+            self.assertIn('noverifyrdeps=yes', t)          # Electron brings its own libraries
+            self.assertIn(name, PACKAGES)
+        self.assertTrue({'steam', 'void-repo-multilib', 'void-repo-multilib-nonfree'} <= PACKAGES)
+        self.assertIn('nofile    524288', (DESK / 'etc/security/limits.d/90-pustota-steam.conf').read_text())
+        opener = (DESK / 'usr/bin/pustota-open').read_text()
+        self.assertIn('have webcord && exec webcord', opener)
 

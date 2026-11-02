@@ -6,13 +6,15 @@
  WORKSTATIONS                              PROGRAMS  (Ctrl+Super + ...)
  Super+1 … 9        go to workstation 1-9  w      web (Firefox)
  Super+Shift+1 … 9  send the window there  t      terminal (X-терминал)
- Super+Tab          overview: pick a       d      Discord (in Firefox unless installed)
+ Super+Tab          overview: pick a       d      Discord (WebCord)
                     window or workstation  v      video (VLC if installed, else mpv)
                                            e      files (mc)
  WINDOWS                                   a      ani-cli
  Super+q            close the window       p      VPN on/off (Proton etc.)
  Super+f            this window full size  c      acme (write)
                                            o      office (LibreOffice)
+                                           y      YouTube (FreeTube)
+                                           g      games (Steam)
  Super+r            width 33/50/67/100%    r      Russian menu
  Super+`            next window            n / b / m   Wi-Fi / Bluetooth / sound mixer
  Super+Shift+Tab    previous window        Space  the Pustota menu

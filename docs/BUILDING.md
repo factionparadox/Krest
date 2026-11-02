@@ -28,6 +28,8 @@ Ordinary xbps-src templates, as in void-packages:
 | --- | --- |
 | `x-terminal` | X-терминал: st 0.9.3 via st-flexipatch, fetched with git at a pinned commit (checked after checkout); `files/patches.h` and `files/config.h` are Pustota's |
 | `intel-lpmd` | Intel's Energy Optimizer 0.1.0 (adds Panther Lake), fetched with git at the tag's commit; built against elogind's sd-bus, run as a runit service in cgroup-v2 isolate mode (no systemd); Pustota's Panther Lake config in `files/` |
+| `webcord` | WebCord 4.14.0 (Discord with its tracking blocked), the upstream x86_64 RPM repacked; SHA-256 as GitHub publishes it for the asset |
+| `freetube` | FreeTube 0.25.3 (private YouTube), the upstream portable x86_64 build repacked; SHA-256 as GitHub publishes it |
 | `ani-cli` | v5.1, pinned to commit `c99221d`; its three files are checked against git's bytes |
 | `ollama-bin` | Ollama's official v0.40.13 release, SHA-256 pinned, without CUDA/ROCm. It has a `_ollama` user and a runit service, which stays off until the Russian tutor is installed |
 

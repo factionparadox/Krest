@@ -19,6 +19,9 @@ Files (Midnight Commander)	pustota-term Files mc
 Write (acme)	pustota-acme
 Web	firefox
 Office (LibreOffice)	libreoffice
+Discord (WebCord)	webcord
+YouTube (FreeTube)	freetube
+Games (Steam)	steam
 Russian ›	pustota-menu russian
 Learn the system ›	pustota-menu learn
 Wi-Fi	networkmanager_dmenu
