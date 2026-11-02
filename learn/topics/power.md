@@ -40,8 +40,11 @@ Settings: /etc/elogind/logind.conf.d/ and /etc/elogind/sleep.conf.d/.
                                    battery for a laptop that lives on the charger
 After a tlp change: sudo tlp start. Then measure with powertop rather than trusting a list.
 
-Left out on purpose: Intel's low-power daemon for these chips (intel-lpmd) needs systemd to
-move work between core types, and Void has none; tlp and the kernel's own scheduling cover it.
+Not installed (yet): Intel's Energy Optimizer, intel-lpmd, which has a configuration for
+Panther Lake. It moves light work onto the low-power cores. Of its three ways of doing that, one
+asks systemd and two (cgroup v2 isolation, idle injection) do not; it is not packaged for Void,
+and the cgroup way needs CGROUP_MODE=unified in /etc/rc.conf. tlp and the kernel's own
+scheduling (Intel Thread Director) cover the rest.
 
 Avoid running a second power manager (power-profiles-daemon, auto-cpufreq) beside tlp: they
 fight over the same settings.
