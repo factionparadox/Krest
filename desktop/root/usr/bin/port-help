@@ -3,7 +3,7 @@
 #
 #   port-help           all of them
 #   port-help prt-get   one tool's section (prt-get, pkgmk, pkgadd, pkginfo, ports,
-#                       port-aurum, krest-update)
+#                       port-undo, port-aurum, krest-update)
 R=$(printf '\033[1;31m') N=$(printf '\033[0m')
 [ -t 1 ] || { R= N=; }
 
@@ -78,6 +78,14 @@ ${R}pkginfo${N}  what's installed
   pkginfo -i                    every installed package and its version
   pkginfo -l PACKAGE            the files PACKAGE installed
   pkginfo -o PATTERN            which package owns files matching PATTERN
+
+EOF
+fi
+if section port-undo; then cat <<EOF
+${R}port-undo${N}  going back after an update broke something
+  port-undo                     packages that have an older version kept
+  sudo port-undo PORT           reinstall PORT's previous version (seconds) and lock it
+  sudo prt-get unlock PORT      let updates rebuild it again
 
 EOF
 fi

@@ -1,0 +1,39 @@
+#!/bin/sh
+# port-undo: put back the version of a package you had before an update broke it.
+#
+#   port-undo              packages that have an older version kept, newest change first
+#   port-undo PORT         go back to PORT's previous version, and lock it so updates
+#                          leave it alone until you say (sudo prt-get unlock PORT)
+#   port-undo PORT FILE    go back to that exact package file
+#
+# Every package prt-get builds stays in /usr/ports/packages (name#version-release.pkg.tar.*),
+# so going back is reinstalling a file: seconds, nothing compiled.
+set -eu
+DIR=$(. /etc/pkgmk.conf 2>/dev/null; echo "${PKGMK_PACKAGE_DIR:-/usr/ports/packages}")
+installed() { pkginfo -i | awk -v n="$1" '$1 == n { print $2 }'; }
+files_of() { ls -t "$DIR"/"$1"#*.pkg.tar.* 2>/dev/null || true; }   # newest first
+
+if [ $# -eq 0 ]; then
+	echo "Packages with an older version kept in $DIR (newest change first):"
+	ls -t "$DIR"/*#*.pkg.tar.* 2>/dev/null | sed 's|.*/||; s|#.*||' | awk '{ n[$0]++; if (n[$0] == 2) print "  " $0 }'
+	echo "Go back with: port-undo PORT"
+	exit 0
+fi
+[ "$(id -u)" = 0 ] || exec sudo "$0" "$@"
+name=$1 now=$(installed "$1")
+[ -n "$now" ] || { echo "port-undo: $name is not installed"; exit 1; }
+if [ $# -ge 2 ]; then
+	file=$2
+else
+	file=
+	for f in $(files_of "$name"); do
+		v=${f##*#}; v=${v%.pkg.tar.*}
+		[ "$v" = "$now" ] && continue
+		file=$f; break
+	done
+fi
+[ -n "$file" ] && [ -f "$file" ] || { echo "port-undo: no other version of $name is kept in $DIR"; exit 1; }
+echo "$name: $now -> $(basename "$file" | sed 's/.*#//; s/\.pkg\.tar.*//')"
+pkgadd -u -f "$file"
+prt-get lock "$name" >/dev/null 2>&1 || true
+echo "Done. $name is locked, so updates skip it; when its next version is out: sudo prt-get unlock $name"

@@ -1,0 +1,16 @@
+# Description: Russian dictionary for Hunspell (spelling in Firefox, LibreOffice and the editors)
+# URL: https://github.com/LibreOffice/dictionaries/tree/master/ru_RU
+# Maintainer: Krest
+# Depends on: hunspell
+
+name=hunspell-ru
+version=20261103
+release=1
+_commit=4f1df64b2e8e14751aa7c2205d170ca016071315
+source=(https://raw.githubusercontent.com/LibreOffice/dictionaries/$_commit/ru_RU/ru_RU.aff
+	https://raw.githubusercontent.com/LibreOffice/dictionaries/$_commit/ru_RU/ru_RU.dic)
+
+build() {
+	install -Dm644 ru_RU.aff $PKG/usr/share/hunspell/ru_RU.aff
+	install -Dm644 ru_RU.dic $PKG/usr/share/hunspell/ru_RU.dic
+}

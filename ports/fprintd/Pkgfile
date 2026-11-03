@@ -1,0 +1,20 @@
+# Description: Fingerprint service and its PAM module (fingerprint for sudo and the login)
+# URL: https://fprint.freedesktop.org/
+# Maintainer: Krest
+# Depends on: basu dbus gettext glib libfprint linux-pam polkit python3
+
+name=fprintd
+version=1.94.5
+release=1
+source=(https://gitlab.freedesktop.org/libfprint/fprintd/-/archive/v$version/fprintd-v$version.tar.gz)
+
+build() {
+	# no systemd: D-Bus starts fprintd when something asks for it, and the PAM module talks
+	# to it through basu (sd-bus on its own)
+	meson setup fprintd-v$version build --prefix=/usr --buildtype=plain \
+		-D systemd=false -D libsystemd=basu -D man=false -D gtk_doc=false \
+		-D pam=true -D pam_modules_dir=/lib/security
+	meson compile -C build
+	DESTDIR=$PKG meson install -C build
+	rm -rf $PKG/usr/share/locale
+}

@@ -21,7 +21,7 @@ Output: `out/krest-x86_64.iso` and its `.sha256`.
 1. GPT on the chosen disk: 1 GiB EFI, swap the size of the RAM, XFS root; mkfs; mounts at `/mnt`.
 2. CRUX's core from the stick (`pkgadd -r /mnt`), GRUB's tools and dracut from the ISO, and the stick's kernel and NetworkManager.
 3. `/etc/fstab`, `/etc/rc.conf` (name, timezone, UK keymap, services), locales, your user (in `wheel`) and the passwords, ly on tty1 (`/etc/inittab`), dracut's initramfs with early microcode, GRUB (EFI, with `resume=` for hibernation). From here the laptop boots.
-4. `ports -u`, Krest's ports synced and every source checked, then each port of the `krest` metapackage's dependency tree built with `prt-get install`, in order, counted on screen (`[n of N]`). This is the long part: Firefox, LibreOffice, Rust and the kernel compile here.
+4. `ports -u`, Krest's ports synced and every source checked, then each port of the `krest` metapackage's dependency tree built with `prt-get install`, in order, counted on screen (`[n of N]`). This is the long part: Firefox, Rust and the kernel compile here. LibreOffice is left for after the first boot (`sudo prt-get depinst libreoffice`).
 
 If step 4 stops (a failed build, the network), the laptop still boots to ly or a console: log in and run `sudo krest-install --continue`. The log of every build is in `/var/log/pkgbuild/<port>.log`, and the install's in `/var/log/krest-install.log`.
 

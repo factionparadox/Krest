@@ -295,6 +295,8 @@ finish() {
 	cp "$LOG" "$T/var/log/krest-install.log" 2>/dev/null
 	say ""
 	say "Krest is installed."
+	say "  Later, from the desktop: krest-fingerprint (finger for sudo), and LibreOffice with"
+	say "  sudo prt-get depinst libreoffice (a long build)."
 }
 
 cleanup() {
@@ -336,4 +338,8 @@ trap - EXIT
 dlg --msgbox "Krest is installed.
 
 Remove the USB stick and restart (reboot). Super+? shows the keys; krest-learn
-explains the system." 11 70
+explains the system, port-help lists the package commands.
+
+Once you're on the desktop:
+  krest-fingerprint                   use your finger for sudo
+  sudo prt-get depinst libreoffice    LibreOffice (a long build: leave it running)" 16 76

@@ -1,0 +1,43 @@
+#!/bin/sh
+# krest-fingerprint: use the fingerprint reader for sudo (and the password prompts of
+# programs that ask through polkit).
+#
+#   krest-fingerprint          enrol a finger, then switch fingerprint on for sudo
+#   krest-fingerprint add      enrol another finger
+#   krest-fingerprint off      back to passwords only (enrolled fingers are kept)
+#   krest-fingerprint forget   delete your enrolled fingers
+#
+# With it on, sudo asks for a finger first; give it 10 seconds or press Ctrl+C, and it asks
+# for the password as before. The screen lock (slock) and the login screen keep passwords.
+set -eu
+user=${SUDO_USER:-$(id -un)}
+[ "$(id -u)" = 0 ] || exec sudo "$0" "$@"
+LINE='auth       sufficient   pam_fprintd.so max-tries=2 timeout=10'
+FILES="/etc/pam.d/sudo /etc/pam.d/polkit-1"
+
+on() {
+	for f in $FILES; do
+		[ -f "$f" ] || continue
+		grep -q pam_fprintd "$f" || { printf '%s\n' "$LINE" | cat - "$f" > "$f.new" && mv "$f.new" "$f"; }
+		# CRUX's upgrades of sudo and polkit leave the file alone
+		grep -q "${f#/}" /etc/pkgadd.conf 2>/dev/null ||
+			printf 'UPGRADE\t^%s$\tNO\n' "${f#/}" >> /etc/pkgadd.conf
+	done
+	echo "Fingerprint is on for sudo. Try it: sudo true"
+}
+off() {
+	for f in $FILES; do [ -f "$f" ] && sed -i '/pam_fprintd/d' "$f"; done
+	echo "Fingerprint is off: passwords only."
+}
+enrol() {
+	echo "Enrolling a finger for $user: touch the reader each time it asks (about 10 times)."
+	fprintd-enroll "$user"
+}
+
+case ${1:-} in
+	"") enrol && on ;;
+	add) enrol ;;
+	off) off ;;
+	forget) off; fprintd-delete "$user" ;;
+	*) sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+esac

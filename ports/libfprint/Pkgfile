@@ -1,0 +1,17 @@
+# Description: Fingerprint reader library (the Framework's Goodix reader among them)
+# URL: https://fprint.freedesktop.org/
+# Maintainer: Krest
+# Depends on: eudev glib libgudev libgusb openssl xorg-libpixman
+
+name=libfprint
+version=1.94.10
+release=1
+source=(https://gitlab.freedesktop.org/libfprint/libfprint/-/archive/v$version/libfprint-v$version.tar.gz)
+
+build() {
+	meson setup libfprint-v$version build --prefix=/usr --buildtype=plain \
+		-D introspection=false -D doc=false -D gtk-examples=false -D installed-tests=false \
+		-D udev_rules=enabled -D udev_rules_dir=/lib/udev/rules.d -D udev_hwdb=disabled
+	meson compile -C build
+	DESTDIR=$PKG meson install -C build
+}

@@ -10,13 +10,13 @@
 | Kernel | Linux 7.3.1, built on the laptop from Arch Linux's laptop configuration with Krest's changes (`ports/linux`) |
 | Disk | GPT: 1 GiB EFI, swap the size of the RAM (for hibernation), **XFS** root |
 | Desktop | X11: **ratpoison**, **polybar**, **dmenu** menus, dunst, slock, **ly** on tty1, **X-терминал** (st with scrollback and a Plan 9 look) |
-| Tools | Midnight Commander, **acme** and the rest of **Plan 9** (plan9port), Firefox, **WebCord**, **FreeTube**, **Steam**, the **Proton VPN** app, LibreOffice, mpv, zathura, ani-cli, clipboard history, night light, fastfetch, `framework_tool` |
+| Tools | Midnight Commander, **acme** and the rest of **Plan 9** (plan9port), Firefox, **WebCord**, **FreeTube**, **Steam**, the **Proton VPN** app, mpv, zathura, ani-cli, clipboard history, night light, fastfetch, `framework_tool` |
 | Laptop | NetworkManager (nmtui, Wi-Fi menu), bluetuith, PipeWire, TLP and thermald, Intel video decoding, sleep that turns into hibernation after two hours on battery (acpid), low-battery hibernation, nftables firewall |
 | Russian | Constellation's kit: a 10,000-word drill, the AI tutor (Qwen3.6 35B-A3B through llama.cpp, on the laptop), Piper voices, FSI/DLI/Peace Corps courses, *Между нами*, Wiktionary, audiobooks. UK and Russian phonetic keyboard; Alt+Shift switches |
 | Learning | `krest-learn`: lessons and a wiki on how this system works, `explain`, `doctor`, and CRUX's handbook offline |
 | Installer | A net install: nmtui, five questions, one Yes/No, then the CRUX install by itself, with the desktop compiled on the laptop |
 
-Not included: fingerprint login. CRUX has no atomic updates or rollback; updates are rebuilds, and older packages stay in `/usr/ports/packages` to reinstall.
+Fingerprint for sudo: `krest-fingerprint` (the login screen and screen lock keep passwords). Spelling in English and Russian. LibreOffice comes after the first boot, so the install is shorter: `sudo prt-get depinst libreoffice`. CRUX has no atomic updates, but every package it builds is kept, so `port-undo foo` puts the previous version back in seconds.
 
 ## Installing
 
@@ -24,7 +24,7 @@ Not included: fingerprint login. CRUX has no atomic updates or rollback; updates
 2. In the laptop's firmware: **Secure Boot off**. Boot the stick in UEFI mode.
 3. The installer starts. Plug in a cable or connect to Wi-Fi with nmtui, then answer: the disk, a computer name, your username, your password (twice), the timezone, and whether to log in automatically.
 4. Read the summary and choose **Erase and install**. That's the only point of no return.
-5. Steps 1–3 take minutes. Step 4 compiles the desktop on the laptop, every build on screen: **expect most of a day** (Firefox, LibreOffice, Rust and the kernel are the big ones). The laptop can already boot after step 3.
+5. Steps 1–3 take minutes. Step 4 compiles the desktop on the laptop, every build on screen: **expect most of a day** (Firefox, Rust and the kernel are the big ones). The laptop can already boot after step 3.
 
 If the compiling stops, restart, log in, and run `sudo krest-install --continue`.
 
@@ -34,6 +34,7 @@ If the compiling stops, restart, log in, and run `sudo krest-install --continue`
 krest-update          # Krest's ports (git pull), CRUX's (ports -u), then prt-get sysup
 krest-update --dry    # only show what would be rebuilt
 prt-get search foo      # find a port; sudo prt-get depinst foo builds and installs it
+port-undo foo           # an update broke foo: put its previous version back, in seconds
 port-help               # every package command (prt-get, pkgmk, pkgadd, pkginfo ...) on one page
 ```
 
