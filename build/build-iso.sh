@@ -139,10 +139,15 @@ depmod_b() {
 say "Arch's ready-built kernel and Intel firmware (downloaded by pacman; nothing is compiled)"
 command -v pacman >/dev/null || die "this step uses pacman: run the build on Arch (WSL is fine)"
 arch=$cache/arch
-mkdir -p "$arch/pkgs"
 ARCH_PKGS="linux linux-firmware-intel linux-firmware-realtek linux-firmware-other linux-firmware-whence sof-firmware wireless-regdb"
-# (explicit names: pacman fetches them even when this computer has them installed)
-sudo pacman -Syw --noconfirm --cachedir "$arch/pkgs" $ARCH_PKGS
+# into pacman's own cache (pacman downloads as its own user, which can't write in your home);
+# explicit names, so pacman fetches them even when this computer has them installed
+sudo pacman -Syw --noconfirm $ARCH_PKGS
+safe_rm "$arch/pkgs"; mkdir -p "$arch/pkgs"
+pcache=$(pacman-conf CacheDir 2>/dev/null | head -n 1); pcache=${pcache:-/var/cache/pacman/pkg/}
+pacman -Sp --print-format '%n %f' $ARCH_PKGS | while read -r n f; do
+  case " $ARCH_PKGS " in *" $n "*) cp "${pcache%/}/$f" "$arch/pkgs/" || exit 1 ;; esac
+done || die "the packages pacman downloaded are not in ${pcache}"
 akpkg=$(ls -t "$arch"/pkgs/linux-[0-9]*.pkg.tar.zst | head -n 1)
 [[ -n $akpkg ]] || die "pacman downloaded no kernel package"
 st=$work/linux-arch
