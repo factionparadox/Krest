@@ -186,7 +186,10 @@ sudo install -m755 "$project/installer/krest-install" "$live/usr/bin/krest-insta
 sudo install -m755 "$project/installer/iso-binaries" "$live/usr/bin/iso-binaries"
 sudo install -m755 "$project/installer/krest-wifi" "$live/usr/bin/krest-wifi"
 sudo install -m644 "$project/installer/live-bash_profile" "$live/root/.bash_profile"
-sudo tar -C "$live" --one-file-system -cf - . | xz -T0 -6 > "$work/rootfs.tar.xz"
+# gzip, not xz: many times quicker to make, and the stick's busybox (no zstd) unpacks it quicker
+# too. pigz uses every core when it's there.
+gz=gzip; command -v pigz >/dev/null && gz=pigz
+sudo tar -C "$live" --one-file-system -cf - . | $gz -1 > "$work/rootfs.tar.gz"
 safe_rm "$live"
 
 say "The initramfs: CRUX's, with the $KVER kernel's storage and filesystem modules"
@@ -207,6 +210,9 @@ sudo find "$ird/lib/modules" -name '*.ko.zst' -exec zstd -q -d --rm {} \;
 depmod_b "$ird" "$KVER"
 # the live system is bigger now: give its RAM disk room
 sudo sed -i 's/-o size=1650m/-o size=75%/' "$ird/init"
+# ...which is now a gzip archive
+sudo sed -i 's|tar -xJf ${MEDIAMNT}/${PREFIX}/rootfs.tar.xz|tar -xzf ${MEDIAMNT}/${PREFIX}/rootfs.tar.gz|; s|rootfs.tar.xz|rootfs.tar.gz|g' "$ird/init"
+grep -q 'tar -xzf ${MEDIAMNT}/${PREFIX}/rootfs.tar.gz' "$ird/init" || die "couldn't point the initramfs at rootfs.tar.gz"
 (cd "$ird" && sudo find . | sudo cpio -o -H newc --quiet) > "$work/initramfs"
 safe_rm "$ird"
 
@@ -223,7 +229,7 @@ rm -f "$iso"
 xorriso -indev "$iso_in" -outdev "$iso" -boot_image any replay \
   -map "$st/pkg/boot/vmlinuz-$KVER" /boot/vmlinuz \
   -map "$work/initramfs" /boot/initramfs \
-  -map "$work/rootfs.tar.xz" /rootfs.tar.xz \
+  -rm /rootfs.tar.xz -- -map "$work/rootfs.tar.gz" /rootfs.tar.gz \
   -map "$work/grub.cfg" /boot/grub/grub.cfg \
   -map "$work/packages" /krest/packages \
   -map "$work/repo" /krest/repo \
