@@ -1,0 +1,227 @@
+#!/bin/bash
+# krest-aur: turn an AUR recipe (PKGBUILD) into a Krest port, then build and install it.
+#
+#   krest-aur NAME...       fetch NAME from the AUR, show you its PKGBUILD, convert it to a
+#                           port in /usr/ports/aur/NAME, then build and install it (prt-get)
+#   krest-aur -c NAME...    convert only: the port is left for you to read, edit and build
+#                           (cd /usr/ports/aur/NAME && pkgmk -d, or prt-get install NAME)
+#
+# How it converts:
+#   - name, version, release, description, URL and sources come from the PKGBUILD;
+#   - the PKGBUILD itself goes into the port, and the port's build() runs its prepare(),
+#     build() and package() functions, in that order, with makepkg's variables ($srcdir,
+#     $pkgdir, $pkgname, $pkgver ...) set to pkgmk's;
+#   - dependencies get CRUX's names (python-foo is python3-foo, libx11 is xorg-libx11 ...).
+#     One that's in no CRUX or Krest collection but is on the AUR is converted too; one
+#     that's nowhere is listed in the Pkgfile for you to port;
+#   - every download is checked against the PKGBUILD's sha256sums before anything is built.
+#     Sources the PKGBUILD marks SKIP (git checkouts, mostly) can't be checked.
+#
+# AUR recipes are written by anyone. A PKGBUILD runs as root while it's converted and
+# built, so krest-aur shows it to you first and builds nothing you haven't said yes to.
+# Recipes for Arch's systemd, or that use Arch-only tools, may need editing.
+set -euo pipefail
+AUR=https://aur.archlinux.org
+DEST=/usr/ports/aur
+die() { echo "krest-aur: $*" >&2; exit 1; }
+say() { printf '\n==> %s\n' "$*"; }
+[ "$(id -u)" = 0 ] || exec sudo "$0" "$@"
+
+convert_only=
+[ "${1:-}" = -c ] && { convert_only=1; shift; }
+[ $# -gt 0 ] || { sed -n '2,/^set /p' "$0" | sed '$d; s/^# \{0,1\}//'; exit 2; }
+command -v curl >/dev/null || die "curl is needed"
+
+# Arch's package name -> CRUX's (empty: not needed on CRUX)
+crux_name() {
+	local n=${1%%[<>=]*}
+	case $n in
+		glibc|gcc-libs|filesystem|sh|bash|coreutils|libgcc|libstdc++) echo "" ;;
+		python) echo python3 ;;
+		python-*) echo "python3-${n#python-}" ;;
+		qt5-base) echo qt5 ;;
+		libx11|libx[a-z]*|libxcb) echo "xorg-$n" ;;
+		xorg-xrandr|xorg-xset|xorg-xprop|xorg-xdpyinfo|xorg-xrdb) echo "$n" ;;
+		gtk2|gtk3|gtk4) echo "$n" ;;
+		systemd|systemd-libs|systemd-sysvcompat) echo "!systemd" ;;
+		lib32-*) echo "!lib32" ;;
+		*) echo "$n" ;;
+	esac
+}
+in_ports() { prt-get path "$1" >/dev/null 2>&1; }
+on_aur() { curl -fsS "$AUR/rpc/v5/info?arg[]=$1" | grep -q '"resultcount":[1-9]'; }
+
+# the variables a sourced PKGBUILD sets, printed as NAME<TAB>value, one array element a line
+read_pkgbuild() {   # read_pkgbuild DIR
+	( set +eu; cd "$1"
+	  CARCH=x86_64; srcdir=$PWD/src; pkgdir=$PWD/pkg; startdir=$PWD
+	  . ./PKGBUILD >/dev/null
+	  emit() { local v=$1; shift; local x; for x in "$@"; do printf '%s\t%s\n' "$v" "$x"; done; }
+	  emit pkgname "${pkgname[@]}"
+	  emit pkgver "$pkgver"; emit pkgrel "${pkgrel:-1}"
+	  emit pkgdesc "${pkgdesc:-}"; emit url "${url:-}"
+	  emit depends "${depends[@]}" "${depends_x86_64[@]}"
+	  emit makedepends "${makedepends[@]}" "${makedepends_x86_64[@]}"
+	  emit source "${source[@]}" "${source_x86_64[@]}"
+	  emit sha256sums "${sha256sums[@]}" "${sha256sums_x86_64[@]}"
+	) 2>/dev/null
+}
+field() { awk -F'\t' -v k="$1" '$1 == k { print substr($0, length(k) + 2) }' "$2"; }
+
+# the file name pkgmk saves a source under, and the name makepkg would use for it
+pkgmk_file() { local u=${1#*::}; echo "${u##*/}"; }
+makepkg_file() { case $1 in *::*) echo "${1%%::*}" ;; *) echo "${1##*/}" ;; esac; }
+
+convert() {   # convert NAME: fetch, show, convert to $DEST/NAME
+	local name=$1 tmp port
+	in_ports "$name" && [ ! -d "$DEST/$name" ] && { echo "    $name is already a CRUX or Krest port: using that"; return 0; }
+	say "$name from the AUR"
+	tmp=$(mktemp -d)
+	curl -fsSL "$AUR/cgit/aur.git/snapshot/$name.tar.gz" | tar -xzf - -C "$tmp" ||
+		die "$name is not on the AUR"
+	[ -f "$tmp/$name/PKGBUILD" ] || die "$name: the AUR snapshot has no PKGBUILD"
+	echo "---------------------------------------------------------------- $name/PKGBUILD"
+	cat "$tmp/$name/PKGBUILD"
+	echo "--------------------------------------------------------------------------------"
+	local ok; read -r -p "Convert and build $name from this recipe? [y/N] " ok </dev/tty
+	[[ $ok =~ ^[yY] ]] || die "stopped: $name not converted"
+
+	local info=$tmp/info
+	read_pkgbuild "$tmp/$name" > "$info"
+	local ver rel desc url
+	ver=$(field pkgver "$info"); rel=$(field pkgrel "$info"); rel=${rel%%.*}
+	desc=$(field pkgdesc "$info"); url=$(field url "$info")
+	[ -n "$ver" ] || die "$name: couldn't read pkgver from its PKGBUILD"
+
+	# dependencies
+	local deps=() missing=() notes=() d c
+	while read -r d; do
+		[ -n "$d" ] || continue
+		c=$(crux_name "$d")
+		case $c in
+			"") continue ;;
+			'!systemd') notes+=("needs systemd ($d): may not work on Krest without changes"); continue ;;
+			'!lib32') notes+=("wants 32-bit $d: see the compat-32 collection"); continue ;;
+		esac
+		if in_ports "$c"; then deps+=("$c")
+		elif [ "$c" != "${d%%[<>=]*}" ] && in_ports "${d%%[<>=]*}"; then deps+=("${d%%[<>=]*}")
+		elif on_aur "${d%%[<>=]*}"; then convert "${d%%[<>=]*}"; deps+=("${d%%[<>=]*}")
+		else missing+=("$c")
+		fi
+	done < <( { field depends "$info"; field makedepends "$info"; } | awk '!seen[$0]++')
+
+	# sources: URLs for pkgmk, files the port carries itself, git checkouts done in build()
+	port=$DEST/$name
+	rm -rf "$port"; mkdir -p "$port"
+	cp -a "$tmp/$name/." "$port/"; rm -rf "$port/.SRCINFO" "$port/.git" "$port/.gitignore"
+	local srcs=() sums=() links=() gits=() i=0 s sum file want n u
+	local -a s_all sum_all
+	mapfile -t s_all < <(field source "$info")
+	mapfile -t sum_all < <(field sha256sums "$info")
+	for s in "${s_all[@]}"; do
+		sum=${sum_all[$i]:-SKIP}; i=$((i + 1))
+		case ${s#*::} in
+			git+*|git://*)
+				gits+=("$s"); deps+=(git); continue ;;
+			http://*|https://*|ftp://*)
+				want=$(makepkg_file "$s"); u=${s#*::}
+				# a GitHub archive saved under its own name (v1.0.tar.gz would clash with
+				# every other v1.0.tar.gz in the shared download folder): GitHub serves it
+				# under any file name given after the tag
+				if [[ $u =~ ^(https://github\.com/[^/]+/[^/]+/archive/)(refs/tags/)?([^/]+)\.(tar\.gz|zip)$ ]] &&
+				   [ "$want" != "${u##*/}" ]; then
+					u=${BASH_REMATCH[1]}${BASH_REMATCH[3]}/$want
+				fi
+				srcs+=("$u")
+				file=${u##*/}
+				[ "$file" = "$want" ] || links+=("$file $want")
+				sums+=("$sum  $file") ;;
+			*)   # a file in the AUR repository (a patch, a .desktop file ...)
+				srcs+=("$s"); sums+=("$sum  $s") ;;
+		esac
+	done
+	srcs+=(PKGBUILD)
+
+	{
+		echo "# Description: ${desc:-$name (from the AUR)}"
+		echo "# URL: ${url:-$AUR/packages/$name}"
+		echo "# Maintainer: converted from $AUR/packages/$name by krest-aur"
+		echo "# Depends on: $(printf '%s\n' "${deps[@]}" | awk 'NF && !seen[$0]++' | tr '\n' ' ' | sed 's/ $//')"
+		[ ${#missing[@]} -eq 0 ] || echo "# Not found in CRUX, Krest or the AUR (port these first): ${missing[*]}"
+		for n in "${notes[@]}"; do echo "# Note: $n"; done
+		echo
+		echo "name=$name"
+		echo "version=${ver//-/_}"
+		echo "release=${rel:-1}"
+		printf 'source=('; local first=1
+		for s in "${srcs[@]}"; do [ -n "$first" ] || printf '\n\t'; printf '%s' "$s"; first=; done
+		echo ')'
+		echo
+		echo "# git checkouts the PKGBUILD asks for (pkgmk downloads only plain files)"
+		printf '_aur_git=('; for s in "${gits[@]}"; do printf "'%s' " "$s"; done; echo ')'
+		printf '_aur_links=('; for s in "${links[@]}"; do printf "'%s' " "$s"; done; echo ')'
+		cat <<'EOF'
+
+build() {
+	cd "$SRC"
+	local l g dir ref
+	# sources the PKGBUILD names differently from their download
+	for l in "${_aur_links[@]}"; do ln -sf ${l% *} "${l#* }"; done
+	for g in "${_aur_git[@]}"; do
+		dir=${g%%::*}; g=${g#*::}; g=${g#git+}; ref=
+		case $g in *'#'*) ref=${g#*#}; ref=${ref#*=}; g=${g%%#*} ;; esac
+		[ "$dir" != "${dir#*://}" ] && dir=$(basename "${g%.git}")
+		git clone "${g%%\?*}" "$dir"
+		[ -z "$ref" ] || git -C "$dir" checkout "$ref"
+	done
+	# the AUR recipe, with makepkg's names for pkgmk's folders
+	unset -f prepare build check package
+	CARCH=x86_64 srcdir=$SRC pkgdir=$PKG startdir=$SRC
+	. "$SRC/PKGBUILD"
+	if declare -F prepare >/dev/null; then (cd "$SRC" && set -e && prepare); fi
+	if declare -F build >/dev/null; then (cd "$SRC" && set -e && build); fi
+	local p fns=()
+	if declare -F package >/dev/null; then fns=(package)
+	else for p in "${pkgname[@]}"; do declare -F "package_$p" >/dev/null && fns+=("package_$p"); done
+	fi
+	[ ${#fns[@]} -gt 0 ] || { echo "the PKGBUILD has no package() function"; return 1; }
+	for p in "${fns[@]}"; do (cd "$SRC" && set -e && "$p"); done
+	# CRUX keeps no licences or empty folders in packages
+	rm -rf "$PKG/usr/share/licenses" "$PKG/usr/share/doc"
+	find "$PKG" -depth -type d -empty -delete
+}
+EOF
+	} > "$port/Pkgfile"
+	printf '%s\n' "${sums[@]}" > "$port/sha256"
+	rm -rf "$tmp"
+	echo "    $port/Pkgfile written"
+	[ ${#missing[@]} -eq 0 ] || echo "    not found anywhere (port these first): ${missing[*]}"
+	for n in "${notes[@]}"; do echo "    note: $n"; done
+	built+=("$name")
+}
+
+check_sources() {   # check_sources NAME: download, then compare with the PKGBUILD's sha256sums
+	local port=$DEST/$1 line sum file dir
+	say "$1: downloading and checking its sources"
+	(cd "$port" && pkgmk -do)
+	. /etc/pkgmk.conf 2>/dev/null; dir=${PKGMK_SOURCE_DIR:-$port}
+	while read -r sum file; do
+		[ -n "$file" ] || continue
+		if [ "$sum" = SKIP ]; then echo "    $file: not checked (the PKGBUILD says SKIP)"; continue; fi
+		local f=$dir/$file; [ -f "$f" ] || f=$port/$file
+		[ "$(sha256sum "$f" | cut -d' ' -f1)" = "$sum" ] || die "$file does not match the PKGBUILD's sha256sum: not building"
+		echo "    $file: matches"
+	done < "$port/sha256"
+	(cd "$port" && pkgmk -um >/dev/null)
+}
+
+mkdir -p "$DEST"
+grep -q "^prtdir $DEST\$" /etc/prt-get.conf || echo "prtdir $DEST" >> /etc/prt-get.conf
+built=()
+for n in "$@"; do convert "$n"; done
+[ -z "$convert_only" ] || { echo; echo "Converted: ${built[*]:-nothing}. Build with: prt-get depinst NAME"; exit 0; }
+for n in "${built[@]}"; do check_sources "$n"; done
+for n in "$@"; do
+	say "Building $n (prt-get depinst)"
+	prt-get depinst "$n"
+done

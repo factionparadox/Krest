@@ -199,6 +199,21 @@ settings() {
 		echo "shm     /dev/shm  tmpfs   defaults                         0 0"
 	} > "$T/etc/fstab"
 	cat "$T/etc/fstab" | tee -a "$LOG"
+	# Krest is its own distribution, built on CRUX: it says so (fastfetch, scripts), and
+	# CRUX's filesystem package is told to leave that file alone when it's upgraded
+	local kv; kv=$(cat "$MEDIA/krest/repo/VERSION" 2>/dev/null)
+	cat > "$T/etc/os-release" <<OSR
+NAME="Krest"
+PRETTY_NAME="Крест / Krest $kv"
+ID=krest
+ID_LIKE=crux
+VERSION_ID=$kv
+ANSI_COLOR="0;31"
+HOME_URL="https://github.com/factionparadox/Krest"
+BUG_REPORT_URL="https://github.com/factionparadox/Krest/issues"
+OSR
+	grep -q 'etc/os-release' "$T/etc/pkgadd.conf" 2>/dev/null ||
+		printf '\n# Krest: its own os-release\nUPGRADE\t^etc/os-release$\tNO\n' >> "$T/etc/pkgadd.conf"
 	sed -i -e "s|^HOSTNAME=.*|HOSTNAME=$HOST|" -e "s|^TIMEZONE=.*|TIMEZONE=$TZONE|" \
 		-e "s|^KEYMAP=.*|KEYMAP=uk|" -e "s|^LANG=.*|LANG=en_GB.UTF-8|" \
 		-e "s|^SERVICES=.*|SERVICES=($SERVICES)|" "$T/etc/rc.conf"
@@ -218,7 +233,7 @@ settings() {
 	install -m644 "$T/usr/src/krest/build/crux/pkgmk.conf" "$T/etc/pkgmk.conf"
 	install -m644 "$T/usr/src/krest/build/crux/prt-get.conf" "$T/etc/prt-get.conf"
 	for f in "$T"/etc/ports/*.inactive; do [ -e "$f" ] && mv "$f" "${f%.inactive}"; done
-	mkdir -p "$T/usr/ports/distfiles" "$T/usr/ports/packages" "$T/var/log/pkgbuild"
+	mkdir -p "$T/usr/ports/distfiles" "$T/usr/ports/packages" "$T/usr/ports/aur" "$T/var/log/pkgbuild"
 	# ly on the first console instead of a text login
 	sed -i 's|^c1:.*|c1:2:respawn:/usr/bin/ly|' "$T/etc/inittab"
 	# GRUB, with hibernation's resume partition

@@ -2,7 +2,7 @@
 
 # Крест · Krest
 
-*Krest* is Russian for "cross": CRUX is Latin for cross, and Crux is the Southern Cross, four stars that are its mark. It's a light, keyboard-driven laptop system built on **CRUX 3.8**: simple, BSD-style, and compiled on the laptop itself for its own processor. It's for writing, for learning Russian, and for lasting on battery. It's made for the Framework Laptop 13 Pro (Intel Core Ultra series 3, Panther Lake), and runs on most UEFI laptops.
+*Krest* is Russian for "cross": CRUX is Latin for cross, and Crux is the Southern Cross, four stars that are its mark. It's a light, keyboard-driven laptop distribution of its own, built on **CRUX 3.8**: simple, BSD-style, and compiled on the laptop itself for its own processor. It's for writing, for learning Russian, and for lasting on battery. It's made for the Framework Laptop 13 Pro (Intel Core Ultra series 3, Panther Lake), and runs on most UEFI laptops.
 
 | | |
 | --- | --- |
@@ -36,9 +36,21 @@ krest-update --dry    # only show what would be rebuilt
 prt-get search foo      # find a port; sudo prt-get depinst foo builds and installs it
 ```
 
+## Software from the AUR
+
+Arch's AUR recipes (PKGBUILDs) are close cousins of CRUX's Pkgfiles, so Krest converts them:
+
+```sh
+krest-aur foo         # shows you foo's PKGBUILD, converts it to /usr/ports/aur/foo, checks its
+                      # downloads against the PKGBUILD's sha256sums, then builds and installs it
+krest-aur -c foo      # convert only, to read or edit the port first
+```
+
+Dependencies get CRUX's names (`python-foo` is `python3-foo`, `libx11` is `xorg-libx11`). One that's only on the AUR is converted too; one that's nowhere is listed at the top of the Pkgfile for you to port. Recipes that need systemd say so in the Pkgfile, and may need editing. CRUX's and Krest's own ports always come first.
+
 ## Building the ISO
 
-On any x86_64 Linux with sudo (Arch on WSL2 works), with about 30 GB free:
+On Arch (WSL2 works) with sudo and about 15 GB free. Nothing is compiled on that computer:
 
 ```sh
 git clone https://github.com/factionparadox/Krest && cd Krest
