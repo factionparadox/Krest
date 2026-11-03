@@ -212,9 +212,10 @@ def choice(label, options, default=None):
 
 
 # ------------------------------------------------------------------ progress
-# While the installer works, a dialog "progressbox" shows each command as it runs and its output
-# as it comes, under the step's title; package installs also show a count, "312 of 1450".
-PROGRESS = None           # the dialog --progressbox process for the current step
+# While the installer works it prints plain text to the screen: each step's heading, every
+# command as it starts and its output as it comes, with an XBPS package count ("[312 of 1450
+# unpacked]"). Plain text, not a dialog window, so nothing can leave the screen blank.
+PROGRESS = None           # where progress goes: the screen (sys.stdout) once a step has begun
 STEP = re.compile(r"^(\d)/(\d)\s+")
 # XBPS without a terminal says "1450 packages will be downloaded:" (and "installed"), then prints
 # one line per file downloaded ("name.xbps: 3MB [avg rate: ...]"), per package unpacked and per
@@ -225,33 +226,33 @@ COUNTED = (("downloaded", "downloaded", re.compile(r"\.xbps: \S+ \[avg rate")),
            ("configured", "installed", re.compile(r"^\S+: configuring \.\.\.")))
 
 
-def progress_open(title, text):
-    """Show a progressbox (not in tests, and not without a terminal)."""
+def progress_open(title, text, out=None):
+    """Clear the screen and print the step's heading; progress lines follow it."""
     global PROGRESS
-    progress_close()
-    if not shutil.which("dialog") or not sys.stdout.isatty():
-        return
-    PROGRESS = sp.Popen(["dialog", "--backtitle", TITLE, "--title", title, "--progressbox",
-                         text, "22", "90"], stdin=sp.PIPE, text=True, bufsize=1)
+    PROGRESS = out or sys.stdout
+    if PROGRESS.isatty():
+        PROGRESS.write("\033[H\033[2J")                 # clear the screen
+    rule = "=" * min(78, max(len(title), 20))
+    PROGRESS.write(f"{rule}\n {title}\n{rule}\n{text}\n\n")
+    PROGRESS.flush()
 
 
 def progress_close():
     global PROGRESS
     if PROGRESS is not None:
         try:
-            PROGRESS.stdin.close()
-        except OSError:
+            PROGRESS.flush()
+        except (OSError, ValueError):
             pass
-        PROGRESS.wait()
         PROGRESS = None
 
 
 def progress_line(text):
-    if PROGRESS is not None and PROGRESS.poll() is None:
+    if PROGRESS is not None:
         try:
-            PROGRESS.stdin.write(text[:86] + "\n")
-            PROGRESS.stdin.flush()
-        except OSError:
+            PROGRESS.write(text[:200] + "\n")
+            PROGRESS.flush()
+        except (OSError, ValueError):
             pass
 
 
@@ -279,11 +280,8 @@ class Counter:
 def stage(message):
     m = STEP.match(message)
     title = f"Installing Pustota: step {m.group(1)} of {m.group(2)}" if m else "Pustota"
-    text = (STEP.sub("", message) + "\n\nThe commands and their output scroll below; all of it "
-            "is also in " + str(LOGFILE) + " (Alt+F2 for a shell).")
-    if PROGRESS is None and not (shutil.which("dialog") and sys.stdout.isatty()):
-        dialog("--infobox", text, 9, 78)
-        return
+    text = (STEP.sub("", message) + "\n\nEach command and its output appear below as they happen. "
+            "Everything is also kept in " + str(LOGFILE) + " (Alt+F2 opens a shell).")
     progress_open(title, text)
 
 

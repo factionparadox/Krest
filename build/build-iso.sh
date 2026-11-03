@@ -30,7 +30,7 @@ while [[ $# -gt 0 ]]; do
 done
 if [[ -n $music ]]; then
   if [[ -d $music && -n $(ls -A "$music" 2>/dev/null) ]]; then
-    say "Your music: $music ($(du -sh "$music" | cut -f1)): this makes a PERSONAL ISO, not for sharing"
+    say "Your music: $music ($(du -shL "$music" | cut -f1)): this makes a PERSONAL ISO, not for sharing"
   else
     [[ $music == "$project/local/music" ]] || die "no music in $music"
     music=

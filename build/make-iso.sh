@@ -75,7 +75,7 @@ cp "$root/packages.txt" "$ov/usr/lib/pustota/packages.txt"
 # installer. (It goes into the live image with everything else; FLAC hardly compresses further.)
 iso=pustota-x86_64.iso
 if [[ -n ${PUSTOTA_MUSIC:-} && -d $PUSTOTA_MUSIC && -n $(ls -A "$PUSTOTA_MUSIC") ]]; then
-  say "Your music ($(du -sh "$PUSTOTA_MUSIC" | cut -f1)): a PERSONAL ISO, not for sharing"
+  say "Your music ($(du -shL "$PUSTOTA_MUSIC" | cut -f1)): a PERSONAL ISO, not for sharing"
   install -d "$ov/usr/lib/pustota/music"
   cp -a "$PUSTOTA_MUSIC/." "$ov/usr/lib/pustota/music/"
   iso=pustota-personal-x86_64.iso

@@ -327,13 +327,14 @@ class Progress(unittest.TestCase):
         self.tmp = Path(tempfile.mkdtemp())
         self.saved = inst.LOGFILE, inst.PROGRESS
         inst.LOGFILE = self.tmp / 'log'
-        # a stand-in for dialog --progressbox: cat copies what it is shown into a file
+        # the screen, as a file
         self.shown = self.tmp / 'shown'
-        inst.PROGRESS = inst.sp.Popen(['sh', '-c', f'cat > {self.shown}'], stdin=inst.sp.PIPE,
-                                      text=True, bufsize=1)
+        self.screen = self.shown.open('w')
+        inst.progress_open('Installing Pustota: step 2 of 6', 'Installing', out=self.screen)
 
     def tearDown(self):
         inst.progress_close()
+        self.screen.close()
         inst.LOGFILE, inst.PROGRESS = self.saved
 
     def test_output_is_shown_live_and_logged(self):
@@ -341,6 +342,7 @@ class Progress(unittest.TestCase):
                              "b-2_1: unpacking ...\\nno newline at the end'")
         inst.progress_close()
         shown = self.shown.read_text()
+        self.assertIn('Installing Pustota: step 2 of 6', shown)     # the heading
         self.assertIn('$ sh -c', shown)                              # the command itself
         self.assertIn('[1 of 2 unpacked] a-1_1: unpacking ...', shown)
         self.assertIn('[2 of 2 unpacked] b-2_1: unpacking ...', shown)   # \r splits lines too
