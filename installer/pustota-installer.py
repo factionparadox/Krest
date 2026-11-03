@@ -177,6 +177,7 @@ def fstab_ok(fstab):
 
 # ------------------------------------------------------------------ dialog
 def dialog(*args, output=False):
+    progress_close()               # a question or a notice replaces the progress view
     command = ["dialog", "--clear", "--stdout", "--backtitle", TITLE, "--title", "Pustota",
                *map(str, args)]
     result = sp.run(command, text=True, stdout=sp.PIPE)
@@ -207,9 +208,80 @@ def choice(label, options, default=None):
     return selected
 
 
+# ------------------------------------------------------------------ progress
+# While the installer works, a dialog "progressbox" shows each command as it runs and its output
+# as it comes, under the step's title; package installs also show a count, "312 of 1450".
+PROGRESS = None           # the dialog --progressbox process for the current step
+STEP = re.compile(r"^(\d)/(\d)\s+")
+# XBPS without a terminal says "1450 packages will be downloaded:" (and "installed"), then prints
+# one line per file downloaded ("name.xbps: 3MB [avg rate: ...]"), per package unpacked and per
+# package configured ("name-1.2_1: unpacking ...", then later ": configuring ...").
+PLANNED = re.compile(r"^(\d+) packages? will be (downloaded|installed|updated):")
+COUNTED = (("downloaded", "downloaded", re.compile(r"\.xbps: \S+ \[avg rate")),
+           ("unpacked", "installed", re.compile(r"^\S+: unpacking \.\.\.")),
+           ("configured", "installed", re.compile(r"^\S+: configuring \.\.\.")))
+
+
+def progress_open(title, text):
+    """Show a progressbox (not in tests, and not without a terminal)."""
+    global PROGRESS
+    progress_close()
+    if not shutil.which("dialog") or not sys.stdout.isatty():
+        return
+    PROGRESS = sp.Popen(["dialog", "--backtitle", TITLE, "--title", title, "--progressbox",
+                         text, "22", "90"], stdin=sp.PIPE, text=True, bufsize=1)
+
+
+def progress_close():
+    global PROGRESS
+    if PROGRESS is not None:
+        try:
+            PROGRESS.stdin.close()
+        except OSError:
+            pass
+        PROGRESS.wait()
+        PROGRESS = None
+
+
+def progress_line(text):
+    if PROGRESS is not None and PROGRESS.poll() is None:
+        try:
+            PROGRESS.stdin.write(text[:86] + "\n")
+            PROGRESS.stdin.flush()
+        except OSError:
+            pass
+
+
+class Counter:
+    """Counts an XBPS transaction from its own output: "312 of 1450 unpacked"."""
+    def __init__(self):
+        self.total = {"downloaded": 0, "installed": 0}
+        self.done = {name: 0 for name, _, _ in COUNTED}
+
+    def line(self, text):
+        m = PLANNED.match(text)
+        if m:
+            key = "downloaded" if m.group(2) == "downloaded" else "installed"
+            self.total[key] += int(m.group(1))
+            return None
+        for name, total, pattern in COUNTED:
+            if pattern.search(text):
+                self.done[name] += 1
+                if self.total[total]:
+                    return f"[{min(self.done[name], self.total[total])} of {self.total[total]} {name}] "
+                return f"[{self.done[name]} {name}] "
+        return None
+
+
 def stage(message):
-    dialog("--infobox", message + "\n\nEverything is logged to " + str(LOGFILE)
-           + " (Alt+F2 for a shell to read it).", 9, 78)
+    m = STEP.match(message)
+    title = f"Installing Pustota: step {m.group(1)} of {m.group(2)}" if m else "Pustota"
+    text = (STEP.sub("", message) + "\n\nThe commands and their output scroll below; all of it "
+            "is also in " + str(LOGFILE) + " (Alt+F2 for a shell).")
+    if PROGRESS is None and not (shutil.which("dialog") and sys.stdout.isatty()):
+        dialog("--infobox", text, 9, 78)
+        return
+    progress_open(title, text)
 
 
 # ------------------------------------------------------------------ system
@@ -253,8 +325,26 @@ def run(*cmd, input_text=None, capture=False):
                             stdout=sp.PIPE, stderr=log, check=True)
             log.write(result.stdout)
             return result.stdout
-        sp.run(list(map(str, cmd)), input=input_text, text=True,
-               stdout=log, stderr=sp.STDOUT, check=True)
+        progress_line("$ " + " ".join(map(str, cmd)))
+        proc = sp.Popen(list(map(str, cmd)), stdin=sp.PIPE if input_text else sp.DEVNULL,
+                        stdout=sp.PIPE, stderr=sp.STDOUT)
+        if input_text:                                  # passwords: to the program, never shown
+            proc.stdin.write(input_text.encode())
+            proc.stdin.close()
+        counter, pending = Counter(), b""
+        for chunk in iter(lambda: proc.stdout.read1(4096), b""):
+            log.write(chunk.decode(errors="replace"))
+            log.flush()
+            pending += chunk
+            *lines, pending = re.split(rb"[\r\n]", pending)
+            for raw in lines:
+                text = raw.decode(errors="replace").strip()
+                if text:
+                    progress_line((counter.line(text) or "  ") + text)
+        if pending.strip():
+            progress_line("  " + pending.decode(errors="replace").strip())
+        if proc.wait():
+            raise sp.CalledProcessError(proc.returncode, list(map(str, cmd)))
     return None
 
 
@@ -310,6 +400,7 @@ def check_repository():
 
 
 def failure_dialog(error):
+    progress_close()
     details = ""
     if LOGFILE.is_file():
         lines = LOGFILE.read_text(encoding="utf-8", errors="replace").splitlines()
@@ -576,6 +667,7 @@ def main():
         return 1
     finally:
         password = ""
+    progress_close()
     shutil.copy2(LOGFILE, TARGET / "var/log/pustota-install.log")
     cleanup()
     notice(f"Pustota is installed (Linux {version}).\n\nRemove the USB stick and reboot:  "

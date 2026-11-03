@@ -319,3 +319,42 @@ class Steam32bit(WholeInstall):
         log = inst.LOGFILE.read_text() if inst.LOGFILE.exists() else ''
         self.assertIn('mesa-vulkan-intel-32bit: not available, skipped', log)
 
+
+class Progress(unittest.TestCase):
+    """The installer streams each command's output (and an XBPS package count) to the screen."""
+    def setUp(self):
+        import tempfile
+        self.tmp = Path(tempfile.mkdtemp())
+        self.saved = inst.LOGFILE, inst.PROGRESS
+        inst.LOGFILE = self.tmp / 'log'
+        # a stand-in for dialog --progressbox: cat copies what it is shown into a file
+        self.shown = self.tmp / 'shown'
+        inst.PROGRESS = inst.sp.Popen(['sh', '-c', f'cat > {self.shown}'], stdin=inst.sp.PIPE,
+                                      text=True, bufsize=1)
+
+    def tearDown(self):
+        inst.progress_close()
+        inst.LOGFILE, inst.PROGRESS = self.saved
+
+    def test_output_is_shown_live_and_logged(self):
+        inst.run('sh', '-c', "printf '2 packages will be installed:\\na-1_1: unpacking ...\\r"
+                             "b-2_1: unpacking ...\\nno newline at the end'")
+        inst.progress_close()
+        shown = self.shown.read_text()
+        self.assertIn('$ sh -c', shown)                              # the command itself
+        self.assertIn('[1 of 2 unpacked] a-1_1: unpacking ...', shown)
+        self.assertIn('[2 of 2 unpacked] b-2_1: unpacking ...', shown)   # \r splits lines too
+        self.assertIn('no newline at the end', shown)
+        self.assertIn('b-2_1: unpacking', inst.LOGFILE.read_text())
+
+    def test_input_is_passed_not_shown_and_failures_raise(self):
+        inst.run('sh', '-c', 'read -r x; test -n "$x"', input_text='pw-hidden\n')
+        with self.assertRaises(inst.sp.CalledProcessError):
+            inst.run('sh', '-c', 'exit 3')
+        inst.progress_close()
+        self.assertNotIn('pw-hidden', self.shown.read_text())
+        self.assertNotIn('pw-hidden', inst.LOGFILE.read_text())
+
+    def test_steps_get_a_title(self):
+        self.assertEqual(inst.STEP.match('2/6  Installing').group(1, 2), ('2', '6'))
+
