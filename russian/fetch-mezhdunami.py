@@ -26,7 +26,7 @@ import sys
 import time
 from urllib import error, parse, request
 
-USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) rassvet/1 (+https://github.com/factionparadox/Pustota)'
+USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) krest/1 (+https://github.com/factionparadox/Pustota)'
 ATTR = re.compile(r'''(\b(?:href|src)\s*=\s*)(["'])(.*?)\2''', re.I | re.S)
 CSS_URL = re.compile(r'''url\(\s*(["']?)([^"')]+)\1\s*\)''', re.I)
 IFRAME = re.compile(r'''<iframe\b[^>]*\bsrc\s*=\s*(["'])([^"']*soundcloud[^"']*)\1[^>]*>.*?</iframe>''', re.I | re.S)
@@ -40,7 +40,7 @@ Licence: Creative Commons BY-NC-ND 3.0
 (https://creativecommons.org/licenses/by-nc-nd/3.0/). Copied unchanged for personal,
 non-commercial use; the only changes are those needed to read it offline (links point
 to these files, and the SoundCloud players are replaced with the same recordings
-saved locally). Rassvet is not affiliated with the authors. Open index.html to start.
+saved locally). Krest is not affiliated with the authors. Open index.html to start.
 '''
 
 

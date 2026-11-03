@@ -1,6 +1,0 @@
-[Desktop Entry]
-Name=Rassvet
-Comment=ratpoison, polybar and the Rassvet tools
-Exec=/usr/bin/rassvet-session
-Type=Application
-DesktopNames=rassvet

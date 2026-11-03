@@ -1,6 +1,6 @@
 # Description: FreeTube: YouTube without an account, adverts or tracking
 # URL: https://freetubeapp.io
-# Maintainer: Rassvet
+# Maintainer: Krest
 # Depends on: alsa-lib at-spi2-core cups gtk3 libdrm libnotify libsecret libxkbcommon mesa nss xdg-utils xorg-libxscrnsaver xorg-libxtst
 
 name=freetube

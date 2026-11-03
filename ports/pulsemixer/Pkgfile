@@ -1,6 +1,6 @@
 # Description: Sound mixer in the terminal (Ctrl+Super+m)
 # URL: https://pypi.org/project/pulsemixer/
-# Maintainer: Rassvet
+# Maintainer: Krest
 # Depends on: pulseaudio python3-build python3-installer python3-setuptools
 
 name=pulsemixer

@@ -1,6 +1,6 @@
 # Description: Plan 9 from User Space: acme, sam, rc, the plumber and the rest
 # URL: https://9fans.github.io/plan9port/
-# Maintainer: Rassvet
+# Maintainer: Krest
 # Depends on: fontconfig freetype xorg-libxext xorg-libxt
 
 name=plan9port

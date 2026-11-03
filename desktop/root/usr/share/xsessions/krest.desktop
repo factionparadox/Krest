@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=Krest
+Comment=ratpoison, polybar and the Krest tools
+Exec=/usr/bin/krest-session
+Type=Application
+DesktopNames=krest

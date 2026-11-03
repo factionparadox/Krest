@@ -18,13 +18,13 @@ One part can differ, for just your account, in ~/.bash_profile:
 For every user, the same lines in a file of your own in /etc/profile.d/.
 
 ## The keyboard
-X: /etc/X11/xorg.conf.d/30-rassvet.conf
+X: /etc/X11/xorg.conf.d/30-krest.conf
   Option "XkbLayout" "gb,ru"   Option "XkbVariant" ",phonetic"
   Option "XkbOptions" "grp:alt_shift_toggle"
 English (UK) and Russian phonetic, Alt+Shift to switch. setxkbmap -query shows what X uses;
 try another layout for this session with
   setxkbmap -layout gb,ru -variant ,phonetic -option grp:alt_shift_toggle
-and make it permanent in that file (it belongs to rassvet-desktop: an update keeps your
+and make it permanent in that file (it belongs to krest-desktop: an update keeps your
 version and offers the new one through rejmerge).
 The text console: KEYMAP=uk in /etc/rc.conf (loadkeys; the maps are in /usr/share/keymaps).
 GRUB uses the firmware's US layout.
@@ -38,6 +38,6 @@ TIMEZONE in /etc/rc.conf ("Europe/London" unless you chose another), applied at 
 linking /etc/localtime to /usr/share/zoneinfo/ZONE. For now as well:
   sudo ln -sf /usr/share/zoneinfo/Europe/Moscow /etc/localtime
 For one shell:  TZ=Europe/Moscow date
-The night light (rassvet-nightlight) works out sunset from this zone.
+The night light (krest-nightlight) works out sunset from this zone.
 
 See also: time, rc-conf ; man localedef ; man setxkbmap ; man loadkeys ; man locale

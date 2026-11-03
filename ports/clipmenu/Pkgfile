@@ -1,6 +1,6 @@
 # Description: Clipboard history in dmenu (Super+v)
 # URL: https://github.com/cdown/clipmenu
-# Maintainer: Rassvet
+# Maintainer: Krest
 # Depends on: clipnotify dmenu xsel
 
 name=clipmenu

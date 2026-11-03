@@ -1,6 +1,6 @@
 # Description: Fast downloads over HTTP, BitTorrent and more (ani-cli uses it)
 # URL: https://aria2.github.io/
-# Maintainer: Rassvet
+# Maintainer: Krest
 # Depends on: c-ares libxml2 openssl sqlite3 zlib
 
 name=aria2

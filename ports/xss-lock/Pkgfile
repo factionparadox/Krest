@@ -1,6 +1,6 @@
 # Description: Locks the screen (slock) on sleep and when the screen saver starts
 # URL: https://github.com/xdbob/xss-lock
-# Maintainer: Rassvet
+# Maintainer: Krest
 # Depends on: glib xorg-xcb-util
 
 name=xss-lock

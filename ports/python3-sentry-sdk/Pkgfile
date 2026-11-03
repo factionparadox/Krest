@@ -1,6 +1,6 @@
 # Description: Sentry's Python SDK (the Proton VPN app's crash reports, off by default)
 # URL: https://pypi.org/project/sentry_sdk/
-# Maintainer: Rassvet
+# Maintainer: Krest
 # Depends on: python3-build python3-certifi python3-installer python3-setuptools python3-urllib3
 
 name=python3-sentry-sdk

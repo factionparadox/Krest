@@ -1,6 +1,6 @@
 # Filesystems and disks
 
-## Rassvet's layout
+## Krest's layout
   nvme0n1p1   1 GiB   FAT32   /boot/efi   the EFI system partition (boot loader)
   nvme0n1p2   = RAM   swap                hibernation, and overflow when memory runs short
   nvme0n1p3   rest    XFS     /           everything else, /usr/ports and its builds included
@@ -39,7 +39,7 @@ SSDs stay fast when told which blocks are free. Nothing does it on a schedule he
                                  Sunday (see: time)
 
 ## USB sticks and drives
-rassvet-session starts udiskie, which mounts them through udisks as they are plugged in and
+krest-session starts udiskie, which mounts them through udisks as they are plugged in and
 notifies you with the folder. By hand:
   udisksctl mount -b /dev/sda1 ; udisksctl unmount -b /dev/sda1
   sudo mount /dev/sda1 /mnt      the plain way

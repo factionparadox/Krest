@@ -1,0 +1,14 @@
+# Description: Крест / Krest: the whole system (installing this installs everything)
+# URL: https://github.com/factionparadox/Pustota
+# Maintainer: Krest
+# Depends on: linux linux-firmware intel-ucode xfsprogs dosfstools exfatprogs ntfs-3g grub2-efi efibootmgr sudo xorg-server xorg-xinit xorg-xauth xorg-xf86-input-libinput xorg-xinput xorg-xrandr xorg-setxkbmap xorg-xprop xorg-xdpyinfo mesa libva intel-media-driver ly krest-desktop krest-learn krest-russian networkmanager networkmanager-dmenu wpa_supplicant bluez bluetuith pipewire wireplumber pulseaudio pulsemixer alsa-utils tlp thermald acpid upower polkit udisks2 dbus framework-tool powertop fwupd udiskie plan9port mc neovim git rsync htop openssh fastfetch firefox libreoffice hunspell hunspell-en mpv yt-dlp ffmpeg zathura zathura-pdf-mupdf steam webcord freetube proton-vpn-gtk-app ani-cli fzf aria2 xorg-font-dejavu-ttf otf-noto ttf-noto-emoji xorg-font-terminus font-go font-ipaex chrony
+
+name=krest
+version=@VERSION@
+release=@RELEASE@
+source=()
+
+build() {
+	install -d $PKG/usr/share/krest
+	echo "Крест / Krest $version" > $PKG/usr/share/krest/version
+}

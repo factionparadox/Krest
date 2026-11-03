@@ -1,6 +1,6 @@
 # Description: framework_tool: the Framework laptop's keyboard light, touchpad, battery limit and firmware
 # URL: https://github.com/FrameworkComputer/framework-system
-# Maintainer: Rassvet
+# Maintainer: Krest
 # Depends on: eudev
 
 name=framework-tool

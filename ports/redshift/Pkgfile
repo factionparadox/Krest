@@ -1,6 +1,6 @@
 # Description: Warmer screen colour after sunset (night light)
 # URL: http://jonls.dk/redshift/
-# Maintainer: Rassvet
+# Maintainer: Krest
 # Depends on: xorg-libxcb xorg-libxxf86vm
 
 name=redshift

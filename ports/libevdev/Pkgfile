@@ -1,6 +1,6 @@
 # Description: Wrapper library for evdev devices (needed by thermald)
 # URL: https://www.freedesktop.org/wiki/Software/libevdev/
-# Maintainer: Rassvet
+# Maintainer: Krest
 
 name=libevdev
 version=1.14.0

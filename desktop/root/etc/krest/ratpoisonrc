@@ -1,0 +1,120 @@
+# Krest's ratpoison settings (your ~/.ratpoisonrc sources this file).
+# ratpoison gives each window the whole screen; split the screen into frames to see several.
+# Three ways to give commands:
+#   Super + a key         windows, workstations and the session
+#   Ctrl + Super + a key  programs (the "chords": Ctrl+Super+w is the web browser)
+#   Ctrl+t, then a key    ratpoison's own keys (Ctrl+t ? lists them all)
+
+startup_message off
+escape C-t
+set font "DejaVu Sans Mono-11"
+set fgcolor #d8d8d8
+set bgcolor #16161c
+set fwcolor #c8323c
+set bwcolor #2a2a32
+set border 2
+set barpadding 8 4
+set inputwidth 640
+set msgwait 3
+set padding 0 30 0 0
+set winname class
+set winliststyle column
+set transgravity center
+set maxsizegravity center
+set waitcursor 1
+
+# workstations 1-9 (ratpoison calls them groups); krest-workstations makes them at login
+exec krest-workstations
+addhook switchgroup exec polybar-msg action "#workstation.hook.0"
+# Super+1..9: go to that workstation. Super+Shift+1..9: send this window there.
+definekey top s-1 gselect 1
+definekey top s-2 gselect 2
+definekey top s-3 gselect 3
+definekey top s-4 gselect 4
+definekey top s-5 gselect 5
+definekey top s-6 gselect 6
+definekey top s-7 gselect 7
+definekey top s-8 gselect 8
+definekey top s-9 gselect 9
+definekey top s-S-1 gmove 1
+definekey top s-S-exclam gmove 1
+definekey top s-S-2 gmove 2
+definekey top s-S-quotedbl gmove 2
+definekey top s-S-3 gmove 3
+definekey top s-S-sterling gmove 3
+definekey top s-S-4 gmove 4
+definekey top s-S-dollar gmove 4
+definekey top s-S-5 gmove 5
+definekey top s-S-percent gmove 5
+definekey top s-S-6 gmove 6
+definekey top s-S-asciicircum gmove 6
+definekey top s-S-7 gmove 7
+definekey top s-S-ampersand gmove 7
+definekey top s-S-8 gmove 8
+definekey top s-S-asterisk gmove 8
+definekey top s-S-9 gmove 9
+definekey top s-S-parenleft gmove 9
+definekey top s-Tab exec krest-overview
+
+# programs: Ctrl+Super chords
+definekey top C-s-w exec krest-open web
+definekey top C-s-t exec krest-open terminal
+definekey top C-s-d exec krest-open discord
+definekey top C-s-v exec krest-open video
+definekey top C-s-e exec krest-open files
+definekey top C-s-a exec krest-open anime
+definekey top C-s-p exec krest-open vpn
+definekey top C-s-o exec krest-open office
+definekey top C-s-y exec krest-open youtube
+definekey top C-s-g exec krest-open games
+definekey top C-s-c exec krest-acme
+definekey top C-s-r exec krest-menu russian
+definekey top C-s-n exec sh -c 'command -v networkmanager_dmenu >/dev/null && exec networkmanager_dmenu; exec krest-term Wi-Fi nmtui'
+definekey top C-s-b exec sh -c 'command -v bluetuith >/dev/null && exec krest-term Bluetooth bluetuith; exec krest-term Bluetooth bluetoothctl'
+definekey top C-s-m exec krest-term Sound pulsemixer
+definekey top C-s-space exec krest-menu
+definekey top s-space exec dmenu_run -i -fn 'DejaVu Sans Mono-12' -nb '#16161c' -sb '#c8323c'
+definekey top s-Return exec krest-open terminal
+
+definekey top s-v exec clipmenu -i -l 15 -fn 'Go Mono-12' -nb '#16161c' -sb '#c8323c'
+
+# windows
+definekey top s-q delete
+definekey top s-f only
+definekey top s-r exec krest-width
+definekey top s-grave next
+definekey top s-ISO_Left_Tab prev
+# frames: see two windows at once
+definekey top s-backslash vsplit
+definekey top s-minus hsplit
+definekey top s-BackSpace remove
+definekey top s-o only
+definekey top s-Left focusleft
+definekey top s-Right focusright
+definekey top s-Up focusup
+definekey top s-Down focusdown
+definekey top s-S-Left exchangeleft
+definekey top s-S-Right exchangeright
+definekey top s-S-Up exchangeup
+definekey top s-S-Down exchangedown
+
+# session
+definekey top s-x exec xset s activate
+definekey top s-z exec krest-sleep suspend
+definekey top s-Escape exec krest-menu power
+definekey top s-question exec krest-keys
+definekey top s-slash exec krest-keys
+definekey top s-S-r source /etc/krest/ratpoisonrc
+
+# screenshots
+definekey top s-S-s exec krest-screenshot area
+definekey top Print exec krest-screenshot
+definekey top S-Print exec krest-screenshot area
+
+# the laptop's own keys
+definekey top XF86AudioRaiseVolume exec wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+
+definekey top XF86AudioLowerVolume exec wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
+definekey top XF86AudioMute exec wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
+definekey top XF86AudioMicMute exec wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle
+definekey top XF86MonBrightnessUp exec brightnessctl -q set +5%
+definekey top XF86MonBrightnessDown exec brightnessctl -q set 5%-

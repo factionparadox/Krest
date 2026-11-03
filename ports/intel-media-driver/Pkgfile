@@ -1,6 +1,6 @@
 # Description: Intel's video decoding driver (VA-API, iHD): video plays on the GPU, saving battery
 # URL: https://github.com/intel/media-driver
-# Maintainer: Rassvet
+# Maintainer: Krest
 # Depends on: intel-gmmlib libva
 
 name=intel-media-driver

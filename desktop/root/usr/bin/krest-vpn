@@ -1,0 +1,19 @@
+#!/bin/sh
+# Ctrl+Super+p: switch a VPN on or off. Proton VPN (or any WireGuard/OpenVPN service) lives in
+# NetworkManager; add one once with   nmcli connection import type wireguard file proton-uk.conf
+# (krest-learn network has the steps).
+list=$(nmcli -t -f NAME,TYPE,ACTIVE connection show | awk -F: '$2=="wireguard" || $2=="vpn" {
+  print ($3=="yes" ? "on   " : "off  ") $1 }')
+if [ -z "$list" ]; then
+  notify-send "No VPN yet" "Download a WireGuard file from your Proton account, then:
+nmcli connection import type wireguard file proton-uk.conf"
+  exit 0
+fi
+pick=$(printf '%s\n' "$list" | dmenu -i -p "VPN (pick to switch):" -fn 'DejaVu Sans Mono-12' \
+  -nb '#16161c' -sb '#c8323c') || exit 0
+name=${pick#* }; name=${name# *}; name=$(printf '%s' "$name" | sed 's/^ *//')
+case "$pick" in
+  on*)  nmcli connection down id "$name" && notify-send "VPN off" "$name" ;;
+  off*) nmcli connection up id "$name" && notify-send "VPN on" "$name" ||
+        notify-send "VPN failed" "$name: see  nmcli connection up id '$name'" ;;
+esac

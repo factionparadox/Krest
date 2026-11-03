@@ -1,6 +1,6 @@
 # Description: Waits for clipboard changes (used by clipmenu)
 # URL: https://github.com/cdown/clipnotify
-# Maintainer: Rassvet
+# Maintainer: Krest
 # Depends on: xorg-libxfixes
 
 name=clipnotify

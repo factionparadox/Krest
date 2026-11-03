@@ -1,6 +1,6 @@
 # Description: Command-line access to the X selections (used by clipmenu)
 # URL: https://github.com/kfish/xsel
-# Maintainer: Rassvet
+# Maintainer: Krest
 # Depends on: xorg-libxt
 
 name=xsel

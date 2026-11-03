@@ -1,0 +1,23 @@
+#!/bin/sh
+# Update everything, the CRUX way: fetch the newest ports (CRUX's collections and Krest's own,
+# from this system's copy of the Krest repository), then rebuild whatever changed.
+#   krest-update          ports -u, then prt-get sysup (every update, built here)
+#   krest-update --dry    only show what would be rebuilt
+# The kernel is a port too ("linux"); after it rebuilds, restart to use it.
+set -e
+[ "$(id -u)" = 0 ] || exec sudo "$0" "$@"
+echo "==> Krest's own ports (git pull in /usr/src/krest, checked and copied to /usr/ports/krest)"
+git -C /usr/src/krest pull --ff-only
+/usr/src/krest/build/krest-ports sync /usr/src/krest
+echo
+echo "==> CRUX's ports (ports -u)"
+ports -u
+echo
+if [ "${1:-}" = --dry ]; then
+	prt-get diff
+	exit 0
+fi
+echo "==> Rebuilding what changed (prt-get sysup; each build shows here)"
+prt-get sysup
+echo
+echo "Done. Anything new that was kept aside: sudo rejmerge"

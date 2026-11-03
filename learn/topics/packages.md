@@ -22,13 +22,13 @@ is there for every user.
     pkginfo -o usr/bin/mpv          which package owns a file
 
 ## Change
-    rassvet-update                  update everything (the ports, then prt-get sysup)
+    krest-update                  update everything (the ports, then prt-get sysup)
     sudo prt-get depinst gimp       build and install gimp with whatever it needs
     sudo prt-get install gimp       just gimp (its dependencies must be there already)
     sudo prt-get update gimp        rebuild and reinstall one
     sudo prt-get remove gimp        remove it (pkgrm); its dependencies stay
     sudo prt-get lock gimp          keep sysup from updating it
-Shortcuts in your shell (~/.bashrc): pk (search), pi (depinst), pr (remove), pu (rassvet-update).
+Shortcuts in your shell (~/.bashrc): pk (search), pi (depinst), pr (remove), pu (krest-update).
 
 Builds use /etc/pkgmk.conf: -O2 -march=native, every core, sources kept in
 /usr/ports/distfiles, finished packages in /usr/ports/packages, the work in /var/tmp/pkgmk.
@@ -42,4 +42,4 @@ There are no generations: an update replaces the package. The previous package f
 stays in /usr/ports/packages (until the next build of that port overwrites a file of the same
 name), and  sudo pkgadd -u -f FILE  puts it back.
 
-References: man prt-get ; man pkgmk ; man pkgadd ; rassvet-handbook ; rassvet-learn wiki prt-get
+References: man prt-get ; man pkgmk ; man pkgadd ; krest-handbook ; krest-learn wiki prt-get

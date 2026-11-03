@@ -1,0 +1,124 @@
+#!/bin/sh
+# Krest's menu (Ctrl+Super+Space): dmenu lists, one per topic, like the classic right-click menu.
+#   krest-menu [main|russian|learn|power|system]
+# Each entry is "label<TAB>command"; edit /usr/bin/krest-menu's lists, or copy it to
+# ~/.local/bin/krest-menu and change your copy.
+dm() { dmenu -i -l 14 -p "$1" -fn 'DejaVu Sans Mono-12' -nb '#16161c' -nf '#d8d8d8' -sb '#c8323c' -sf '#ffffff'; }
+installed() {  # the entries whose programs are installed (optional ones may not be)
+  while IFS= read -r line; do
+    cmd=${line#*	}
+    for prog in "${cmd%% *}" framework_tool bluetuith; do
+      case $prog in framework_tool|bluetuith) case $cmd in *"$prog"*) ;; *) continue ;; esac ;; esac
+      case $prog in krest-menu|*\)*) continue ;; esac
+      command -v "$prog" >/dev/null 2>&1 || continue 2
+    done
+    printf '%s\n' "$line"
+  done
+}
+pick() {  # pick PROMPT, entries on stdin
+  entries=$(installed)
+  label=$(printf '%s\n' "$entries" | cut -f1 | dm "$1") || exit 0
+  printf '%s\n' "$entries" | awk -F'\t' -v l="$label" '$1 == l { print $2; exit }'
+}
+run() { [ -n "$1" ] && setsid -f sh -c "$1" >/dev/null 2>&1; }
+
+case "${1:-main}" in
+main)
+  run "$(pick 'Крест' <<'M'
+Terminal	krest-term
+Files (Midnight Commander)	krest-term Files mc
+Write (acme)	krest-acme
+Web	firefox
+Office (LibreOffice)	libreoffice
+Discord	krest-open discord
+YouTube	krest-open youtube
+Games (Steam)	steam
+Russian ›	krest-menu russian
+Learn the system ›	krest-menu learn
+Wi-Fi	networkmanager_dmenu
+Wi-Fi (full screen)	krest-term Wi-Fi nmtui
+Proton VPN	protonvpn-app
+VPN on/off (WireGuard files)	krest-vpn
+Bluetooth	krest-term Bluetooth bluetuith
+Bluetooth (bluetoothctl)	krest-term Bluetooth bluetoothctl
+Sound	krest-term Sound pulsemixer
+System ›	krest-menu system
+Screenshot	krest-screenshot
+Keys	krest-keys
+Power ›	krest-menu power
+M
+)" ;;
+russian)
+  run "$(pick 'Русский' <<'M'
+Where to start (the route to B2)	krest-term Russian krest-russian --pause path
+Words (10 minutes, spaced repetition)	krest-term Слова krest-russian --pause words
+Tutor (AI, on this laptop)	krest-term Репетитор krest-russian --pause tutor
+Listen (audiobooks)	krest-term Listen krest-russian --pause listen --pick
+Course library (FSI, DLI, Peace Corps)	krest-russian library --open
+Textbook: Между нами	krest-russian read mezhdunami
+Dictionary (Wiktionary)	krest-russian read wiktionary
+Download material…	krest-term Downloads sh -c 'sudo krest-content; read -r -p "Enter to close " _'
+M
+)" ;;
+learn)
+  run "$(pick 'Learn' <<'M'
+Lessons	krest-term Learn krest-learn browse
+Wiki: CRUX explained (ports, prt-get, rc scripts ...)	krest-term Wiki krest-learn wiki
+Wiki page…	krest-menu wikipage
+Search the lessons and the wiki…	krest-menu search
+System map (what is running)	krest-term 'System map' sh -c 'krest-learn doctor; read -r -p "Enter to close " _'
+Explain a command…	krest-menu explain
+CRUX handbook (offline)	krest-handbook
+CRUX handbook and the wiki, side by side (mc)	krest-handbook mc
+Manual page…	krest-menu manual
+Where things come from	krest-term Sources sh -c 'krest-learn sources | less'
+M
+)" ;;
+explain)
+  cmd=$(printf '' | dm 'Explain (nothing is run):') || exit 0
+  [ -n "$cmd" ] && setsid -f krest-term Explain sh -c 'krest-learn explain "$1" | less' _ "$cmd" ;;
+clickforce)
+  force=$(printf 'low\nmedium\nhigh\n' | dm 'Touchpad click force (fewer false clicks: high):') || exit 0
+  [ -n "$force" ] && setsid -f krest-term Touchpad sh -c 'sudo framework_tool --click-force "$1"; read -r -p "Enter to close " _' _ "$force" ;;
+wikipage)
+  page=$(ls /usr/share/krest/learn/wiki | sed 's/\.md$//' | dm 'Wiki page:') || exit 0
+  [ -n "$page" ] && setsid -f krest-term "Wiki: $page" krest-learn wiki "$page" ;;
+search)
+  words=$(printf '' | dm 'Search the lessons and the wiki:') || exit 0
+  [ -n "$words" ] && setsid -f krest-term "Search: $words" sh -c 'krest-learn search $1 | less' _ "$words" ;;
+manual)
+  page=$(printf '' | dm 'man') || exit 0
+  [ -n "$page" ] && setsid -f krest-term "man $page" man "$page" ;;
+system)
+  run "$(pick 'System' <<'M'
+Update everything (sync the ports, then rebuild what changed)	krest-term Update sh -c 'krest-update; read -r -p "Enter to close " _'
+What would update (prt-get diff)	krest-term Updates sh -c 'prt-get diff | less'
+Services (/etc/rc.d)	krest-term Services sh -c 'for s in /etc/rc.d/*; do printf "%-18s " "${s##*/}"; sudo "$s" status 2>&1 | head -n 1; done | less'
+The log (/var/log/messages)	krest-term Log sudo less +G /var/log/messages
+Processes (htop)	krest-term htop htop
+Battery report (powertop)	krest-term powertop sudo powertop
+Sleep check (suspends for 1 minute)	krest-term 'Sleep check' sh -c 'krest-sleepcheck; read -r -p "Enter to close " _'
+Touchscreen off (saves power)	krest-term Touchscreen sh -c 'sudo framework_tool --touchscreen-enable false; read -r -p "Enter to close " _'
+Touchscreen on	krest-term Touchscreen sh -c 'sudo framework_tool --touchscreen-enable true; read -r -p "Enter to close " _'
+Keyboard light off	krest-term 'Keyboard light' sh -c 'sudo framework_tool --kblight 0; read -r -p "Enter to close " _'
+Keyboard light on (50 %)	krest-term 'Keyboard light' sh -c 'sudo framework_tool --kblight 50; read -r -p "Enter to close " _'
+Touchpad click: light / medium / firm…	krest-menu clickforce
+Disks	krest-term Disks sh -c 'lsblk -f; df -h -x tmpfs -x devtmpfs; read -r -p "Enter to close " _'
+Night light on/off	krest-nightlight toggle
+Fingerprint: add a finger (for sudo)	krest-term Fingerprint sh -c 'fprintd-enroll; read -r -p "Enter to close " _'
+Firewall rules (nftables)	krest-term Firewall sh -c 'sudo nft list ruleset | less'
+Firmware updates (fwupdtool)	krest-term Firmware sh -c 'sudo fwupdtool refresh; sudo fwupdtool get-updates; read -r -p "Enter to close " _'
+M
+)" ;;
+power)
+  run "$(pick 'Power' <<'M'
+Lock	xset s activate
+Suspend	krest-sleep suspend
+Hibernate	krest-sleep hibernate
+Log out	ratpoison -c quit
+Restart	sudo /sbin/reboot
+Power off	sudo /sbin/poweroff
+M
+)" ;;
+*) echo "usage: krest-menu [main|russian|learn|system|power]" >&2; exit 2 ;;
+esac

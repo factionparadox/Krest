@@ -1,6 +1,6 @@
 # Description: Simple window manager: every window fills the screen, all keyboard
 # URL: https://www.nongnu.org/ratpoison/
-# Maintainer: Rassvet
+# Maintainer: Krest
 # Depends on: readline xorg-libxft xorg-libxinerama xorg-libxrandr xorg-libxtst
 
 name=ratpoison

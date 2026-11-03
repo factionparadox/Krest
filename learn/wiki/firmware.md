@@ -7,7 +7,7 @@ collection in /lib/firmware; the stick installed it ready-built with the kernel,
 works on the first boot. A missing file shows in dmesg:
   sudo dmesg | grep -i firmware      ("failed to load" names the file)
   pkginfo -o lib/firmware/iwlwifi    which package has a file
-A newer linux-firmware arrives with rassvet-update like any port; it is used from the next
+A newer linux-firmware arrives with krest-update like any port; it is used from the next
 boot (or the next time the driver loads).
 
 ## CPU microcode
@@ -23,7 +23,7 @@ fwupd (from contrib) reads the LVFS, where Framework publishes BIOS updates: the
 publishes them as files with their own instructions:  https://knowledgebase.frame.work/
 
 ## framework_tool
-Framework's own tool (from framework-system; Rassvet's framework-tool port installs Framework's
+Framework's own tool (from framework-system; Krest's framework-tool port installs Framework's
 release build) talks to the embedded controller. It needs root:
   sudo framework_tool --versions              BIOS, EC and other firmware versions
   sudo framework_tool --power                 battery and charger

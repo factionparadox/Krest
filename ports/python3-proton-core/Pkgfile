@@ -1,6 +1,6 @@
 # Description: Proton's API core library (for the Proton VPN app)
 # URL: https://github.com/ProtonVPN/python-proton-core
-# Maintainer: Rassvet
+# Maintainer: Krest
 # Depends on: python3-aiohttp python3-bcrypt python3-build python3-gnupg python3-installer python3-pyopenssl python3-requests python3-setuptools
 
 name=python3-proton-core

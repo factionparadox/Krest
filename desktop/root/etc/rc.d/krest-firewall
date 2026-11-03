@@ -1,0 +1,10 @@
+#!/bin/sh
+#
+# /etc/rc.d/krest-firewall: load Krest's nftables rules
+#
+case $1 in
+start|restart) /usr/sbin/nft -f /etc/nftables.d/krest.nft ;;
+stop) /usr/sbin/nft flush ruleset ;;
+status) /usr/sbin/nft list ruleset ;;
+*) echo "usage: $0 [start|stop|restart|status]" ;;
+esac

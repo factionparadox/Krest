@@ -1,0 +1,3 @@
+#!/bin/sh
+# Super+? : the keys, in a terminal (q closes).
+exec krest-term Keys less /usr/share/krest/keys.txt

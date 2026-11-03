@@ -7,9 +7,9 @@ bottom are the actions:
     Ctrl+\    a list of favourite folders     Alt+?  find files
     Enter on an archive (.zip, .tar.gz, a .pkg.tar.zst package) opens it like a folder.
 
-mcedit, mc's editor, is also the system's EDITOR (/etc/profile.d/rassvet.sh): sudoedit, git and
+mcedit, mc's editor, is also the system's EDITOR (/etc/profile.d/krest.sh): sudoedit, git and
 prt-get edit use it. Ctrl+s or F2 saves, F10 quits. For writing, acme is there too
-(rassvet-learn learn plan9).
+(krest-learn learn plan9).
 
 ## Look around the system with it
 CRUX keeps the usual layout: programs in /usr/bin, libraries in /usr/lib, documentation in

@@ -280,7 +280,7 @@ class TestMirror(Server):
     def publish(self):
         work, content = self.make_payloads()
         mirror_json = self.base / 'mirror.json'
-        env = {**os.environ, 'RASSVET_MIRROR_PART_SIZE': '4k', 'RASSVET_MIRROR_JSON': str(mirror_json)}
+        env = {**os.environ, 'KREST_MIRROR_PART_SIZE': '4k', 'KREST_MIRROR_JSON': str(mirror_json)}
         result = subprocess.run(['bash', str(BUILD.parent / 'build/publish-content.sh'), '--source', str(work),
                                  '--out', str(self.base / 'out'), '--dry-run'],
                                 capture_output=True, text=True, env=env)

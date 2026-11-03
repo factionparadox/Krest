@@ -1,4 +1,4 @@
-"""rassvet-content against a fake installed system, a stub tutor service and a local web server
+"""krest-content against a fake installed system, a stub tutor service and a local web server
 (standing in for Kiwix, the Internet Archive and Hugging Face)."""
 import functools
 import hashlib
@@ -13,19 +13,19 @@ import threading
 import unittest
 
 PKG = Path(__file__).resolve().parents[1] / 'russian'
-TOOL = PKG / 'rassvet-content'
+TOOL = PKG / 'krest-content'
 
 
 def stage(root: Path) -> None:
-    """Lay the package out as guix/rassvet/packages.scm's install plan does."""
-    lib, share = root / 'usr/lib/rassvet/content', root / 'usr/share/rassvet/russian'
+    """Lay the package out as guix/krest/packages.scm's install plan does."""
+    lib, share = root / 'usr/lib/krest/content', root / 'usr/share/krest/russian'
     lib.mkdir(parents=True); share.mkdir(parents=True)
     for f in PKG.glob('fetch-*.py'):
         shutil.copy(f, lib)
     shutil.copy(PKG / 'mirror.json', lib)
     for f in ('vocab.tsv', 'library.tsv', 'audiobooks.tsv', 'voices.tsv'):
         shutil.copy(PKG / f, share)
-    (root / 'var/lib/rassvet/russian').mkdir(parents=True)
+    (root / 'var/lib/krest/russian').mkdir(parents=True)
 
 
 class ContentTests(unittest.TestCase):
@@ -35,7 +35,7 @@ class ContentTests(unittest.TestCase):
         base = Path(self.temp.name)
         self.root = base / 'root'
         stage(self.root)
-        self.data = self.root / 'var/lib/rassvet/russian'
+        self.data = self.root / 'var/lib/krest/russian'
         (self.data / 'russian.json').write_text(json.dumps({'model': 'tutor'}))
         self.site = base / 'site'; self.site.mkdir()
         site = self.site
@@ -58,7 +58,7 @@ class ContentTests(unittest.TestCase):
         threading.Thread(target=httpd.serve_forever, daemon=True).start()
         self.addCleanup(httpd.server_close); self.addCleanup(httpd.shutdown)
         self.url = f'http://127.0.0.1:{httpd.server_port}'
-        # Stub /etc/rc.d/rassvet-tutor: records what it was asked
+        # Stub /etc/rc.d/krest-tutor: records what it was asked
         self.herd = base / 'herd'
         self.herd.write_text('#!/bin/sh\necho "$@" >> "$(dirname "$0")/herd-args"\n')
         self.herd.chmod(0o755)
@@ -75,14 +75,14 @@ class ContentTests(unittest.TestCase):
         listing.write_text((listing.read_text() if listing.exists() else '') + f'<a href="{name}">{name}</a>\n')
 
     def run_tool(self, *args, input='', env=None):
-        env = {**os.environ, 'RASSVET_CONTENT_ROOT': str(self.root),
-               'RASSVET_CONTENT_LIB': str(self.root / 'usr/lib/rassvet/content'),
-               'RASSVET_CONTENT_SHARE': str(self.root / 'usr/share/rassvet/russian'),
-               'RASSVET_CONTENT_TUTOR_RC': str(self.herd), 'RASSVET_CONTENT_FREE_GB': '500', 'RASSVET_CONTENT_HF': self.url + '/hf',
-               'RASSVET_CONTENT_KIWIX': self.url + '/zim', 'RASSVET_CONTENT_ARCHIVE': self.url + '/archive/',
-               'RASSVET_CONTENT_MEZHDUNAMI': self.url + '/mn/index.shtml',
-               'RASSVET_CONTENT_YTDLP': 'no-such-ytdlp',
-               'RASSVET_CONTENT_MIRROR': self.url + '/no-mirror/', **(env or {})}
+        env = {**os.environ, 'KREST_CONTENT_ROOT': str(self.root),
+               'KREST_CONTENT_LIB': str(self.root / 'usr/lib/krest/content'),
+               'KREST_CONTENT_SHARE': str(self.root / 'usr/share/krest/russian'),
+               'KREST_CONTENT_TUTOR_RC': str(self.herd), 'KREST_CONTENT_FREE_GB': '500', 'KREST_CONTENT_HF': self.url + '/hf',
+               'KREST_CONTENT_KIWIX': self.url + '/zim', 'KREST_CONTENT_ARCHIVE': self.url + '/archive/',
+               'KREST_CONTENT_MEZHDUNAMI': self.url + '/mn/index.shtml',
+               'KREST_CONTENT_YTDLP': 'no-such-ytdlp',
+               'KREST_CONTENT_MIRROR': self.url + '/no-mirror/', **(env or {})}
         return subprocess.run([sys_python(), str(TOOL), *args], capture_output=True, text=True, env=env, input=input)
 
     def config(self):
@@ -122,9 +122,9 @@ class ContentTests(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         cfg = self.config()
         self.assertEqual(cfg['kiwix']['wiktionary'],
-                         '/var/lib/rassvet/russian/dictionary/wiktionary_en_all_nopic_2026-09.zim')
+                         '/var/lib/krest/russian/dictionary/wiktionary_en_all_nopic_2026-09.zim')
         self.assertEqual(cfg['kiwix']['wiktionary-ru'],
-                         '/var/lib/rassvet/russian/dictionary/wiktionary_ru_all_nopic_2026-08.zim')
+                         '/var/lib/krest/russian/dictionary/wiktionary_ru_all_nopic_2026-08.zim')
         self.assertEqual(cfg['model'], 'tutor')                        # existing settings kept
         self.assertRegex(self.run_tool('list').stdout, r'ru-dictionaries\s+installed')
         self.run_tool('remove', 'ru-dictionaries')
@@ -147,15 +147,15 @@ class ContentTests(unittest.TestCase):
         self.assertEqual(self.run_tool('install', 'nonsense').returncode, 2)
 
     def test_packaged_files_exist(self):
-        """ports/rassvet-russian/Pkgfile installs every kit file."""
-        recipe = (PKG.parent / 'ports/rassvet-russian/Pkgfile').read_text()
+        """ports/krest-russian/Pkgfile installs every kit file."""
+        recipe = (PKG.parent / 'ports/krest-russian/Pkgfile').read_text()
         for name in ('fetch-files.py', 'fetch-kiwix.py', 'fetch-archive.py', 'fetch-mezhdunami.py',
                      'fetch-mirror.py', 'fetch-hf.py', 'library.tsv', 'audiobooks.tsv', 'voices.tsv',
                      'vocab.tsv', 'mirror.json'):
             self.assertTrue((PKG / name).is_file(), name)
-        for pattern in ('rassvet-russian $PKG/usr/bin/', 'rassvet-content $PKG/usr/bin/',
-                        'fetch-*.py mirror.json $PKG/usr/lib/rassvet/content/',
-                        '*.tsv VOCAB-SOURCES.md $PKG/usr/share/rassvet/russian/'):
+        for pattern in ('krest-russian $PKG/usr/bin/', 'krest-content $PKG/usr/bin/',
+                        'fetch-*.py mirror.json $PKG/usr/lib/krest/content/',
+                        '*.tsv VOCAB-SOURCES.md $PKG/usr/share/krest/russian/'):
             self.assertIn(pattern, recipe, pattern)
 
 

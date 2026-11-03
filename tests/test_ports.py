@@ -1,5 +1,5 @@
-"""Rassvet's CRUX ports: every Pkgfile is complete, every source has a checksum line, local
-files exist, and build/rassvet-ports makes the collection."""
+"""Krest's CRUX ports: every Pkgfile is complete, every source has a checksum line, local
+files exist, and build/krest-ports makes the collection."""
 from pathlib import Path
 import re
 import subprocess
@@ -8,7 +8,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 PORTS = ROOT / 'ports'
-OWN = {'rassvet', 'rassvet-desktop', 'rassvet-learn', 'rassvet-russian'}
+OWN = {'krest', 'krest-desktop', 'krest-learn', 'krest-russian'}
 HEX = re.compile(r'^[0-9a-f]{64}$')
 
 
@@ -42,14 +42,14 @@ class Pkgfiles(unittest.TestCase):
                     self.assertTrue((PORTS / port / src).is_file(), f'{port}: {src}')
                     self.assertNotEqual(listed[src], '-', f'{port}: {src}')
 
-    def test_the_whole_system_depends_on_rassvets_own_ports(self):
-        deps = re.search(r'^# Depends on:(.*)$', (PORTS / 'rassvet/Pkgfile').read_text(), re.M).group(1).split()
-        for port in ('linux', 'ly', 'rassvet-desktop', 'rassvet-learn', 'rassvet-russian', 'webcord',
+    def test_the_whole_system_depends_on_krests_own_ports(self):
+        deps = re.search(r'^# Depends on:(.*)$', (PORTS / 'krest/Pkgfile').read_text(), re.M).group(1).split()
+        for port in ('linux', 'ly', 'krest-desktop', 'krest-learn', 'krest-russian', 'webcord',
                      'freetube', 'proton-vpn-gtk-app', 'steam', 'firefox', 'networkmanager'):
             self.assertIn(port, deps)
 
     def test_kernel_config_changes_apply(self):
-        frag = (PORTS / 'linux/rassvet.config').read_text()
+        frag = (PORTS / 'linux/krest.config').read_text()
         self.assertIn('CONFIG_XFS_FS=y', frag)
         self.assertIn('CONFIG_BLK_DEV_NVME=y', frag)
         self.assertIn('# CONFIG_DEBUG_INFO_BTF is not set', frag)
@@ -58,47 +58,47 @@ class Pkgfiles(unittest.TestCase):
 class Sync(unittest.TestCase):
     def test_sync_makes_the_collection(self):
         with tempfile.TemporaryDirectory() as tmp:
-            dest = Path(tmp) / 'rassvet'
-            r = subprocess.run(['sh', str(ROOT / 'build/rassvet-ports'), 'sync', str(ROOT), str(dest)],
+            dest = Path(tmp) / 'krest'
+            r = subprocess.run(['sh', str(ROOT / 'build/krest-ports'), 'sync', str(ROOT), str(dest)],
                                capture_output=True, text=True)
             self.assertEqual(r.returncode, 0, r.stderr)
             version = (ROOT / 'VERSION').read_text().strip()
-            for port in ('rassvet-desktop', 'rassvet-learn', 'rassvet-russian'):
+            for port in ('krest-desktop', 'krest-learn', 'krest-russian'):
                 tarball = dest / port / f'{port}-{version}.tar.gz'
                 self.assertTrue(tarball.is_file(), port)
                 pkgfile = (dest / port / 'Pkgfile').read_text()
                 self.assertIn(f'version={version}', pkgfile)
                 self.assertRegex(pkgfile, r'release=\d+')
                 self.assertIn(tarball.name, (dest / port / 'sha256').read_text())
-            listing = subprocess.run(['tar', 'tzf', str(dest / 'rassvet-desktop' / f'rassvet-desktop-{version}.tar.gz')],
+            listing = subprocess.run(['tar', 'tzf', str(dest / 'krest-desktop' / f'krest-desktop-{version}.tar.gz')],
                                      capture_output=True, text=True).stdout
-            self.assertIn('root/usr/bin/rassvet-session', listing)
+            self.assertIn('root/usr/bin/krest-session', listing)
             # the same input makes the same tarball (so its checksum means something)
-            first = (dest / 'rassvet-learn/sha256').read_text()
-            subprocess.run(['sh', str(ROOT / 'build/rassvet-ports'), 'sync', str(ROOT), str(dest)],
+            first = (dest / 'krest-learn/sha256').read_text()
+            subprocess.run(['sh', str(ROOT / 'build/krest-ports'), 'sync', str(ROOT), str(dest)],
                            capture_output=True, check=True)
-            self.assertEqual(first, (dest / 'rassvet-learn/sha256').read_text())
+            self.assertEqual(first, (dest / 'krest-learn/sha256').read_text())
 
 
 class Installer(unittest.TestCase):
     def test_scripts_parse(self):
-        for script in ('installer/rassvet-install', 'build/build-iso.sh'):
+        for script in ('installer/krest-install', 'build/build-iso.sh'):
             r = subprocess.run(['bash', '-n', str(ROOT / script)], capture_output=True, text=True)
             self.assertEqual(r.returncode, 0, f'{script}: {r.stderr}')
-        for script in ('build/rassvet-ports', 'installer/iso-binaries'):
+        for script in ('build/krest-ports', 'installer/iso-binaries'):
             r = subprocess.run(['sh', '-n', str(ROOT / script)], capture_output=True, text=True)
             self.assertEqual(r.returncode, 0, f'{script}: {r.stderr}')
 
     def test_partition_names(self):
-        fn = re.search(r'^part\(\) \{.*\}', (ROOT / 'installer/rassvet-install').read_text(), re.M).group(0)
+        fn = re.search(r'^part\(\) \{.*\}', (ROOT / 'installer/krest-install').read_text(), re.M).group(0)
         for disk, n, want in (('/dev/nvme0n1', 1, '/dev/nvme0n1p1'), ('/dev/sda', 3, '/dev/sda3'),
                               ('/dev/mmcblk0', 2, '/dev/mmcblk0p2')):
             out = subprocess.run(['bash', '-c', f'{fn}; part {disk} {n}'], capture_output=True, text=True).stdout.strip()
             self.assertEqual(out, want)
 
     def test_services_have_rc_scripts(self):
-        """every service the installer switches on comes from a port Rassvet installs."""
-        text = (ROOT / 'installer/rassvet-install').read_text()
+        """every service the installer switches on comes from a port Krest installs."""
+        text = (ROOT / 'installer/krest-install').read_text()
         services = re.search(r'^SERVICES="(.*)"', text, re.M).group(1).split()
         own = {p.name for p in (ROOT / 'desktop/root/etc/rc.d').iterdir()}
         ported = {'acpid', 'tlp', 'thermald'}
@@ -114,7 +114,7 @@ if __name__ == '__main__':
 
 
 class Verify(unittest.TestCase):
-    """rassvet-ports verify, with a stand-in pkgmk (the sources are already in the port)."""
+    """krest-ports verify, with a stand-in pkgmk (the sources are already in the port)."""
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -135,8 +135,8 @@ class Verify(unittest.TestCase):
 
     def verify(self):
         import os
-        env = {**os.environ, 'PATH': f'{self.bin}:{os.environ["PATH"]}', 'RASSVET_SOURCES_LOCK': str(self.lock)}
-        return subprocess.run(['sh', str(ROOT / 'build/rassvet-ports'), 'verify', str(self.dest)],
+        env = {**os.environ, 'PATH': f'{self.bin}:{os.environ["PATH"]}', 'KREST_SOURCES_LOCK': str(self.lock)}
+        return subprocess.run(['sh', str(ROOT / 'build/krest-ports'), 'verify', str(self.dest)],
                               capture_output=True, text=True, env=env)
 
     def test_pinned_and_first_use(self):

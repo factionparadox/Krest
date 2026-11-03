@@ -1,6 +1,6 @@
 # Description: Bluetooth in the terminal (Ctrl+Super+b)
 # URL: https://github.com/bluetuith-org/bluetuith
-# Maintainer: Rassvet
+# Maintainer: Krest
 # Depends on: bluez
 
 name=bluetuith

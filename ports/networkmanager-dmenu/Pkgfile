@@ -1,6 +1,6 @@
 # Description: Wi-Fi and VPN connections in dmenu (Ctrl+Super+n)
 # URL: https://github.com/firecat53/networkmanager-dmenu
-# Maintainer: Rassvet
+# Maintainer: Krest
 # Depends on: dmenu networkmanager python3-gobject
 
 name=networkmanager-dmenu

@@ -1,0 +1,19 @@
+# Description: Constellation's Russian kit, A1 to B2: words, courses, audiobooks, voices, the AI tutor
+# URL: https://github.com/factionparadox/Pustota
+# Maintainer: Krest
+# Depends on: kiwix-tools llama-cpp mpv piper-tts python3 yt-dlp
+
+name=krest-russian
+version=@VERSION@
+release=@RELEASE@
+source=(krest-russian-$version.tar.gz)
+
+build() {
+	cd russian
+	install -Dm755 krest-russian $PKG/usr/bin/krest-russian
+	install -Dm755 krest-content $PKG/usr/bin/krest-content
+	install -d $PKG/usr/lib/krest/content $PKG/usr/share/krest/russian
+	install -m644 fetch-*.py mirror.json $PKG/usr/lib/krest/content/
+	install -m644 *.tsv VOCAB-SOURCES.md $PKG/usr/share/krest/russian/
+	install -d -m755 $PKG/var/lib/krest/russian
+}

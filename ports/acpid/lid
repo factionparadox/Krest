@@ -1,2 +1,2 @@
 event=button/lid.*close
-action=/usr/bin/rassvet-sleep lid
+action=/usr/bin/krest-sleep lid

@@ -16,17 +16,17 @@ Packages install their own; you do not enable anything except by listing it in S
 To start one at every boot, add its name to SERVICES (after anything it needs, such as dbus);
 to stop that, take it out. Changes made with the script itself last until the next boot.
 
-## Rassvet's services (SERVICES in /etc/rc.conf)
+## Krest's services (SERVICES in /etc/rc.conf)
 lo (the loopback interface) · crond (scheduled jobs) · dbus (messages between programs) ·
-networkmanager (Wi-Fi, Ethernet, VPNs) · acpid (the lid and the power button: rassvet-sleep) ·
-tlp (battery tuning) · thermald (heat) · bluetoothd · chronyd (the clock) · rassvet-firewall
-(nftables) · rassvet-tutor (the Russian tutor, once its model is downloaded).
+networkmanager (Wi-Fi, Ethernet, VPNs) · acpid (the lid and the power button: krest-sleep) ·
+tlp (battery tuning) · thermald (heat) · bluetoothd · chronyd (the clock) · krest-firewall
+(nftables) · krest-tutor (the Russian tutor, once its model is downloaded).
 /etc/rc itself starts udev and the system log; inittab starts ly on tty1 and text logins on
 the other consoles. Some pieces are not services at all: polkit, upower and udisks start when
 D-Bus asks for them; slock is a setuid program; gnome-keyring and PipeWire run inside your
 session.
 
 ## Shutting down
-    sudo poweroff ; sudo reboot            no password needed (/etc/sudoers.d/rassvet)
+    sudo poweroff ; sudo reboot            no password needed (/etc/sudoers.d/krest)
 
-References: man init ; man inittab ; rassvet-handbook ; rassvet-learn wiki rc
+References: man init ; man inittab ; krest-handbook ; krest-learn wiki rc

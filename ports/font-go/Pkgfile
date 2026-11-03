@@ -1,6 +1,6 @@
 # Description: The Go fonts (Go Mono is X-терминал's font)
 # URL: https://go.dev/blog/go-fonts
-# Maintainer: Rassvet
+# Maintainer: Krest
 # Depends on: fontconfig
 
 name=font-go

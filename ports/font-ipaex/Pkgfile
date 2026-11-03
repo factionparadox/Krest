@@ -1,6 +1,6 @@
 # Description: IPAex Japanese fonts (Gothic and Mincho), for reading Japanese
 # URL: https://moji.or.jp/ipafont/
-# Maintainer: Rassvet
+# Maintainer: Krest
 # Depends on: fontconfig
 
 name=font-ipaex

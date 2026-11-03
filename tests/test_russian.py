@@ -1,4 +1,4 @@
-"""rassvet-russian: the tutor, speech, library, word drill, audiobooks and reading."""
+"""krest-russian: the tutor, speech, library, word drill, audiobooks and reading."""
 import contextlib
 import importlib.machinery
 import importlib.util
@@ -10,8 +10,8 @@ import unittest
 from unittest.mock import patch
 
 PKG = Path(__file__).resolve().parents[1] / 'russian'
-loader = importlib.machinery.SourceFileLoader('rassvet_russian', str(PKG / 'rassvet-russian'))
-spec = importlib.util.spec_from_loader('rassvet_russian', loader)
+loader = importlib.machinery.SourceFileLoader('krest_russian', str(PKG / 'krest-russian'))
+spec = importlib.util.spec_from_loader('krest_russian', loader)
 ru = importlib.util.module_from_spec(spec)
 loader.exec_module(ru)
 
@@ -144,7 +144,7 @@ class WordTests(unittest.TestCase):
             ru.main(['path'])
         self.assertIn('A1:     0/2 mastered, 0 learned, 1 started', out.getvalue())
         self.assertIn('B2  Confident Russian', out.getvalue())
-        self.assertIn('rassvet-russian read mezhdunami', out.getvalue())
+        self.assertIn('krest-russian read mezhdunami', out.getvalue())
 
     def test_listen_lists_and_plays_by_level(self):
         books = self.root / 'books'

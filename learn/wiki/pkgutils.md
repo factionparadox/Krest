@@ -31,7 +31,7 @@ pkgadd does not run a port's pre- or post-install script; prt-get does (runscrip
 (and some under /var): if the new package brings a different version, pkgadd leaves yours and
 puts the new one in /var/lib/pkg/rejected.
   sudo rejmerge                      for each one: keep yours, take the new one, or merge
-Run it after a large update (rassvet-update reminds you).
+Run it after a large update (krest-update reminds you).
 
 ## pkgmk: building
 pkgmk builds the port in the current folder (see: pkgfiles):
@@ -47,7 +47,7 @@ Its settings are /etc/pkgmk.conf (CFLAGS, MAKEFLAGS, the folders).
 
 ## Other tools
   revdep                             programs with missing libraries; it and other helpers
-                                     come in the prt-utils port (not installed by Rassvet)
+                                     come in the prt-utils port (not installed by Krest)
 
 See also: prt-get, pkgfiles, ports ; man pkgadd ; man pkgrm ; man pkginfo ; man pkgmk ;
-man rejmerge ; man pkgadd.conf ; rassvet-handbook
+man rejmerge ; man pkgadd.conf ; krest-handbook

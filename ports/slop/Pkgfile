@@ -1,6 +1,6 @@
 # Description: Select a screen area with the mouse (for maim)
 # URL: https://github.com/naelstrof/slop
-# Maintainer: Rassvet
+# Maintainer: Krest
 # Depends on: glm icu xorg-libxext xorg-libxrender
 
 name=slop

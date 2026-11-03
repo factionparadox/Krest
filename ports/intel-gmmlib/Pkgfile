@@ -1,6 +1,6 @@
 # Description: Intel graphics memory management library (for the video driver)
 # URL: https://github.com/intel/gmmlib
-# Maintainer: Rassvet
+# Maintainer: Krest
 
 name=intel-gmmlib
 version=22.10.2

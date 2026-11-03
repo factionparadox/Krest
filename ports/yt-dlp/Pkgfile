@@ -1,6 +1,6 @@
 # Description: Downloads video and audio (mpv and ani-cli use it)
 # URL: https://github.com/yt-dlp/yt-dlp
-# Maintainer: Rassvet
+# Maintainer: Krest
 # Depends on: ffmpeg python3
 
 name=yt-dlp

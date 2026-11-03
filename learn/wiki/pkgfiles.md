@@ -48,27 +48,27 @@ difference is shown as NEW or MISSING lines. MISSING usually means something did
 (a missing dependency, a changed option); NEW, that the program installs more than before. If
 the change is right:  sudo pkgmk -uf.
 
-## Rassvet's ports and their sha256 files
-Rassvet's ports live in /usr/src/rassvet/ports and are copied to /usr/ports/rassvet by
-rassvet-ports sync (see: ports). Each has a sha256 file, one line per source:
+## Krest's ports and their sha256 files
+Krest's ports live in /usr/src/krest/ports and are copied to /usr/ports/krest by
+krest-ports sync (see: ports). Each has a sha256 file, one line per source:
   fa595aad...  linux-7.3.1.tar.xz
-  e673d8d2...  rassvet.config
+  e673d8d2...  krest.config
 Most hashes are pinned, and always those of the files kept in the port itself; a "-" in
 place of the hash means a GitHub archive that could not be pinned when the port was written,
-whose hash rassvet-ports records on first download (/var/lib/rassvet/sources.sha256) and holds
-it to afterwards. rassvet-ports verify checks every source this way, then writes the .md5sum
-pkgmk uses. Rassvet's own three (rassvet-desktop, rassvet-learn, rassvet-russian) are packed
+whose hash krest-ports records on first download (/var/lib/krest/sources.sha256) and holds
+it to afterwards. krest-ports verify checks every source this way, then writes the .md5sum
+pkgmk uses. Krest's own three (krest-desktop, krest-learn, krest-russian) are packed
 from the repository by sync, which writes their sha256 and stamps @VERSION@ and @RELEASE@.
 
-## Changing one of Rassvet's ports
-An edit in /usr/ports/rassvet is overwritten at the next sync, and one in /usr/src/rassvet
-must also update the sha256 file and conflicts with rassvet-update's git pull --ff-only.
+## Changing one of Krest's ports
+An edit in /usr/ports/krest is overwritten at the next sync, and one in /usr/src/krest
+must also update the sha256 file and conflicts with krest-update's git pull --ff-only.
 The simple way is a copy in a collection of your own, listed first in /etc/prt-get.conf:
-  sudo mkdir -p /usr/ports/local ; sudo cp -r /usr/ports/rassvet/x-terminal /usr/ports/local/
+  sudo mkdir -p /usr/ports/local ; sudo cp -r /usr/ports/krest/x-terminal /usr/ports/local/
   (edit it; raise release=)
   cd /usr/ports/local/x-terminal && sudo pkgmk -um
   sudo prt-get update x-terminal
-When Rassvet's port moves to a new version, yours still wins until you remove it.
+When Krest's port moves to a new version, yours still wins until you remove it.
 
-See also: prt-get, pkgutils, ports ; man pkgmk ; man pkgmk.conf ; rassvet-handbook (the
+See also: prt-get, pkgutils, ports ; man pkgmk ; man pkgmk.conf ; krest-handbook (the
 chapter on writing ports)

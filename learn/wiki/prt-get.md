@@ -1,7 +1,7 @@
 # prt-get
 
 prt-get is CRUX's package manager on top of the ports tree and pkgutils. It reads the
-collections listed in /etc/prt-get.conf (in order: rassvet, core, opt, xorg, contrib,
+collections listed in /etc/prt-get.conf (in order: krest, core, opt, xorg, contrib,
 compat-32; the first that has a port wins), follows the "# Depends on:" lines of the
 Pkgfiles, and runs pkgmk and pkgadd for you. It never downloads binaries: every install and
 update is a build on this laptop.
@@ -29,11 +29,11 @@ update is a build on this laptop.
   sudo prt-get lock foo ; unlock foo   keep sysup from touching foo ; prt-get listlocked
 Useful flags: --test (show what would happen), -fr (force a rebuild of the same version),
 -im (ignore the checksum), -if (ignore the footprint), --install-scripts (run pre- and
-post-install scripts: Rassvet's prt-get.conf already sets runscripts yes).
+post-install scripts: Krest's prt-get.conf already sets runscripts yes).
 
 ## Updating the whole system
-rassvet-update does it: the Rassvet repository and collection, ports -u, then prt-get sysup.
-  rassvet-update --dry                 stop after prt-get diff: what would be rebuilt
+krest-update does it: the Krest repository and collection, ports -u, then prt-get sysup.
+  krest-update --dry                 stop after prt-get diff: what would be rebuilt
 sysup rebuilds in dependency order. A failed build stops at that port; what was built
 before it is installed, nothing after. Read /var/log/pkgbuild/NAME.log, fix or wait, and run
 it again: it carries on.
@@ -62,4 +62,4 @@ kept even on success.
                                 /var/tmp/pkgmk/NAME (pkgmk -kw keeps it)
 
 See also: pkgutils, pkgfiles, ports, from-arch ; man prt-get ; man prt-get.conf ;
-rassvet-handbook
+krest-handbook

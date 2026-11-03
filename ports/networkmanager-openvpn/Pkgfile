@@ -1,6 +1,6 @@
 # Description: NetworkManager's OpenVPN plugin (for the Proton VPN app)
 # URL: https://gitlab.gnome.org/GNOME/NetworkManager-openvpn
-# Maintainer: Rassvet
+# Maintainer: Krest
 # Depends on: networkmanager openvpn
 
 name=networkmanager-openvpn

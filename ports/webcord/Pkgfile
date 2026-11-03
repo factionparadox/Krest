@@ -1,6 +1,6 @@
 # Description: WebCord: Discord's web app in Electron, with its tracking blocked
 # URL: https://github.com/SpacingBat3/WebCord
-# Maintainer: Rassvet
+# Maintainer: Krest
 # Depends on: alsa-lib at-spi2-core cups gtk3 libdrm libnotify libsecret libxkbcommon mesa nss xdg-utils xorg-libxscrnsaver xorg-libxtst
 
 name=webcord

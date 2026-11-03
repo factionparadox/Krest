@@ -1,2 +1,2 @@
 event=button/power.*
-action=/usr/bin/rassvet-sleep power
+action=/usr/bin/krest-sleep power

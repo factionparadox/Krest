@@ -1,6 +1,6 @@
 # Description: Kiwix's offline Wikipedia, Wiktionary and Wikisource server (kiwix-serve)
 # URL: https://kiwix.org
-# Maintainer: Rassvet
+# Maintainer: Krest
 
 name=kiwix-tools
 version=3.8.2

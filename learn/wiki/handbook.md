@@ -7,8 +7,8 @@ enough to read in an evening, and the rest of CRUX assumes you have. The install
 3.8 handbook from the stick to /usr/share/doc/crux/handbook.txt.
 
 ## Reading it
-  rassvet-handbook            the handbook in less (menu -> Learn -> CRUX handbook)
-  rassvet-handbook mc         Midnight Commander with this wiki on one side and the
+  krest-handbook            the handbook in less (menu -> Learn -> CRUX handbook)
+  krest-handbook mc         Midnight Commander with this wiki on one side and the
                               handbook's folder on the other
   less /usr/share/doc/crux/handbook.txt     the same, in any terminal
 
@@ -34,7 +34,7 @@ hardware), written by its users.
 
 ## Where it fits
 The handbook says how CRUX is meant to be used; this wiki explains the same system at shorter
-length, with Rassvet's own choices; the lessons (rassvet-learn learn) are the short tour. When
+length, with Krest's own choices; the lessons (krest-learn learn) are the short tour. When
 they disagree, the handbook and the manual pages are right.
 
 See also: index ; man less

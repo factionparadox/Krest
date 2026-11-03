@@ -1,6 +1,6 @@
 # Description: Ly: the login screen on tty1, in the terminal
 # URL: https://codeberg.org/fairyglade/ly
-# Maintainer: Rassvet
+# Maintainer: Krest
 # Depends on: linux-pam xorg-libxcb xorg-xauth
 
 name=ly
@@ -33,6 +33,6 @@ build() {
 	cd ly
 	zig build -Doptimize=ReleaseSafe -Dinit_system=sysvinit -Ddefault_tty=1 \
 		-Denable_x11_support=true -Ddest_directory=$PKG installexe
-	# Rassvet starts ly from /etc/inittab, not from an init script
+	# Krest starts ly from /etc/inittab, not from an init script
 	rm -rf $PKG/etc/init.d
 }

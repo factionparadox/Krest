@@ -30,12 +30,12 @@ Order matters: a service comes after what it needs (networkmanager after dbus). 
 restarts a service that dies; its status says so, and start brings it back.
 
 ## A real service: the tutor
-/etc/rc.d/rassvet-tutor, from rassvet-desktop:
+/etc/rc.d/krest-tutor, from krest-desktop:
 
   SSD=/sbin/start-stop-daemon
   PROG=/usr/bin/llama-server
-  MODEL=/var/lib/rassvet/russian/tutor/tutor.gguf
-  PID=/run/rassvet-tutor.pid
+  MODEL=/var/lib/krest/russian/tutor/tutor.gguf
+  PID=/run/krest-tutor.pid
   case $1 in
   start)
   	[ -f $MODEL ] || exit 0
@@ -50,24 +50,24 @@ restarts a service that dies; its status says so, and start brings it back.
   number to a pidfile, and finds it again by that pidfile to stop it or report on it.
 - start does nothing until the model exists, so the service can sit in SERVICES from the
   first boot.
-- Its output goes to its own log, /var/log/rassvet-tutor.log.
+- Its output goes to its own log, /var/log/krest-tutor.log.
 The same shape gives you a service of your own: copy it to /etc/rc.d/NAME, chmod +x, change
 PROG and its arguments, and add NAME to SERVICES.
 
-## Rassvet's services
-SERVICES=(lo crond dbus networkmanager acpid tlp thermald bluetoothd chronyd rassvet-firewall
-rassvet-tutor). acpid, tlp and thermald come from Rassvet's ports, rassvet-firewall and
-rassvet-tutor from rassvet-desktop, the rest from CRUX's. CRUX's net script is not used:
+## Krest's services
+SERVICES=(lo crond dbus networkmanager acpid tlp thermald bluetoothd chronyd krest-firewall
+krest-tutor). acpid, tlp and thermald come from Krest's ports, krest-firewall and
+krest-tutor from krest-desktop, the rest from CRUX's. CRUX's net script is not used:
 NetworkManager configures the network. polkit, upower and udisks are started by D-Bus when
 something asks for them, so they have no line here.
 
 ## Shutting down
-  sudo poweroff ; sudo reboot          (no password: /etc/sudoers.d/rassvet)
+  sudo poweroff ; sudo reboot          (no password: /etc/sudoers.d/krest)
   sudo shutdown -h now ; sudo init 1   halt ; single-user mode
 
 ## Services for your user
 There are none at system level: programs that need your X session go in
-~/.config/rassvet/autostart, which rassvet-session runs.
+~/.config/krest/autostart, which krest-session runs.
 
 See also: rc-conf, logging, sleep ; man init ; man inittab ; man start-stop-daemon ;
-rassvet-handbook
+krest-handbook

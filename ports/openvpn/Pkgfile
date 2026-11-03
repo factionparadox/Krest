@@ -1,6 +1,6 @@
 # Description: OpenVPN (the Proton VPN app's OpenVPN connections)
 # URL: https://openvpn.net/
-# Maintainer: Rassvet
+# Maintainer: Krest
 # Depends on: libcap-ng libnl linux-pam lz4 lzo openssl
 
 name=openvpn

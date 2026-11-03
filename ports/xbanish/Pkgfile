@@ -1,6 +1,6 @@
 # Description: Hides the mouse pointer while you type
 # URL: https://github.com/jcs/xbanish
-# Maintainer: Rassvet
+# Maintainer: Krest
 # Depends on: xorg-libxfixes xorg-libxi xorg-libxt
 
 name=xbanish

@@ -1,6 +1,6 @@
 # Description: ACPI events: the lid, the power button and the charger
 # URL: https://sourceforge.net/projects/acpid2/
-# Maintainer: Rassvet
+# Maintainer: Krest
 
 name=acpid
 version=2.0.34

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fetch a content pack from the Kirin/Rassvet content mirror (GitHub release assets).
+"""Fetch a content pack from the Kirin/Krest content mirror (GitHub release assets).
 
 packaging/content/mirror.json (written by scripts/publish-content.sh) lists, per
 pack, the release asset parts (each under GitHub's 2 GB limit) with their SHA-256
@@ -23,7 +23,7 @@ import tarfile
 import time
 from urllib import request
 
-USER_AGENT = 'rassvet/1 (+https://github.com/factionparadox/Pustota)'
+USER_AGENT = 'krest/1 (+https://github.com/factionparadox/Pustota)'
 CHUNK = 4 << 20
 
 

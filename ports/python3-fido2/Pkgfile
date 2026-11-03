@@ -1,6 +1,6 @@
 # Description: FIDO2 security keys, in Python (for the Proton VPN app)
 # URL: https://pypi.org/project/fido2/
-# Maintainer: Rassvet
+# Maintainer: Krest
 # Depends on: python3-build python3-cryptography python3-installer python3-poetry-core
 
 name=python3-fido2

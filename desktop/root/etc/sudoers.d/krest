@@ -1,0 +1,4 @@
+# Krest: people in the wheel group can use sudo (with their password); sleeping and
+# powering off need no password, so the menu, Super+z and the lid work.
+%wheel ALL=(ALL:ALL) ALL
+%wheel ALL=(root) NOPASSWD: /usr/bin/krest-sleep, /sbin/reboot, /sbin/poweroff

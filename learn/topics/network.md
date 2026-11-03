@@ -19,7 +19,7 @@ keeps the login in gnome-keyring. It sets up its connections through NetworkMana
 Without the app, any WireGuard file works: NetworkManager runs WireGuard itself (it is in the
 kernel). Give the file a short name (it becomes the interface: 15 characters at most):
     nmcli connection import type wireguard file ~/Downloads/proton-uk.conf
-Then the menu's "VPN on/off (WireGuard files)" (rassvet-vpn) switches it, or:
+Then the menu's "VPN on/off (WireGuard files)" (krest-vpn) switches it, or:
     nmcli connection up id proton-uk ; nmcli connection down id proton-uk
 It stays off at boot unless you ask:  nmcli connection modify proton-uk autoconnect yes
 
@@ -27,7 +27,7 @@ It stays off at boot unless you ask:  nmcli connection modify proton-uk autoconn
     ip -br addr ; ip route ; ping -c 3 crux.nu
     iw dev                            the Wi-Fi card
     sudo /etc/rc.d/networkmanager status
-    sudo nft list ruleset             the firewall (rassvet-learn learn security)
+    sudo nft list ruleset             the firewall (krest-learn learn security)
 
 ## Bluetooth
 bluetoothd is the service (bluetoothd in SERVICES, from the bluez port). Ctrl+Super+b opens
@@ -35,4 +35,4 @@ bluetuith, a menu in the terminal: pair, connect, trust, with the arrow keys. bl
 there too (the menu's "Bluetooth (bluetoothctl)"):
     power on ; scan on ; pair XX:XX:... ; connect XX:XX:... ; trust XX:XX:...
 
-References: man nmcli ; man nmtui ; rassvet-learn wiki network
+References: man nmcli ; man nmtui ; krest-learn wiki network

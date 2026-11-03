@@ -16,7 +16,7 @@ Old logs are rotated by a cron job, so the disk does not fill.
 
 ## A service's own log
 Services started from /etc/rc.d log through syslog unless their script sends the output
-elsewhere; Rassvet's tutor writes /var/log/rassvet-tutor.log. When a service fails silently,
+elsewhere; Krest's tutor writes /var/log/krest-tutor.log. When a service fails silently,
 run its script by hand to see what it says:
   sudo /etc/rc.d/NAME status
   sudo sh -x /etc/rc.d/NAME start              every command the script runs
@@ -24,7 +24,7 @@ run its script by hand to see what it says:
 ## Builds
   /var/log/pkgbuild/NAME.log        every prt-get build's full output, one file per port,
                                     overwritten by the next build of that port
-  /var/log/rassvet-install.log      every command the installer ran, with its output
+  /var/log/krest-install.log      every command the installer ran, with its output
 
 ## The kernel
   sudo dmesg                 the kernel's ring buffer since boot

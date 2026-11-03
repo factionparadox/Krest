@@ -1,0 +1,685 @@
+#!/usr/bin/env python3
+"""Krest Learn: offline lessons about this system, read-only inspection, manuals.
+
+From Archon/Krest's learning tool, rewritten for Krest on CRUX 3.8 (BSD-style rc scripts,
+ports and prt-get, XFS, ratpoison, Plan 9). It never runs a command it explains and never asks
+for root.
+"""
+import argparse
+import os
+from pathlib import Path
+import re
+import shlex
+import shutil
+import subprocess
+import sys
+import webbrowser
+
+
+def doc_root():
+    """The lessons and the wiki: $KREST_LEARN_ROOT, else beside this script (installed:
+    /usr/bin/../share/krest/learn; in a checkout of the repository: learn/ itself), else
+    /usr/share/krest/learn."""
+    if os.environ.get("KREST_LEARN_ROOT"):
+        return Path(os.environ["KREST_LEARN_ROOT"])
+    here = Path(__file__).resolve().parent
+    for candidate in (here.parent / "share/krest/learn", here):
+        if (candidate / "topics").is_dir():
+            return candidate
+    return Path("/usr/share/krest/learn")
+
+
+DOC_ROOT = doc_root()
+HANDBOOK = Path("/usr/share/doc/crux/handbook.txt")
+CRUX_WEB = "https://crux.nu/"
+RC_CONF = Path("/etc/rc.conf")
+RC_D = Path("/etc/rc.d")
+PRT_GET_CONF = Path("/etc/prt-get.conf")
+PKG_DB = Path("/var/lib/pkg/db")
+REPO = Path("/usr/src/krest")
+TOPIC_NAME = re.compile(r"[a-z][a-z0-9-]{0,60}\Z")
+MAN_NAME = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9_.+-]{0,70}\Z")
+# command (or "COMMAND WORD", "COMMAND -FLAG") -> lesson (krest-learn learn TOPIC)
+ALIASES = {
+    "prt-get": "packages", "prt-get depinst": "packages", "prt-get install": "packages",
+    "prt-get update": "packages", "prt-get remove": "packages", "prt-get search": "packages",
+    "prt-get dsearch": "packages", "prt-get info": "packages", "prt-get diff": "packages",
+    "prt-get quickdep": "packages", "prt-get deptree": "packages", "prt-get lock": "packages",
+    "prt-get listinst": "packages", "prt-get path": "ports", "prt-get sysup": "first-steps",
+    "pkgadd": "packages", "pkgadd -u": "recovery", "pkgrm": "packages", "pkginfo": "packages",
+    "rejmerge": "first-steps", "pkgmk": "building", "revdep": "recovery",
+    "ports": "ports", "ports -u": "ports", "krest-ports": "ports",
+    "krest-update": "first-steps", "krest-install": "install",
+    "rc.d": "services", "init": "services", "telinit": "services", "halt": "services",
+    "shutdown": "services", "reboot": "services", "poweroff": "services",
+    "start-stop-daemon": "services", "crond": "services", "crontab": "services",
+    "chronyc": "services",
+    "krest-sleep": "power", "acpid": "power", "acpi_listen": "power", "rtcwake": "power",
+    "tlp": "power", "tlp-stat": "power", "powertop": "power", "brightnessctl": "power",
+    "krest-sleepcheck": "power", "krest-battery": "power",
+    "framework_tool": "hardware", "lspci": "hardware", "lsusb": "hardware",
+    "swapon": "storage", "lsblk": "storage", "findmnt": "storage", "blkid": "storage",
+    "mount": "storage", "umount": "storage", "mkfs.xfs": "storage", "xfs_info": "storage",
+    "xfs_repair": "storage", "xfs_growfs": "storage", "df": "storage", "fstrim": "storage",
+    "udiskie": "storage", "udisksctl": "storage",
+    "nmtui": "network", "nmcli": "network", "ip": "network", "krest-vpn": "network",
+    "iw": "network", "ping": "network", "bluetoothctl": "network", "bluetuith": "network",
+    "networkmanager_dmenu": "network", "protonvpn-app": "network",
+    "nft": "security", "ss": "security", "passwd": "security", "sudo": "security",
+    "useradd": "security", "usermod": "security", "visudo": "security",
+    "grub-install": "boot", "grub-mkconfig": "boot", "efibootmgr": "boot", "dracut": "boot",
+    "uname": "kernel", "dmesg": "kernel", "lsmod": "kernel", "modprobe": "kernel",
+    "modinfo": "kernel",
+    "man": "manuals", "apropos": "manuals", "info": "manuals", "krest-handbook": "manuals",
+    "krest-learn": "manuals",
+    "ratpoison": "ratpoison", "krest-width": "ratpoison", "krest-overview": "ratpoison",
+    "startx": "desktop", "ly": "desktop", "xinit": "desktop", "krest-session": "desktop",
+    "polybar": "desktop", "dmenu": "desktop", "dmenu_run": "desktop", "dunst": "desktop",
+    "slock": "desktop", "xss-lock": "desktop", "xrdb": "desktop", "setxkbmap": "desktop",
+    "krest-menu": "desktop", "krest-open": "desktop", "krest-term": "desktop",
+    "x-terminal": "desktop",
+    "mc": "files", "mcedit": "files",
+    "acme": "plan9", "sam": "plan9", "rc": "plan9", "plumber": "plan9", "9": "plan9",
+    "krest-acme": "plan9", "krest-plumb": "plan9",
+    "pipewire": "sound", "wireplumber": "sound", "pamixer": "sound", "pulsemixer": "sound",
+    "wpctl": "sound", "pw-top": "sound",
+    "krest-russian": "russian", "krest-content": "russian", "llama-server": "russian",
+    "kiwix-serve": "russian",
+    "chroot": "recovery",
+    # Guix's names, from before Krest moved to CRUX, so they still lead somewhere
+    "guix": "packages", "guix pull": "ports", "guix system": "architecture",
+    "guix system roll-back": "recovery", "herd": "services", "loginctl": "power",
+}
+# commands whose wiki page goes deeper than the lesson (krest-learn wiki PAGE)
+WIKI_FOR = {
+    "prt-get": "prt-get", "krest-update": "prt-get", "revdep": "prt-get",
+    "prt-get path": "ports",
+    "pkgadd": "pkgutils", "pkgrm": "pkgutils", "pkginfo": "pkgutils", "rejmerge": "pkgutils",
+    "pkgmk": "pkgfiles", "pkgfile": "pkgfiles", "footprint": "pkgfiles", ".footprint": "pkgfiles",
+    "sha256": "pkgfiles", "port": "pkgfiles",
+    "ports": "ports", "krest-ports": "ports", "collections": "ports", "prt-get.conf": "ports",
+    "rc.d": "rc", "init": "rc", "telinit": "rc", "services": "rc", "start-stop-daemon": "rc",
+    "shutdown": "rc", "halt": "rc", "rc.multi": "rc",
+    "rc.conf": "rc-conf", "fstab": "rc-conf", "inittab": "rc-conf",
+    "dmesg": "logging", "syslog": "logging", "syslogd": "logging",
+    "krest-sleep": "sleep", "acpid": "sleep", "acpi_listen": "sleep", "rtcwake": "sleep",
+    "suspend": "sleep", "hibernate": "sleep", "hibernation": "sleep",
+    "modprobe": "kernel", "lsmod": "kernel", "uname": "kernel", "modinfo": "kernel",
+    "linux": "kernel",
+    "grub-install": "boot", "grub-mkconfig": "boot", "efibootmgr": "boot", "grub": "boot",
+    "dracut": "boot", "initramfs": "boot",
+    "passwd": "users", "sudo": "users", "groups": "users", "id": "users", "useradd": "users",
+    "usermod": "users", "visudo": "users", "pam": "users",
+    "chronyd": "time", "chronyc": "time", "crond": "time", "crontab": "time", "date": "time",
+    "locale": "locale", "localedef": "locale", "setxkbmap": "locale", "setfont": "locale",
+    "loadkeys": "locale",
+    "fstrim": "filesystems", "mkfs.xfs": "filesystems", "xfs_repair": "filesystems",
+    "xfs_growfs": "filesystems", "lsblk": "filesystems", "mount": "filesystems",
+    "udisksctl": "filesystems", "udiskie": "filesystems",
+    "nmcli": "network", "nmtui": "network", "nft": "network", "ip": "network",
+    "krest-vpn": "network", "networkmanager_dmenu": "network", "protonvpn-app": "network",
+    "krest-firewall": "network",
+    "wpctl": "sound", "pipewire": "sound", "pamixer": "sound", "wireplumber": "sound",
+    "pulsemixer": "sound",
+    "vainfo": "graphics", "xrandr": "graphics",
+    "framework_tool": "firmware", "krest-sleepcheck": "framework",
+    "krest-handbook": "handbook", "handbook": "handbook",
+    "pacman": "from-arch", "systemctl": "from-arch", "journalctl": "from-arch",
+    "mkinitcpio": "from-arch", "makepkg": "from-arch", "yay": "from-arch",
+    # the old pages' names and Guix's, from before Krest moved to CRUX
+    "guix-packages": "prt-get", "guix-packaging": "pkgfiles", "guix-tools": "pkgutils",
+    "shepherd": "rc", "system": "rc-conf", "channels": "ports", "elogind": "sleep",
+    "guix": "from-arch", "guix pull": "ports", "guix build": "pkgfiles", "herd": "rc",
+    "loginctl": "sleep", "config.scm": "rc-conf", "generations": "prt-get",
+    # Void's names, from before that, likewise
+    "xbps-install": "prt-get", "xbps-query": "prt-get", "xbps-remove": "prt-get",
+    "xbps": "prt-get", "sv": "rc", "runit": "rc", "xbps-src": "pkgfiles", "xtools": "pkgutils",
+    "repositories": "ports",
+}
+MANUALS = {
+    "prt-get": "man 8 prt-get", "krest-update": "man 8 prt-get ; man 8 ports ; krest-handbook",
+    "ports": "man 8 ports", "pkgadd": "man 8 pkgadd", "pkgrm": "man 8 pkgrm",
+    "pkginfo": "man 8 pkginfo", "pkgmk": "man 8 pkgmk ; man 5 pkgmk.conf",
+    "rejmerge": "man 8 rejmerge", "krest-ports": "less /usr/src/krest/build/krest-ports",
+    "rc.d": "man 8 init ; man 5 inittab ; krest-handbook", "init": "man 8 init",
+    "start-stop-daemon": "man 8 start-stop-daemon", "acpid": "man 8 acpid",
+    "krest-sleep": "less /usr/bin/krest-sleep ; man 8 acpid",
+    "krest-handbook": "less " + str(HANDBOOK), "dracut": "man 8 dracut",
+    "nmtui": "man 1 nmtui", "nmcli": "man 1 nmcli", "nft": "man 8 nft",
+    "lsblk": "man 8 lsblk", "findmnt": "man 8 findmnt", "mkfs.xfs": "man 8 mkfs.xfs",
+    "xfs_repair": "man 8 xfs_repair", "grub-install": "man 8 grub-install", "man": "man 1 man",
+    "grub-mkconfig": "man 8 grub-mkconfig",
+    "ratpoison": "man 1 ratpoison", "polybar": "man 1 polybar", "dmenu": "man 1 dmenu",
+    "mc": "man 1 mc", "tlp": "man 8 tlp", "chronyc": "man 1 chronyc", "crontab": "man 1 crontab",
+    "framework_tool": "framework_tool --help", "info": "info info",
+    "acme": "9 man 1 acme", "sam": "9 man 1 sam", "rc": "9 man 1 rc", "plumber": "9 man 4 plumber",
+    "guix": "krest-learn wiki from-arch", "herd": "krest-learn wiki rc",
+    "loginctl": "krest-learn wiki sleep",
+}
+SOURCES = (
+    ("The CRUX handbook (offline)", f"krest-handbook   (or: less {HANDBOOK})"),
+    ("CRUX: the handbook, FAQ, wiki and mailing lists (online)", CRUX_WEB),
+    ("CRUX ports, every collection, searchable", "https://crux.nu/portdb/"),
+    ("CRUX's ports and tools, in Git", "https://git.crux.nu/"),
+    ("Manual pages for the package tools", "man prt-get ; man ports ; man pkgmk ; man pkgadd"),
+    ("Krest's ports (Pkgfiles and sha256 files)", "/usr/src/krest/ports  (or: /usr/ports/krest)"),
+    ("The Linux kernel (the linux port's source)", "https://www.kernel.org/"),
+    ("Linux kernel documentation", "https://docs.kernel.org/"),
+    ("Arch Linux's kernel configuration (the linux port's base.config)",
+     "https://gitlab.archlinux.org/archlinux/packaging/packages/linux"),
+    ("framework_tool (framework-system)", "https://github.com/FrameworkComputer/framework-system"),
+    ("ratpoison manual", "https://www.nongnu.org/ratpoison/doc/"),
+    ("Plan 9 from User Space (plan9port)", "https://9fans.github.io/plan9port/"),
+    ("acme, by Rob Pike (paper)", "https://doc.cat-v.org/plan_9/4th_edition/papers/acme/"),
+    ("Midnight Commander", "https://midnight-commander.org/"),
+    ("polybar wiki", "https://github.com/polybar/polybar/wiki"),
+    ("PipeWire documentation", "https://docs.pipewire.org/"),
+    ("XFS documentation", "https://docs.kernel.org/admin-guide/xfs.html"),
+    ("Krest source (the installer, the ports, the desktop)", "https://github.com/factionparadox/Pustota"),
+)
+
+
+def topics():
+    root = DOC_ROOT / "topics"
+    if not root.is_dir():
+        return {}
+    return {p.stem: p for p in sorted(root.glob("*.md"))
+            if p.is_file() and TOPIC_NAME.fullmatch(p.stem)}
+
+
+def read_topic(name):
+    if not TOPIC_NAME.fullmatch(name):
+        return None
+    path = topics().get(name)
+    return path.read_text(encoding="utf-8") if path else None
+
+
+def learn(name=None):
+    if name is None:
+        available = topics()
+        if not available:
+            print("Krest offline lessons are missing.", file=sys.stderr)
+            return 2
+        print("KREST LEARN — understand, inspect, adapt\n")
+        for key, path in available.items():
+            heading = next((line[2:] for line in path.read_text(encoding="utf-8").splitlines()
+                            if line.startswith("# ")), key)
+            print(f"  {key:<16} {heading}")
+        print("\nRead: krest-learn learn packages")
+        print("Browse: krest-learn browse")
+        print("The wiki (CRUX in depth): krest-learn wiki ; search: krest-learn search WORD")
+        print("Explain without running: krest-learn explain \"sudo prt-get depinst gimp\"")
+        return 0
+    page = read_topic(name)
+    if page is None:
+        print("Unknown lesson. List lessons with krest-learn learn.",
+              file=sys.stderr)
+        return 2
+    print(page)
+    return 0
+
+
+def wiki_pages():
+    root = DOC_ROOT / "wiki"
+    if not root.is_dir():
+        return {}
+    return {p.stem: p for p in sorted(root.glob("*.md"))
+            if p.is_file() and TOPIC_NAME.fullmatch(p.stem)}
+
+
+def show(text):
+    """Long pages go through less in a terminal; otherwise print them."""
+    pager = shutil.which("less")
+    if pager and sys.stdout.isatty() and text.count("\n") > 40:
+        subprocess.run([pager, "-R"], input=text, text=True, check=False)
+    else:
+        print(text)
+
+
+def wiki(name=None):
+    pages = wiki_pages()
+    if not pages:
+        print("The Krest wiki is missing (krest-learn package).", file=sys.stderr)
+        return 2
+    if name is None:
+        name = "index"
+    name = WIKI_FOR.get(name, name)
+    if not TOPIC_NAME.fullmatch(name) or name not in pages:
+        print(f"No wiki page '{name}'. The index: krest-learn wiki ; "
+              f"search: krest-learn search {name}", file=sys.stderr)
+        return 2
+    show(pages[name].read_text(encoding="utf-8"))
+    return 0
+
+
+def search(words):
+    """Every line in the lessons and the wiki containing all the words (any case)."""
+    words = [w.lower() for w in words if w.strip()]
+    if not words:
+        print("Usage: krest-learn search WORD [WORD...]", file=sys.stderr)
+        return 2
+    found = 0
+    for kind, pages in (("wiki", wiki_pages()), ("learn", topics())):
+        for name, path in pages.items():
+            for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+                if all(w in line.lower() for w in words):
+                    print(f"{kind} {name}:{number}: {line.strip()}")
+                    found += 1
+    if not found:
+        print("Nothing found. The wiki's index: krest-learn wiki")
+        return 1
+    print(f"\nRead a page: krest-learn wiki NAME  (or: krest-learn learn NAME)")
+    return 0
+
+
+def browse():
+    while True:
+        available = list(topics())
+        if not available:
+            return learn()
+        print("\nKREST LEARN — offline lessons\n")
+        for i, item in enumerate(available, 1):
+            print(f"  {i:2}. {item}")
+        print("   q. Quit")
+        try:
+            response = input("Choose a lesson: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            return 0
+        if response.lower() in ("", "q", "quit", "exit"):
+            return 0
+        if not response.isdigit() or int(response) not in range(1, len(available) + 1):
+            print("Enter a listed number.")
+            continue
+        print("\n" + (read_topic(available[int(response) - 1]) or "Missing lesson"))
+        try:
+            input("\nEnter to return to the lessons...")
+        except (EOFError, KeyboardInterrupt):
+            return 0
+
+
+def lookup_key(tokens):
+    """The table keys for a command line, most specific first: "pkgadd -u", "prt-get sysup",
+    "guix system roll-back", then the command's own name. A service script (/etc/rc.d/NAME)
+    is "rc.d"."""
+    if tokens[0].startswith(str(RC_D) + "/"):
+        return ["rc.d"]
+    command = Path(tokens[0]).name.lower()
+    words = [t for t in tokens[1:] if not t.startswith("-")]
+    flags = [t for t in tokens[1:] if t.startswith("-")]
+    keys = []
+    if len(words) >= 2:
+        keys.append(f"{command} {words[0]} {words[1]}")
+    if words:
+        keys.append(f"{command} {words[0]}")
+    keys += [f"{command} {flag}" for flag in flags]
+    keys.append(command)
+    return keys
+
+
+def first(table, keys):
+    return next((table[k] for k in keys if k in table), None)
+
+
+def rc_services():
+    """The SERVICES list in /etc/rc.conf, in order (empty if there is no such file)."""
+    try:
+        text = RC_CONF.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return []
+    text = "\n".join(line.split("#", 1)[0] for line in text.splitlines())
+    found = re.search(r"^\s*SERVICES=\((.*?)\)", text, re.M | re.S)
+    return found.group(1).split() if found else []
+
+
+def notes(command, tokens):
+    """What a command would change, in a line or two (read from the command line only)."""
+    words = [t for t in tokens[1:] if not t.startswith("-")]
+    flags = [t for t in tokens[1:] if t.startswith("-")]
+    out = []
+    if (command == "prt-get" and words[:1] == ["sysup"]) or (
+            command == "krest-update" and "--dry" not in flags):
+        out.append("This rebuilds, on this laptop, every installed package whose port is newer "
+                   "(prt-get diff lists\nthem) and replaces each one as it goes. There is no "
+                   "rollback; the previous package\nfiles stay in /usr/ports/packages "
+                   "(sudo pkgadd -u -f FILE puts one back).")
+    if command == "krest-update" and "--dry" in flags:
+        out.append("With --dry it still updates the ports (git pull, krest-ports sync, "
+                   "ports -u), then only\nlists what would be rebuilt (prt-get diff).")
+    if command == "ports" and any(f.startswith("-u") for f in flags):
+        out.append("ports -u updates only the recipes in /usr/ports; nothing is built or "
+                   "installed until\nprt-get sysup (krest-update does both).")
+    if command == "prt-get" and words[:1] in (["depinst"], ["install"], ["update"]):
+        out.append("prt-get builds from source here (each build's output: "
+                   "/var/log/pkgbuild/NAME.log), then\ninstalls with pkgadd"
+                   + (", installing missing dependencies first." if words[0] == "depinst"
+                      else "."))
+    if command == "pkgadd" and "-u" in flags:
+        out.append("pkgadd -u replaces the installed version. Files under /etc are kept as "
+                   "they are; the\npackage's new versions go to /var/lib/pkg/rejected "
+                   "(sudo rejmerge).")
+    if command == "pkgadd" and "-f" in flags:
+        out.append("-f also takes over files another package owns, and installs an older "
+                   "version over a newer.")
+    if tokens[0].startswith(str(RC_D) + "/"):
+        name = Path(tokens[0]).name
+        action = words[0] if words else "start|stop|restart|status"
+        out.append(f"This runs the {name} service script with '{action}' now; it lasts until "
+                   "the next boot.\nAt boot, only the services in SERVICES in /etc/rc.conf "
+                   "start" + (f" ({name} is not among them)." if RC_CONF.exists()
+                              and name not in rc_services() else "."))
+    if command in ("guix", "herd", "loginctl", "shepherd"):
+        out.append("Krest is CRUX now (it was Guix System): there is no " + command +
+                   " here. The equivalents:\nkrest-learn wiki from-arch "
+                   "(and krest-learn wiki prt-get, rc, sleep).")
+    destructive = command in ("mkfs.xfs", "mkfs.vfat", "mkfs.fat", "mkfs.exfat", "wipefs",
+                              "sfdisk", "sgdisk", "xfs_repair", "dd", "pkgrm") or (
+        command == "prt-get" and words[:1] == ["remove"])
+    if destructive:
+        out.append("CAUTION: this command can change or destroy system state"
+                   + (" (removed packages come back only by\ninstalling them again)."
+                      if command in ("pkgrm", "prt-get") else "."))
+    return out
+
+
+def explain(parts):
+    if not parts:
+        print('Usage: krest-learn explain "sudo prt-get depinst gimp"', file=sys.stderr)
+        return 2
+    command_line = " ".join(parts)
+    try:
+        tokens = shlex.split(command_line)
+    except ValueError as error:
+        print("Invalid command: " + str(error), file=sys.stderr)
+        return 2
+    if not tokens:
+        return 2
+    # sudo (run as root), sudo -E, sh (run a script) and 9 (the Plan 9 version) only wrap the
+    # real command
+    while len(tokens) > 1 and (Path(tokens[0]).name in ("sudo", "9", "sh") or
+                               (tokens[0].startswith("-") and len(tokens[0]) <= 3)):
+        tokens = tokens[1:]
+    keys = lookup_key(tokens)
+    command = keys[-1]
+    print("Command: " + command_line)
+    print("READ ONLY: This command was NOT executed.\n")
+    lesson_name = first(ALIASES, keys)
+    lesson = read_topic(lesson_name) if lesson_name else None
+    print(lesson or "No dedicated lesson for this command. Read its manual page.")
+    for note in notes(command, tokens):
+        print("\n" + note)
+    wiki_page = first(WIKI_FOR, keys)
+    if wiki_page:
+        print("\nIn depth: krest-learn wiki " + wiki_page)
+    print("Reference: " + (first(MANUALS, keys) or "man " + command))
+    return 0
+
+
+def read_only(argv, timeout=4):
+    if not shutil.which(argv[0]):
+        return "unavailable: " + argv[0]
+    try:
+        result = subprocess.run(argv, capture_output=True, text=True,
+                                check=False, timeout=timeout)
+    except (OSError, subprocess.TimeoutExpired):
+        return "not available"
+    if result.returncode != 0:
+        return "unavailable or inactive"
+    return result.stdout.strip().split("\n")[0][:190] or "no output"
+
+
+def battery():
+    for bat in sorted(Path("/sys/class/power_supply").glob("BAT*")):
+        try:
+            return (f"{bat.name} {(bat / 'capacity').read_text().strip()} % "
+                    f"{(bat / 'status').read_text().strip().lower()}")
+        except OSError:
+            continue
+    return "no battery reported"
+
+
+def first_line(path):
+    try:
+        return Path(path).read_text(encoding="utf-8", errors="replace").split("\n")[0].strip()
+    except OSError:
+        return None
+
+
+def crux_version():
+    """CRUX's own answer (the crux command), else what Krest installed."""
+    if shutil.which("crux"):
+        answer = read_only(["crux"])
+        if not answer.startswith("unavailable"):
+            return answer
+    return "not CRUX (no crux command)"
+
+
+def packages():
+    """How many packages are installed: pkginfo -i, else the blocks of /var/lib/pkg/db."""
+    if shutil.which("pkginfo"):
+        try:
+            result = subprocess.run(["pkginfo", "-i"], capture_output=True, text=True,
+                                    check=False, timeout=10)
+            if result.returncode == 0:
+                return f"{len(result.stdout.splitlines())} installed (pkginfo -i)"
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+    try:
+        text = PKG_DB.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return "unknown (no pkginfo, no " + str(PKG_DB) + ")"
+    return f"{len([b for b in text.split(chr(10) * 2) if b.strip()])} installed ({PKG_DB})"
+
+
+def updates():
+    """prt-get quickdiff: the installed packages whose port has another version."""
+    if not shutil.which("prt-get"):
+        return "unavailable: prt-get"
+    try:
+        result = subprocess.run(["prt-get", "quickdiff"], capture_output=True, text=True,
+                                check=False, timeout=30)
+    except (OSError, subprocess.TimeoutExpired):
+        return "not available"
+    names = result.stdout.split()
+    if result.returncode != 0 and not names:
+        return "unknown"
+    if not names:
+        return "none: every installed package matches its port"
+    shown = " ".join(names[:6]) + (" ..." if len(names) > 6 else "")
+    return f"{len(names)} with a newer port ({shown})"
+
+
+def collections():
+    """The prtdir lines of /etc/prt-get.conf, in order, each marked if its folder is missing."""
+    try:
+        lines = PRT_GET_CONF.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return "unknown (no " + str(PRT_GET_CONF) + ")"
+    dirs = [line.split()[1].split(":")[0] for line in lines
+            if line.strip().startswith("prtdir") and len(line.split()) > 1]
+    if not dirs:
+        return "none listed"
+    return " ".join(Path(d).name + ("" if Path(d).is_dir() else " (missing)") for d in dirs)
+
+
+def repository():
+    if not (REPO / ".git").exists():
+        return "not found (" + str(REPO) + ")"
+    answer = read_only(["git", "-C", str(REPO), "log", "-1", "--format=%h %cs %s"])
+    return answer[:80]
+
+
+def hibernation():
+    cmdline = first_line("/proc/cmdline") or ""
+    try:
+        swaps = Path("/proc/swaps").read_text().splitlines()[1:]
+    except OSError:
+        swaps = []
+    partition = any(len(l.split()) > 1 and l.split()[1] == "partition" for l in swaps)
+    if "resume=" in cmdline and partition:
+        return "ready (resume= on the kernel line, a swap partition)"
+    if partition:
+        return "no resume= on the kernel line (/etc/default/grub)"
+    return "no swap partition to hibernate into"
+
+
+# the process each service leaves running, for looking without root (none: a one-off script)
+PROCESS = {
+    "dbus": "dbus-daemon", "networkmanager": "NetworkManager", "acpid": "acpid",
+    "thermald": "thermald", "bluetoothd": "bluetoothd", "chronyd": "chronyd",
+    "crond": "crond", "krest-tutor": "llama-server", "sshd": "sshd", "cupsd": "cupsd",
+    "lo": None, "tlp": None, "krest-firewall": None, "net": None,
+}
+
+
+def service(name):
+    """One service: its script's status as root; otherwise whether its process runs."""
+    script = RC_D / name
+    if not script.exists():
+        return "no script in /etc/rc.d"
+    if os.geteuid() == 0:
+        try:
+            result = subprocess.run([str(script), "status"], capture_output=True, text=True,
+                                    check=False, timeout=6, stdin=subprocess.DEVNULL)
+        except (OSError, subprocess.TimeoutExpired):
+            return "status not available"
+        lines = [l.strip() for l in (result.stdout + result.stderr).splitlines() if l.strip()]
+        return lines[0][:120] if lines else "no status output"
+    process = PROCESS.get(name, name)
+    if process is None:
+        return "runs once at boot (sudo krest-learn doctor shows its status)"
+    if not shutil.which("pgrep"):
+        return "unknown"
+    try:
+        result = subprocess.run(["pgrep", "-x", process], capture_output=True, text=True,
+                                check=False, timeout=4)
+    except (OSError, subprocess.TimeoutExpired):
+        return "unknown"
+    pids = result.stdout.split()
+    return f"running ({process}, pid {pids[0]})" if pids else f"not running ({process})"
+
+
+def doctor():
+    print("KREST SYSTEM MAP: observations only; nothing is changed or sent anywhere.\n")
+    values = (
+        ("Init (PID 1)", lambda: first_line("/proc/1/comm") or "unknown"),
+        ("Kernel", lambda: read_only(["uname", "-r"])),
+        ("System", crux_version),
+        ("Krest", lambda: first_line("/usr/share/krest/version") or "not installed"),
+        ("Repository", repository),
+        ("Packages", packages),
+        ("Updates", updates),
+        ("Collections", collections),
+        ("Root filesystem", lambda: read_only(["findmnt", "-n", "-o", "SOURCE,FSTYPE,OPTIONS",
+                                               "--target", "/"])),
+        ("Swap", lambda: read_only(["swapon", "--show=NAME,TYPE,SIZE", "--noheadings"])),
+        ("Hibernation", hibernation),
+        ("Power profile", lambda: first_line("/sys/firmware/acpi/platform_profile")
+                                  or "not reported"),
+    )
+    for label, get in values:
+        print(f"{label:<17} {get()}")
+    print(f"{'Battery':<17} {battery()}")
+    print(f"{'Display':<17} {os.environ.get('DISPLAY', 'not in X')}  (window manager: ratpoison)")
+    names = rc_services()
+    if names:
+        print(f"\nServices started at boot (SERVICES in {RC_CONF}):")
+        for name in names:
+            print(f"  {name:<17} {service(name)}")
+    else:
+        print(f"\nServices: no SERVICES list found in {RC_CONF}")
+    if os.geteuid() != 0:
+        print("\nServices are shown by their processes; sudo krest-learn doctor asks each "
+              "/etc/rc.d script.")
+    print("What would update:  prt-get diff   (krest-update --dry)")
+    print("No rollback on CRUX: earlier package files are in /usr/ports/packages.")
+    print("\nWhat each line means: krest-learn learn architecture")
+    print("Sources and manuals:  krest-learn sources")
+    return 0
+
+
+def open_reference(target):
+    try:
+        return 0 if webbrowser.open(target) else 2
+    except (OSError, webbrowser.Error):
+        return 2
+
+
+def handbook():
+    """The CRUX handbook, offline, in less (krest-handbook does the same in its own window)."""
+    if not HANDBOOK.is_file():
+        print(f"The CRUX handbook is not at {HANDBOOK} (the installer copies it from the stick).")
+        print("Online: " + CRUX_WEB)
+        return 2
+    pager = shutil.which("less")
+    if pager and sys.stdin.isatty() and sys.stdout.isatty():
+        return subprocess.run([pager, str(HANDBOOK)], check=False).returncode
+    print(f"The CRUX handbook, offline: less {HANDBOOK}  (or krest-handbook)")
+    print("Beside this wiki, in Midnight Commander: krest-handbook mc")
+    print("Online: " + CRUX_WEB)
+    return 0
+
+
+def sources():
+    print("KREST REFERENCE LIBRARY\n")
+    for name, address in SOURCES:
+        print(f"{name}\n  {address}")
+    return 0
+
+
+def manual(name):
+    if not MAN_NAME.fullmatch(name):
+        print("Invalid manual name.", file=sys.stderr)
+        return 2
+    if not shutil.which("man"):
+        print("Manual viewer unavailable; read the CRUX handbook: krest-handbook",
+              file=sys.stderr)
+        return 2
+    return subprocess.run(["man", "--", name], check=False).returncode
+
+
+def main(argv=None):
+    p = argparse.ArgumentParser(prog="krest-learn",
+                                description="Read-only lessons and inspection for Krest")
+    sub = p.add_subparsers(dest="action")
+    ln = sub.add_parser("learn", help="list or read an offline chapter")
+    ln.add_argument("topic", nargs="?")
+    ex = sub.add_parser("explain", help="explain without executing")
+    ex.add_argument("command", nargs=argparse.REMAINDER)
+    sub.add_parser("browse", help="browse offline chapters interactively")
+    wk = sub.add_parser("wiki", help="the Krest wiki: CRUX explained, page by page")
+    wk.add_argument("page", nargs="?")
+    se = sub.add_parser("search", help="search the lessons and the wiki")
+    se.add_argument("words", nargs="+")
+    sub.add_parser("doctor", help="show read-only system state")
+    sub.add_parser("handbook", help="open the CRUX handbook, offline")
+    sub.add_parser("sources", help="show authoritative reference links")
+    ma = sub.add_parser("manual", help="open installed man page")
+    ma.add_argument("name")
+    args = p.parse_args(argv)
+    if args.action in (None, "learn"):
+        return learn(getattr(args, "topic", None))
+    if args.action == "browse":
+        return browse()
+    if args.action == "wiki":
+        return wiki(args.page)
+    if args.action == "search":
+        return search(args.words)
+    if args.action == "doctor":
+        return doctor()
+    if args.action == "explain":
+        return explain(args.command)
+    if args.action == "handbook":
+        return handbook()
+    if args.action == "sources":
+        return sources()
+    if args.action == "manual":
+        return manual(args.name)
+    return 2
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except BrokenPipeError:                   # piped into head, or a pager that quit early
+        os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+        sys.exit(0)

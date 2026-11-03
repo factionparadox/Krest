@@ -1,3 +1,0 @@
-#!/bin/sh
-# Super+? : the keys, in a terminal (q closes).
-exec rassvet-term Keys less /usr/share/rassvet/keys.txt

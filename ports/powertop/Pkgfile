@@ -1,6 +1,6 @@
 # Description: What uses the battery, and power-saving tunables (System menu: Battery report)
 # URL: https://github.com/fenrus75/powertop
-# Maintainer: Rassvet
+# Maintainer: Krest
 # Depends on: autoconf-archive libnl ncurses pciutils
 
 name=powertop

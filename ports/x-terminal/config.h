@@ -1,9 +1,9 @@
 /* See LICENSE file for copyright and license details. */
 /*
- * X-терминал: Rassvet's terminal. st (suckless) through st-flexipatch, with the patches in
+ * X-терминал: Krest's terminal. st (suckless) through st-flexipatch, with the patches in
  * patches.h, and these settings: a Plan 9 look (acme's pale yellow, Go Mono by the designers
  * of Plan 9's Lucida), scrollback, select-to-copy, right-click to plumb.
- * Change a setting here, then rebuild:  ./xbps-src pkg x-terminal  (rassvet-learn building)
+ * Change a setting here, then rebuild:  ./xbps-src pkg x-terminal  (krest-learn building)
  */
 
 /*
@@ -779,7 +779,7 @@ static char ascii_printable[] =
  * plumb_cmd is run on mouse button 3 click, with argument set to
  * current selection and with cwd set to the cwd of the active shell
  */
-static char *plumb_cmd = "rassvet-plumb";
+static char *plumb_cmd = "krest-plumb";
 #endif // RIGHTCLICKTOPLUMB_PATCH
 
 #if UNDERCURL_PATCH

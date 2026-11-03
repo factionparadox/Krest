@@ -1,0 +1,15 @@
+# Description: krest-learn: lessons and a wiki on how this system works, in the terminal
+# URL: https://github.com/factionparadox/Pustota
+# Maintainer: Krest
+# Depends on: python3
+
+name=krest-learn
+version=@VERSION@
+release=@RELEASE@
+source=(krest-learn-$version.tar.gz)
+
+build() {
+	install -Dm755 learn/krest-learn $PKG/usr/bin/krest-learn
+	install -d $PKG/usr/share/krest/learn
+	cp -a learn/topics learn/wiki $PKG/usr/share/krest/learn/
+}

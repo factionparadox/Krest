@@ -1,6 +1,6 @@
 # Description: Runs language models on the CPU (the Russian tutor's server)
 # URL: https://github.com/ggml-org/llama.cpp
-# Maintainer: Rassvet
+# Maintainer: Krest
 
 name=llama-cpp
 version=0.8.0

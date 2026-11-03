@@ -1,6 +1,6 @@
 # Description: Simple X screen locker (the screen lock on sleep, lid and Super+x)
 # URL: https://tools.suckless.org/slock/
-# Maintainer: Rassvet
+# Maintainer: Krest
 # Depends on: xorg-libxext xorg-libxrandr
 
 name=slock

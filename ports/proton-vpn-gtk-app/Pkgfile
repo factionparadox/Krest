@@ -1,6 +1,6 @@
 # Description: The Proton VPN app (Ctrl+Super+p)
 # URL: https://github.com/ProtonVPN/proton-vpn-gtk-app
-# Maintainer: Rassvet
+# Maintainer: Krest
 # Depends on: gnome-keyring gtk4 libnotify librsvg python3-build python3-cairo python3-dbus python3-distro python3-gobject python3-installer python3-packaging python3-proton-core python3-proton-keyring-linux python3-proton-vpn-api-core python3-requests python3-setuptools
 
 name=proton-vpn-gtk-app
@@ -14,6 +14,6 @@ build() {
 	/usr/bin/python3 -m installer --compile-bytecode 2 --destdir=$PKG dist/*.whl
 	install -Dm644 rpmbuild/SOURCES/proton.vpn.app.gtk.desktop $PKG/usr/share/applications/proton.vpn.app.gtk.desktop
 	install -Dm644 rpmbuild/SOURCES/proton-vpn-logo.svg $PKG/usr/share/icons/hicolor/scalable/apps/proton-vpn-logo.svg
-	# Rassvet's menus start it as protonvpn-app
+	# Krest's menus start it as protonvpn-app
 	[ -e $PKG/usr/bin/protonvpn-app ] || ln -s protonvpn $PKG/usr/bin/protonvpn-app
 }

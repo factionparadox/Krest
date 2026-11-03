@@ -1,29 +1,29 @@
 #!/usr/bin/env bash
-# Publish Rassvet's openly licensed Russian material to a GitHub release, so it can always be
+# Publish Krest's openly licensed Russian material to a GitHub release, so it can always be
 # downloaded again even if the original sites change (as the DLI course did).
 #
-# Run on an installed Rassvet that has downloaded the packs (sudo rassvet-content
+# Run on an installed Krest that has downloaded the packs (sudo krest-content
 # install ru-voices ru-course ru-audiobooks), with the GitHub CLI logged in (gh auth login):
 #
 #   build/publish-content.sh [--source DIR] [--out DIR] [--release content-v2] [--repo OWNER/NAME] [--dry-run]
 #
 # Run it as yourself (not sudo), so it uses your gh login; packed parts go to --out
-# (default ~/rassvet-mirror, about 6 GB) and can be deleted after uploading.
+# (default ~/krest-mirror, about 6 GB) and can be deleted after uploading.
 #
 # Mirrors: the FSI/DLI/Peace Corps course library (US government works, public domain),
 # the LibriVox audiobooks (public domain) and the Piper Russian voices (MIT). It does
 # not mirror the Между нами textbook (CC BY-NC-ND: personal copies only), the
 # Wikimedia ZIMs (Kiwix keeps them current) or the AI models (Ollama's registry).
 #
-# Writes russian/mirror.json; commit and push it so rassvet-content
+# Writes russian/mirror.json; commit and push it so krest-content
 # uses the new mirror.
 set -Eeuo pipefail
 
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 REPO=$(cd -- "$HERE/.." && pwd)
-SRC=/var/lib/rassvet/russian RELEASE=content-v2 GH_REPO=factionparadox/Pustota DRY=0
-OUT="$HOME/rassvet-mirror"
-PART=${RASSVET_MIRROR_PART_SIZE:-1900M}
+SRC=/var/lib/krest/russian RELEASE=content-v2 GH_REPO=factionparadox/Pustota DRY=0
+OUT="$HOME/krest-mirror"
+PART=${KREST_MIRROR_PART_SIZE:-1900M}
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -50,7 +50,7 @@ rm -rf "$OUTDIR"; mkdir -p "$OUTDIR"
 
 for pack in ru-course ru-audiobooks ru-voices; do
   src=${SOURCES[$pack]}
-  [ -s "$src/SHA256SUMS" ] || die "$pack: $src has no SHA256SUMS; download it first: sudo rassvet-content install $pack"
+  [ -s "$src/SHA256SUMS" ] || die "$pack: $src has no SHA256SUMS; download it first: sudo krest-content install $pack"
   (cd "$src" && sha256sum --quiet -c SHA256SUMS) || die "$pack: files in $src do not match their SHA256SUMS"
   echo "packing $pack from $src"
   # Reproducible tar: sorted names, fixed owner and time; MP3s and PDFs do not compress.
@@ -72,7 +72,7 @@ PY
   rm -f "$OUTDIR/$pack.tar"
 done
 
-python3 - "$OUTDIR" "$RELEASE" "$GH_REPO" "${RASSVET_MIRROR_JSON:-$REPO/russian/mirror.json}" <<'PY'
+python3 - "$OUTDIR" "$RELEASE" "$GH_REPO" "${KREST_MIRROR_JSON:-$REPO/russian/mirror.json}" <<'PY'
 import json, sys
 from pathlib import Path
 out, release, repo, target = Path(sys.argv[1]), sys.argv[2], sys.argv[3], Path(sys.argv[4])
@@ -85,8 +85,8 @@ print(f'mirror.json: {len(packs)} packs, {sum(len(p["parts"]) for p in packs.val
 PY
 
 cat > "$OUTDIR/NOTES.md" <<'EOF'
-Openly licensed material for Rassvet's Russian course, mirrored so it can always be downloaded again.
-rassvet-content fetches these parts, verifies each one and the whole against
+Openly licensed material for Krest's Russian course, mirrored so it can always be downloaded again.
+krest-content fetches these parts, verifies each one and the whole against
 russian/mirror.json, and unpacks them. Do not download them by hand unless you want to.
 
 * ru-course: FSI, DLI and Peace Corps Russian course books and audio (US government works, public
@@ -101,8 +101,8 @@ if [ "$DRY" -eq 1 ]; then
   exit 0
 fi
 gh release view "$RELEASE" --repo "$GH_REPO" >/dev/null 2>&1 ||
-  gh release create "$RELEASE" --repo "$GH_REPO" --title 'Rassvet content mirror' --notes-file "$OUTDIR/NOTES.md"
+  gh release create "$RELEASE" --repo "$GH_REPO" --title 'Krest content mirror' --notes-file "$OUTDIR/NOTES.md"
 gh release upload "$RELEASE" --repo "$GH_REPO" --clobber "$OUTDIR"/*.tar.??
 echo
-echo "Uploaded. Now commit the mirror index so rassvet-content uses it:"
+echo "Uploaded. Now commit the mirror index so krest-content uses it:"
 echo "  git add russian/mirror.json && git commit -m 'Content mirror $RELEASE' && git push"

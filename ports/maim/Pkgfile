@@ -1,6 +1,6 @@
 # Description: Screenshots (Super+Shift+s takes an area)
 # URL: https://github.com/naelstrof/maim
-# Maintainer: Rassvet
+# Maintainer: Krest
 # Depends on: glm icu libjpeg-turbo libpng slop xorg-libxcomposite xorg-libxfixes xorg-libxrandr
 
 name=maim

@@ -1,0 +1,33 @@
+#!/bin/sh
+# Krest's X session. ly starts it (/usr/share/xsessions/krest.desktop), or startx from
+# ~/.xinitrc; each line starts one piece of the
+# desktop, and ratpoison, the window manager, comes last: the session ends when it exits.
+
+# A D-Bus session bus for notifications, mounting and the browser.
+[ -z "$DBUS_SESSION_BUS_ADDRESS" ] && exec dbus-run-session -- "$0" "$@"
+
+# programs D-Bus starts on request need the display
+dbus-update-activation-environment DISPLAY XAUTHORITY XDG_CURRENT_DESKTOP 2>/dev/null
+# sound: PipeWire, its session manager and its PulseAudio side (no systemd user services here,
+# so the session starts them; they stop when it ends)
+pipewire & sleep 0.3
+wireplumber &
+pipewire-pulse &
+xrdb -merge /etc/krest/Xresources                # fonts, DPI, terminal colours
+[ -f "$HOME/.Xresources" ] && xrdb -merge "$HOME/.Xresources"
+xsetroot -cursor_name left_ptr
+feh --no-fehbg --bg-fill /usr/share/krest/krest-wallpaper.png   # the Крест roundel
+xset s 600 600 dpms 600 900 1200                   # blank after 10 minutes, screen off later
+xss-lock --transfer-sleep-lock -- slock &          # lock on sleep, lid and Super+x
+dunst &                                            # notifications
+udiskie --automount --notify &                     # USB sticks and drives
+xbanish &                                          # hide the pointer while typing
+krest-battery &                                  # low-battery warnings, hibernate when empty
+clipmenud &                                        # clipboard history (Super+v)
+# the Secret Service, where the Proton VPN app keeps its login (and other apps their passwords)
+command -v gnome-keyring-daemon >/dev/null && gnome-keyring-daemon --start --components=secrets >/dev/null
+krest-nightlight &                               # warmer screen after sunset (redshift)
+polybar krest >/dev/null 2>&1 &                  # the bar at the top
+[ -x "$HOME/.config/krest/autostart" ] && "$HOME/.config/krest/autostart" &
+
+exec ratpoison

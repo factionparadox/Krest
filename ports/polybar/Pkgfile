@@ -1,6 +1,6 @@
 # Description: Status bar for X (the bar at the top)
 # URL: https://polybar.github.io/
-# Maintainer: Rassvet
+# Maintainer: Krest
 # Depends on: alsa-lib cairo jsoncpp libnl libuv pulseaudio xorg-xcb-util xorg-xcb-util-cursor xorg-xcb-util-image xorg-xcb-util-wm xorg-xcb-util-xrm
 
 name=polybar

@@ -1,6 +1,6 @@
-# Description: X-терминал: Rassvet's terminal (st with scrollback, Plan 9 look)
+# Description: X-терминал: Krest's terminal (st with scrollback, Plan 9 look)
 # URL: https://github.com/bakkeby/st-flexipatch
-# Maintainer: Rassvet
+# Maintainer: Krest
 # Depends on: fontconfig freetype xorg-libxft font-go
 
 name=x-terminal

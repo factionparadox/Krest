@@ -1,6 +1,6 @@
 # Description: Battery life: CPU energy hints, Wi-Fi and USB power saving on battery
 # URL: https://linrunner.de/tlp/
-# Maintainer: Rassvet
+# Maintainer: Krest
 # Depends on: pciutils usbutils
 
 name=tlp

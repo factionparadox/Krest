@@ -8,7 +8,7 @@ scripts), and its package tools are a few small programs. Most Arch knowledge ab
 carries straight over; this table is the rest.
 
 ## Packages
-  pacman -Syu                 rassvet-update   (git pull, ports -u, then prt-get sysup)
+  pacman -Syu                 krest-update   (git pull, ports -u, then prt-get sysup)
   pacman -Sy                  sudo ports -u                (new ports; nothing rebuilt)
   pacman -S foo               sudo prt-get depinst foo     (built here, with its dependencies)
   pacman -Rns foo             sudo prt-get remove foo      (dependencies stay: remove them too)
@@ -24,7 +24,7 @@ carries straight over; this table is the rest.
   downgrade                   sudo pkgadd -u -f /usr/ports/packages/foo#OLD-1.pkg.tar.zst
   makepkg / PKGBUILD          pkgmk / Pkgfile              (see: pkgfiles)
   the AUR                     contrib, or a collection of your own   (see: ports)
-  pacman-key                  CRUX's signify keys in /etc/ports; Rassvet's sha256 files
+  pacman-key                  CRUX's signify keys in /etc/ports; Krest's sha256 files
   pacman -U file.pkg.tar.zst  sudo pkgadd file.pkg.tar.zst ; -u to upgrade
   .pacnew files               sudo rejmerge
 
@@ -38,7 +38,7 @@ carries straight over; this table is the rest.
   journalctl -f               sudo tail -f /var/log/messages
   journalctl -u foo           /var/log/messages, or /var/log/foo.log if it has one
   journalctl -k               sudo dmesg
-  systemctl suspend           rassvet-sleep suspend           (see: sleep)
+  systemctl suspend           krest-sleep suspend           (see: sleep)
   systemctl poweroff/reboot   sudo poweroff / sudo reboot
   timedatectl set-timezone    TIMEZONE= in /etc/rc.conf      (see: rc-conf)
   locale.gen / locale-gen     localedef -i en_GB -f UTF-8 en_GB.UTF-8     (see: locale)
@@ -47,10 +47,10 @@ carries straight over; this table is the rest.
   mkinitcpio -P               dracut (the linux port runs it)  (see: boot)
   /etc/fstab, /etc/default/grub   the same files, the same way
   systemd-timesyncd           chronyd                          (see: time)
-  systemd-networkd/resolved   NetworkManager (Rassvet)
+  systemd-networkd/resolved   NetworkManager (Krest)
   systemd timers              crond                            (see: time)
-  systemd --user services     ~/.config/rassvet/autostart, run by the session
-  logind.conf                 acpid's rules and rassvet-sleep  (see: sleep)
+  systemd --user services     ~/.config/krest/autostart, run by the session
+  logind.conf                 acpid's rules and krest-sleep  (see: sleep)
   arch-chroot                 mount --bind /dev /proc /sys /run, then chroot (learn recovery)
 
 ## Things that differ in spirit
@@ -61,5 +61,5 @@ carries straight over; this table is the rest.
 - Ports are short shell scripts you are expected to read and copy.
 - No journal: plain text logs through syslog in /var/log.
 
-See also: prt-get, rc, rc-conf, ports ; rassvet-handbook ;
+See also: prt-get, rc, rc-conf, ports ; krest-handbook ;
 the Arch Wiki's package-manager table: https://wiki.archlinux.org/title/Pacman/Rosetta

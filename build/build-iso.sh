@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
-# Рассвет / Rassvet: build the installer ISO from CRUX 3.8's, on any x86_64 Linux with sudo
+# Крест / Krest: build the installer ISO from CRUX 3.8's, on any x86_64 Linux with sudo
 # (Arch on WSL2 is fine).
 #
-#   bash build/build-iso.sh        -> out/rassvet-x86_64.iso and its .sha256
+#   bash build/build-iso.sh        -> out/krest-x86_64.iso and its .sha256
 #
 # The ISO is CRUX's own, with:
 #   - the 7.3 kernel (ports/linux) for the installer itself, so the Framework 13 Pro's Wi-Fi,
 #     graphics and keyboard work from the first second, and newer Intel firmware;
 #   - NetworkManager (nmtui) in the installer, for Wi-Fi;
-#   - Rassvet's installer (installer/rassvet-install), which starts on tty1;
-#   - those packages ready-built in /rassvet/packages, and this repository in /rassvet/repo.
+#   - Krest's installer (installer/krest-install), which starts on tty1;
+#   - those packages ready-built in /krest/packages, and this repository in /krest/repo.
 # Everything else is compiled on the laptop during the install, from the ports.
 #
 # What it does, in order (each step shows its commands; nothing is hidden):
 #   1. xorriso, cpio, rsync, curl, xz on this computer
 #   2. CRUX 3.8's ISO, checked against its published SHA-256
 #   3. a CRUX build root: CRUX's own live system, with every core package from the ISO
-#      installed into it (in ~/.cache/rassvet; made once, reused)
+#      installed into it (in ~/.cache/krest; made once, reused)
 #   4. in the build root: the ports (ports -u), then the kernel and NetworkManager built
 #      (prt-get), packages into build/work/packages
 #   5. the installer's live system and its initramfs, with those added
@@ -24,16 +24,16 @@
 set -Eeuo pipefail
 project=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 work=$project/build/work
-cache=${XDG_CACHE_HOME:-$HOME/.cache}/rassvet
+cache=${XDG_CACHE_HOME:-$HOME/.cache}/krest
 say() { printf '\n==> %s\n' "$*"; }
-die() { printf '\nRassvet: %s\n' "$*" >&2; exit 2; }
-trap 'echo "Rassvet: stopped at line $LINENO (exit $?)" >&2' ERR
+die() { printf '\nKrest: %s\n' "$*" >&2; exit 2; }
+trap 'echo "Krest: stopped at line $LINENO (exit $?)" >&2' ERR
 
 CRUX_ISO=crux-3.8.iso
 CRUX_ISO_SHA256=8eebf2a58114def46b78fe4fb2afb3175d9becd583699ed2b5e9e2660521e31f
 CRUX_MIRRORS="https://ftp.spline.inf.fu-berlin.de/pub/crux/crux-3.8/iso
 https://mirrors.dotsrc.org/crux/crux-3.8/iso"
-KVER=7.3.1-rassvet
+KVER=7.3.1-krest
 # packages built here for the installer (and installed first on the laptop, so it has its
 # network and its kernel before anything else is compiled)
 LIVE_PORTS="linux linux-firmware networkmanager"
@@ -105,7 +105,7 @@ chroot_run() {   # chroot_run ROOT COMMAND: with /proc, /sys, /dev and the netwo
   sudo chroot "$r" /usr/bin/env -i HOME=/root TERM="${TERM:-linux}" \
     PATH=/usr/sbin:/usr/bin:/sbin:/bin MAKEFLAGS="-j$(nproc)" /bin/sh -c "$*"
 }
-if [[ ! -f $root/.rassvet-ready ]]; then
+if [[ ! -f $root/.krest-ready ]]; then
   say "A CRUX build root in $root: the ISO's live system, then every core package"
   safe_rm "$root"; sudo mkdir -p "$root"
   sudo tar -xJf "$media/rootfs.tar.xz" -C "$root"
@@ -118,14 +118,14 @@ if [[ ! -f $root/.rassvet-ready ]]; then
   safe_rm "$cache/buildroot.new"
   sudo mv "$root/target" "$cache/buildroot.new"
   safe_rm "$root"; sudo mv "$cache/buildroot.new" "$root"
-  sudo touch "$root/.rassvet-ready"
+  sudo touch "$root/.krest-ready"
 fi
 
 # --------------------------------------------------------------------- 4. packages for the stick
 say "Building in the CRUX root: ${LIVE_PORTS} (prt-get; the kernel takes a while)"
 mkdir -p "$work/packages" "$cache/distfiles"
 bind "$media" "$root/media"
-bind "$project" "$root/usr/src/rassvet"
+bind "$project" "$root/usr/src/krest"
 bind "$work/packages" "$root/packages"
 bind "$cache/distfiles" "$root/distfiles"
 sudo install -m644 "$project/build/crux/pkgmk.conf" "$root/etc/pkgmk.conf"
@@ -137,9 +137,9 @@ chroot_run "$root" "
   set -e
   for f in /etc/ports/*.inactive; do [ -e \"\$f\" ] && mv \"\$f\" \"\${f%.inactive}\"; done
   ports -u core opt xorg contrib
-  sh /usr/src/rassvet/build/rassvet-ports sync /usr/src/rassvet /usr/ports/rassvet
-  sh /usr/src/rassvet/build/rassvet-ports verify /usr/ports/rassvet linux
-  sh /usr/src/rassvet/installer/iso-binaries /media/crux \$(prt-get quickdep $LIVE_PORTS)
+  sh /usr/src/krest/build/krest-ports sync /usr/src/krest /usr/ports/krest
+  sh /usr/src/krest/build/krest-ports verify /usr/ports/krest linux
+  sh /usr/src/krest/installer/iso-binaries /media/crux \$(prt-get quickdep $LIVE_PORTS)
   prt-get depinst $LIVE_PORTS
   prt-get quickdep $LIVE_PORTS > /packages/LIVE
 "
@@ -163,7 +163,7 @@ chroot_run "$live" '
   depmod '"$KVER"'
 '
 cleanup
-sudo install -m755 "$project/installer/rassvet-install" "$live/usr/bin/rassvet-install"
+sudo install -m755 "$project/installer/krest-install" "$live/usr/bin/krest-install"
 sudo install -m755 "$project/installer/iso-binaries" "$live/usr/bin/iso-binaries"
 sudo install -m644 "$project/installer/live-bash_profile" "$live/root/.bash_profile"
 sudo tar -C "$live" --one-file-system -cf - . | xz -T0 -6 > "$work/rootfs.tar.xz"
@@ -196,17 +196,17 @@ rm -rf "$work/repo"
 rsync -a --exclude=/build/work --exclude=/out --exclude=/local --exclude=__pycache__ \
   "$project/" "$work/repo/"
 cp "$media/boot/grub/grub.cfg" "$work/grub.cfg"
-sed -i -e 's/Install\/Upgrade CRUX 3.8 (UEFI mode)/Рассвет \/ Rassvet installer/' \
+sed -i -e 's/Install\/Upgrade CRUX 3.8 (UEFI mode)/Крест \/ Krest installer/' \
   -e 's/set timeout=99/set timeout=5/' "$work/grub.cfg"
-iso=$project/out/rassvet-x86_64.iso
+iso=$project/out/krest-x86_64.iso
 rm -f "$iso"
 xorriso -indev "$iso_in" -outdev "$iso" -boot_image any replay \
   -map "$root/boot/vmlinuz-$KVER" /boot/vmlinuz \
   -map "$work/initramfs" /boot/initramfs \
   -map "$work/rootfs.tar.xz" /rootfs.tar.xz \
   -map "$work/grub.cfg" /boot/grub/grub.cfg \
-  -map "$work/packages" /rassvet/packages \
-  -map "$work/repo" /rassvet/repo \
+  -map "$work/packages" /krest/packages \
+  -map "$work/repo" /krest/repo \
   -commit 2>&1 | grep -v '^xorriso : UPDATE' || true
 [[ -s $iso ]] || die "xorriso wrote no ISO"
 (cd "$project/out" && sha256sum "$(basename "$iso")" > "$(basename "$iso").sha256")

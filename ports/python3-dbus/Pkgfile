@@ -1,6 +1,6 @@
 # Description: D-Bus bindings for Python (dbus-python; for the Proton VPN app)
 # URL: https://dbus.freedesktop.org/doc/dbus-python/
-# Maintainer: Rassvet
+# Maintainer: Krest
 # Depends on: dbus glib python3
 
 name=python3-dbus

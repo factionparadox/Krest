@@ -1,10 +1,10 @@
 # Plan 9 tools: acme, sam, rc and the plumber
 
 Plan 9 was Bell Labs' successor to Unix, by the same people. plan9port brings its tools to
-Linux; Rassvet's plan9port port builds it on this laptop and installs it in /usr/lib/plan9.
+Linux; Krest's plan9port port builds it on this laptop and installs it in /usr/lib/plan9.
 /etc/profile.d/plan9.sh sets PLAN9=/usr/lib/plan9 and adds $PLAN9/bin to the end of PATH
 for every login shell, so the Linux commands of the same name (rc, man, sam) still come first.
-Run Plan 9's with the "9" wrapper:  9 acme,  9 man rc.  rassvet-acme and rassvet-plumb set
+Run Plan 9's with the "9" wrapper:  9 acme,  9 man rc.  krest-acme and krest-plumb set
 PLAN9 and PATH for themselves.
 
 ## acme (Ctrl+Super+c): text as the interface
@@ -20,9 +20,9 @@ On a touchpad: a three-finger tap is the middle button, two fingers the right (l
 - sam: acme's predecessor, with a structural regular-expression language; 9 sam.
 - rc: Plan 9's shell, simpler quoting than sh;  9 rc.
 - plumber: routes right-clicked text to the right program (files to acme, URLs to the browser).
-  rassvet-acme starts it; its rules are in $PLAN9/plumb/basic.
+  krest-acme starts it; its rules are in $PLAN9/plumb/basic.
 
-Fonts: rassvet-acme asks fontsrv for DejaVu (variable /mnt/font/DejaVuSans/14a/font, fixed
+Fonts: krest-acme asks fontsrv for DejaVu (variable /mnt/font/DejaVuSans/14a/font, fixed
 DejaVuSansMono): copy the script to ~/.local/bin and change -f and -F for another size.
 
 References: https://9fans.github.io/plan9port/ ; 9 man 1 acme ;
