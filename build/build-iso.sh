@@ -142,9 +142,15 @@ chroot_run "$root" "
   ports -u core opt xorg contrib compat-32
   sh /usr/src/krest/build/krest-ports sync /usr/src/krest /usr/ports/krest
   sh /usr/src/krest/build/krest-ports verify /usr/ports/krest linux
-  # the ISO's core is from April 2025 and today's ports need today's tools (meson, cmake ...):
-  # bring core up to date first, as CRUX's handbook says to after installing
-  prt-get sysup
+  # The ISO's core is from April 2025 and today's ports need today's build tools (meson ...).
+  # Only what the stick needs is updated here, build tools first: the rest of the system is
+  # brought up to date by the installer, on the Framework.
+  outdated=\" \$(prt-get quickdiff) \"
+  upd=
+  for p in python3 meson ninja cmake pkgconf \$(prt-get quickdep $LIVE_PORTS); do
+    case \"\$outdated\" in *\" \$p \"*) case \" \$upd \" in *\" \$p \"*) ;; *) upd=\"\$upd \$p\" ;; esac ;; esac
+  done
+  if [ -n \"\$upd\" ]; then echo \"updating:\$upd\"; prt-get update \$upd; fi
   sh /usr/src/krest/installer/iso-binaries /media/crux \$(prt-get quickdep $LIVE_PORTS)
   prt-get depinst $LIVE_PORTS
   prt-get quickdep $LIVE_PORTS > /packages/LIVE
