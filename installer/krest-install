@@ -28,7 +28,7 @@ STEPS=4
 # booting needs these from the ISO, whatever their version: the bootloader and its tools
 BOOT_PKGS="grub2 grub2-efi efibootmgr xfsprogs dosfstools dracut"
 # ...and these, for the services Krest starts (built for real by prt-get afterwards)
-SERVICES="lo crond dbus networkmanager acpid tlp thermald bluetoothd chronyd krest-firewall krest-tutor"
+SERVICES="lo crond dbus networkmanager acpid tlp thermald intel-lpmd bluetoothd chronyd krest-firewall krest-tutor"
 
 say() { printf '%s\n' "$*" | tee -a "$LOG"; }
 run() {   # run CMD...: show it, run it, its output on screen and in the log

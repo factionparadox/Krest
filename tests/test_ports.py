@@ -104,7 +104,7 @@ class Installer(unittest.TestCase):
         text = (ROOT / 'installer/krest-install').read_text()
         services = re.search(r'^SERVICES="(.*)"', text, re.M).group(1).split()
         own = {p.name for p in (ROOT / 'desktop/root/etc/rc.d').iterdir()}
-        ported = {'acpid', 'tlp', 'thermald'}
+        ported = {'acpid', 'tlp', 'thermald', 'intel-lpmd'}
         crux = {'lo', 'crond', 'dbus', 'networkmanager', 'bluetoothd', 'chronyd'}
         for s in services:
             self.assertIn(s, own | ported | crux, s)

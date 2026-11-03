@@ -1,0 +1,29 @@
+# Description: Intel's Energy Optimizer: light work on the low-power cores (Panther Lake battery life)
+# URL: https://github.com/intel/intel-lpmd
+# Maintainer: Krest
+# Depends on: autoconf-archive basu dbus glib libnl libxml2 upower
+
+name=intel-lpmd
+version=0.1.0
+_commit=956df747e56aca1739b39bff8cff77e81758af9a
+release=1
+source=(https://github.com/intel/intel-lpmd/archive/$_commit/intel-lpmd-$_commit.tar.gz
+	intel_lpmd_config_F6_M204.xml intel-lpmd.rc)
+
+build() {
+	cd intel-lpmd-$_commit
+	# systemd's sd-bus is used only for systemd's cgroup mode, which Krest's config does not use;
+	# basu is sd-bus on its own
+	sed -i 's|<systemd/sd-bus.h>|<basu/sd-bus.h>|' src/lpmd_cgroup.c
+	sed -i 's/\[libsystemd\]/[basu]/; s/\[libsystemd-daemon\]/[basu]/' configure.ac
+	NO_CONFIGURE=1 ./autogen.sh
+	./configure --prefix=/usr --sbindir=/usr/sbin --sysconfdir=/etc --localstatedir=/var \
+		--with-systemdsystemunitdir=no --disable-werror --with-dbus-sys-dir=/usr/share/dbus-1/system.d
+	make
+	make DESTDIR=$PKG install
+	rm -f $PKG/usr/share/man/man8/*.gz
+	# Intel's own Panther Lake file stays beside Krest's, for reference
+	mv $PKG/etc/intel_lpmd/intel_lpmd_config_F6_M204.xml $PKG/etc/intel_lpmd/intel_lpmd_config_F6_M204.xml.intel
+	install -m644 $SRC/intel_lpmd_config_F6_M204.xml $PKG/etc/intel_lpmd/
+	install -Dm755 $SRC/intel-lpmd.rc $PKG/etc/rc.d/intel-lpmd
+}

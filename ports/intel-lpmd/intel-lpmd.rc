@@ -1,0 +1,33 @@
+#!/bin/sh
+#
+# /etc/rc.d/intel-lpmd: start/stop Intel's Energy Optimizer
+#
+
+SSD=/sbin/start-stop-daemon
+PROG=/usr/sbin/intel_lpmd
+PID=/run/intel-lpmd.pid
+
+case $1 in
+start)
+	$SSD --start --background --make-pidfile --pidfile $PID --exec $PROG -- \
+		--no-daemon --dbus-enable --loglevel=info
+	# with no power-profiles-daemon (Krest uses tlp), lpmd waits to be told a mode: "auto"
+	# enters low-power mode when the load is light and leaves it when it is not
+	( sleep 5; /usr/bin/intel_lpmd_control AUTO >/dev/null 2>&1 ) &
+	;;
+stop)
+	$SSD --stop --retry 10 --pidfile $PID --remove-pidfile
+	;;
+restart)
+	$0 stop
+	$0 start
+	;;
+status)
+	$SSD --status --pidfile $PID && echo "running" || echo "not running"
+	;;
+*)
+	echo "usage: $0 [start|stop|restart|status]"
+	;;
+esac
+
+# End of file
