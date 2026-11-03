@@ -30,7 +30,7 @@ while [[ $# -gt 0 ]]; do
 done
 if [[ -n $music ]]; then
   if [[ -d $music && -n $(ls -A "$music" 2>/dev/null) ]]; then
-    say "Your music: $music ($(du -shL "$music" | cut -f1)): this makes a PERSONAL ISO, not for sharing"
+    say "Your music: $music ($(du -shL "$music" | cut -f1))"
   else
     [[ $music == "$project/local/music" ]] || die "no music in $music"
     music=
@@ -143,4 +143,3 @@ out=$project/out/pustota-x86_64.iso
 sudo chown -R "$(id -u):$(id -g)" "$project/out" "$project/build/work" 2>/dev/null || true
 sudo rm -f "$base/root/pustota-repo-key.pem"
 say "Done: $out ($(du -h "$out" | cut -f1))"
-[[ -z $music ]] || echo "    It holds your music: keep it to yourself (do not share or publish it)."
