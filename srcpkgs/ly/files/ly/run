@@ -1,0 +1,4 @@
+#!/bin/sh
+# ly on tty1: agetty opens the console and runs ly in place of login
+[ -r conf ] && . ./conf
+exec setsid agetty ${GETTY_ARGS} -nl /usr/bin/ly "${TTY}" "${BAUD_RATE}" "${TERM_NAME}"

@@ -225,6 +225,20 @@ class SourcePackages(unittest.TestCase):
             # archs lists target machines; "noarch" matches none, so xbps-src refuses the package
             self.assertNotIn('noarch', f.get('archs', ''), path.name)
 
+    def test_ly_on_tty1_with_a_checked_zig(self):
+        text, f = self.template('ly')
+        self.assertIn('70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00', text)
+        self.assertIn('sha256sum -c', text)
+        self.assertIn('-Dinit_system=runit', text)
+        self.assertIn('zig build --fetch', text)                 # network only while fetching
+        self.assertIn('vsv ly', text)
+        files = ROOT / 'srcpkgs/ly/files'
+        self.assertIn('TTY=tty1', (files / 'ly/conf').read_text())
+        self.assertIn('/usr/bin/ly', (files / 'ly/run').read_text())
+        self.assertIn('Exec=/usr/bin/pustota-session', (files / 'pustota.desktop').read_text())
+        self.assertIn('ly', (ROOT / 'packages.txt').read_text().split())
+        self.assertIn('xauth', (ROOT / 'packages.txt').read_text().split())
+
     def test_ollama_is_the_pinned_release_with_a_service(self):
         text, f = self.template('ollama-bin')
         self.assertIn('c9490e0f520be21271d969e6703f012268b1d39f8b70dd58854e5bfef7a75bb6', text)

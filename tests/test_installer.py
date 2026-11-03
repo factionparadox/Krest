@@ -60,6 +60,13 @@ class Files(unittest.TestCase):
         self.assertIn('GRUB_CMDLINE_LINUX_DEFAULT="nvme.noacpi=1"', inst.with_kernel_options('X=1\n'))
         self.assertIn('resume=UUID=x', inst.with_resume('GRUB_DEFAULT=0\n', 'x'))
 
+    def test_ly_conf(self):
+        void = 'animation = none\nauto_login_session = null\nauto_login_user = null\n'
+        out = inst.ly_conf(void, 'a')
+        self.assertIn('auto_login_session = pustota\n', out)
+        self.assertIn('auto_login_user = a\n', out)
+        self.assertEqual(inst.ly_conf(out), void)
+
     def test_autologin(self):
         void = 'if [ -x /sbin/agetty -o -x /bin/agetty ]; then\n\tGETTY_ARGS="--noclear"\nfi\nBAUD_RATE=38400\n'
         out = inst.autologin_conf(void, 'stephen')
@@ -167,6 +174,10 @@ class WholeInstall(unittest.TestCase):
                 (t / 'etc/sv' / svc).mkdir(parents=True, exist_ok=True)
             (t / 'etc/sv/agetty-tty1/conf').write_text('GETTY_ARGS="--noclear"\n')
             (t / 'etc/runit/runsvdir/default').mkdir(parents=True, exist_ok=True)
+            (t / 'etc/runit/runsvdir/default/agetty-tty1').symlink_to('/etc/sv/agetty-tty1')
+            (t / 'etc/ly').mkdir(parents=True, exist_ok=True)
+            (t / 'etc/ly/config.ini').write_text('auto_login_session = null\nauto_login_user = null\n')
+            (t / 'etc/runit/runsvdir/default').mkdir(parents=True, exist_ok=True)
             (t / 'etc/runit/runsvdir/default/dhcpcd').symlink_to('/etc/sv/dhcpcd')
             (t / 'etc/group').write_text('root:x:0:\nwheel:x:1:\naudio:x:2:\nvideo:x:3:\n')
             (t / 'etc/default').mkdir(parents=True, exist_ok=True)
@@ -232,7 +243,10 @@ class WholeInstall(unittest.TestCase):
         enabled = t / 'etc/runit/runsvdir/default'
         self.assertEqual(sorted(p.name for p in enabled.iterdir()),
                          sorted(inst.SERVICES_REQUIRED + inst.SERVICES_OPTIONAL))      # dhcpcd gone
-        self.assertIn('--autologin stephen', (t / 'etc/sv/agetty-tty1/conf').read_text())
+        ly = (t / 'etc/ly/config.ini').read_text()                 # ly logs stephen in
+        self.assertIn('auto_login_user = stephen\n', ly)
+        self.assertIn('auto_login_session = pustota\n', ly)
+        self.assertNotIn('--autologin', (t / 'etc/sv/agetty-tty1/conf').read_text())
         self.assertIn('resume=UUID=SWAP-UUID', (t / 'etc/default/grub').read_text())
         self.assertIn('nvme.noacpi=1', (t / 'etc/default/grub').read_text())
         self.assertTrue((t / 'etc/runit/runsvdir/default/snooze-weekly').is_symlink())   # weekly TRIM

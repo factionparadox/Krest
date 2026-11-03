@@ -11,8 +11,8 @@ hidden: every piece is an ordinary Void package or a short, readable script.
    kernel line) and hands over to runit, process 1.
 4. runit runs /etc/runit/1 (one-off setup), then supervises every service linked into
    /var/service: dbus, elogind, NetworkManager, bluetoothd, tlp, thermald, chronyd, zramen ...
-5. agetty on tty1 logs you in (automatically, if you chose that).
-6. ~/.bash_profile runs startx, which runs ~/.xinitrc, which runs /usr/bin/pustota-session.
+5. ly, the login screen on tty1, logs you in (automatically, if you chose that).
+6. ly starts X and the session in /usr/share/xsessions/pustota.desktop: /usr/bin/pustota-session.
 7. pustota-session starts the bar, notifications, sound and the screen lock, then ratpoison.
 
 ## Where things live

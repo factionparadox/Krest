@@ -37,7 +37,7 @@ ALIASES = {
     "grub-install": "boot", "grub-mkconfig": "boot", "dracut": "boot", "efibootmgr": "boot",
     "uname": "kernel", "dmesg": "kernel", "lsmod": "kernel", "modprobe": "kernel",
     "man": "manuals", "apropos": "manuals", "void-docs": "manuals",
-    "ratpoison": "ratpoison", "startx": "desktop", "xinit": "desktop", "pustota-session": "desktop",
+    "ratpoison": "ratpoison", "startx": "desktop", "ly": "desktop", "xinit": "desktop", "pustota-session": "desktop",
     "polybar": "desktop", "dmenu": "desktop", "dmenu_run": "desktop", "dunst": "desktop",
     "slock": "desktop", "xss-lock": "desktop", "xrdb": "desktop", "setxkbmap": "desktop",
     "pustota-menu": "desktop",

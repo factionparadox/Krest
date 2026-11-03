@@ -5,10 +5,11 @@ password, for recovery from a console. Other groups give you hardware without su
 video, input, network, bluetooth, storage.
 
 ## Automatic login
-If you chose it, agetty logs you in on tty1 (GETTY_ARGS in /etc/sv/agetty-tty1/conf). The
-screen still locks with your password on sleep, lid close and Super+x (xss-lock + slock), so a
-stolen sleeping laptop is locked, but a stolen powered-off one boots to your desktop. To turn
-it off, remove --autologin YOU from that file. Without disk encryption, anyone with the laptop
+If you chose it, ly (the login screen on tty1) logs you in at boot: auto_login_user and
+auto_login_session in /etc/ly/config.ini. It does this once per boot; after logging out it asks.
+The screen still locks with your password on sleep, lid close and Super+x (xss-lock + slock), so
+a stolen sleeping laptop is locked, but a stolen powered-off one boots to your desktop. To turn
+it off, set both keys back to null. Without disk encryption, anyone with the laptop
 can read the disk anyway: Pustota does not encrypt it (yet).
 
 ## Software
@@ -26,4 +27,4 @@ not enabled.
     ss -tlnp                          what is listening
     id                                your groups
 
-References: man sudo ; man agetty ; https://docs.voidlinux.org/config/users-and-groups.html
+References: man sudo ; man agetty ; /etc/ly/config.ini (every key explained) ; https://docs.voidlinux.org/config/users-and-groups.html

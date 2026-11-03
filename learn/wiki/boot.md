@@ -11,8 +11,8 @@ From power button to desktop, in order:
                         root filesystem, resumes from hibernation if there is an image,
                         mounts / (XFS) and hands over
   4. runit              stage 1 (start-up), stage 2 (services, logins) (see: runit)
-  5. agetty on tty1     logs you in (automatically, if you chose that); ~/.bash_profile runs
-                        startx, which runs pustota-session
+  5. ly on tty1         the login screen (logs you in by itself, if you chose that); it
+                        starts X and /usr/share/xsessions/pustota.desktop: pustota-session
 
 ## GRUB
   /etc/default/grub                    settings; the kernel command line is

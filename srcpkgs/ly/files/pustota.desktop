@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=Pustota
+Comment=ratpoison, polybar and the Pustota tools
+Exec=/usr/bin/pustota-session
+Type=Application
+DesktopNames=pustota

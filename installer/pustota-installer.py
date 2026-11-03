@@ -58,7 +58,7 @@ GROUPS = ["wheel", "audio", "video", "input", "network", "bluetooth", "storage",
 # if missing rather than stopping the install.
 SERVICES_REQUIRED = ["dbus", "elogind", "NetworkManager"]
 SERVICES_OPTIONAL = ["bluetoothd", "tlp", "thermald", "chronyd", "socklog-unix", "nanoklogd",
-                     "zramen", "earlyoom", "ufw", "snooze-weekly", "intel_lpmd"]
+                     "zramen", "earlyoom", "ufw", "snooze-weekly", "intel_lpmd", "ly"]
 # Base live images start these; NetworkManager and elogind do their jobs on Pustota.
 SERVICES_OFF = ["dhcpcd", "wpa_supplicant", "acpid"]
 # Steam's 32-bit libraries (Void's multilib repositories; the list is Void's own, from
@@ -160,6 +160,19 @@ def with_fingerprint(pam):
     if not done:
         out.insert(1 if out and out[0].startswith("#%PAM") else 0, line)
     return "\n".join(out) + "\n"
+
+
+def ly_conf(conf, username=None):
+    """ly's config.ini: with USERNAME, ly logs that account into the Pustota session at boot
+    (once: after logging out it asks). Without, both keys stay null and ly asks every time."""
+    for key, value in (("auto_login_user", username or "null"),
+                       ("auto_login_session", "pustota" if username else "null")):
+        line = f"{key} = {value}"
+        if re.search(rf"^{key} = ", conf, re.M):
+            conf = re.sub(rf"^{key} = .*$", line, conf, flags=re.M)
+        else:
+            conf = conf.rstrip("\n") + "\n" + line + "\n"
+    return conf
 
 
 def autologin_conf(conf, username):
@@ -574,7 +587,14 @@ def install(disk, hostname, username, password, timezone, autologin):
     if pam_sudo.exists() and (TARGET / "usr/lib/security/pam_fprintd.so").exists():
         pam_sudo.write_text(with_fingerprint(pam_sudo.read_text()))
         log("sudo: fingerprint first, then password")
-    if autologin:
+    ly = TARGET / "etc/ly/config.ini"
+    if (enabled / "ly").is_symlink() and ly.exists():      # links point inside TARGET
+        # ly is the login screen on tty1, so the plain console login there steps aside
+        (enabled / "agetty-tty1").unlink(missing_ok=True)
+        ly.write_text(ly_conf(ly.read_text(), username if autologin else None))
+        log(f"login: ly on tty1{f', logging {username} in automatically' if autologin else ''}")
+    elif autologin:
+        # no ly: agetty logs in on tty1 and ~/.bash_profile runs startx
         conf = TARGET / "etc/sv/agetty-tty1/conf"
         conf.write_text(autologin_conf(conf.read_text() if conf.exists() else "", username))
 

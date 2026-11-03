@@ -23,10 +23,12 @@ tlp thermald powertop brightnessctl
 # the Framework's own tool: battery charge limit, fans, expansion cards (framework_tool)
 framework-system
 # X11 and Intel graphics
-xorg-minimal xinit xrdb setxkbmap xset xsetroot xprop xinput xdpyinfo xrandr
+xorg-minimal xinit xauth xrdb setxkbmap xset xsetroot xprop xinput xdpyinfo xrandr
 xf86-input-libinput mesa-dri mesa-vulkan-intel vulkan-loader intel-media-driver libva-utils
 # the desktop: ratpoison, polybar, dmenu, notifications, lock, terminal
 ratpoison polybar dmenu dunst libnotify slock xss-lock xbanish xclip maim xterm feh
+# ly: the login screen on tty1 (Pustota's own package, srcpkgs/ly)
+ly
 # X-терминал (Pustota's own, srcpkgs/x-terminal: st with a Plan 9 look) and its font
 x-terminal font-go-ttf
 # clipboard history (Super+v), night light, firewall, fingerprint reader

@@ -1,7 +1,9 @@
 # The desktop: X11, the session, the bar, the menus
 
-There is no display manager. tty1 logs you in, ~/.bash_profile runs startx, and startx runs
-/usr/bin/pustota-session: a short script, one line per piece. Read it: it is the desktop.
+ly is the login screen: a text box on tty1, no toolkit of its own (/etc/ly/config.ini; the
+service is /etc/sv/ly). It starts X and /usr/bin/pustota-session: a short script, one line per
+piece. Read it: it is the desktop. Without ly (sudo rm /var/service/ly and
+sudo ln -s /etc/sv/agetty-tty1 /var/service), logging in on tty1 runs startx from ~/.bash_profile.
 
     xrdb        fonts, DPI and terminal colours (/etc/pustota/Xresources, then ~/.Xresources)
     xss-lock    locks the screen with slock on sleep, lid close and Super+x
