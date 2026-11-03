@@ -194,7 +194,7 @@ chroot_run "$root" "
 cleanup
 live_names="linux-arch"
 for name in $(sudo cat "$root/tmp/nm-order"); do
-  f=$(ls "$media"/crux/{core,opt,xorg}/"$name"#*.pkg.tar.* 2>/dev/null | head -n 1)
+  f=$(ls "$media"/crux/{core,opt,xorg}/"$name"#*.pkg.tar.* 2>/dev/null | head -n 1 || true)
   if [[ -z $f ]]; then echo "    note: $name is not on the CRUX ISO"; continue; fi
   cp "$f" "$work/packages/"
   live_names="$live_names $name"
