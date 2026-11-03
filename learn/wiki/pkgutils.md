@@ -41,7 +41,7 @@ pkgmk builds the port in the current folder (see: pkgfiles):
   pkgmk -um ; pkgmk -uf              update the .md5sum ; update the .footprint
   pkgmk -im ; pkgmk -if              ignore the checksum ; ignore the footprint
   pkgmk -f                           build again even if the package is up to date
-  pkgmk -kw                          keep the work folder (/var/tmp/pkgmk/NAME) for a look
+  pkgmk -kw                          keep the work folder (/var/tmp/pkgmk-NAME) for a look
   pkgmk -c                           remove the downloaded sources and the package
 Its settings are /etc/pkgmk.conf (CFLAGS, MAKEFLAGS, the folders).
 

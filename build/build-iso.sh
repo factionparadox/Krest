@@ -137,6 +137,7 @@ sudo sed -i -e 's|^PKGMK_SOURCE_DIR=.*|PKGMK_SOURCE_DIR="/distfiles"|' \
   -e 's|^export CFLAGS=.*|export CFLAGS="-O2 -march=x86-64-v3 -pipe"|' "$root/etc/pkgmk.conf"
 chroot_run "$root" "
   set -e
+  mkdir -p /var/tmp
   for f in /etc/ports/*.inactive; do [ -e \"\$f\" ] && mv \"\$f\" \"\${f%.inactive}\"; done
   ports -u core opt xorg contrib
   sh /usr/src/krest/build/krest-ports sync /usr/src/krest /usr/ports/krest
@@ -156,6 +157,7 @@ sudo tar -xJf "$media/rootfs.tar.xz" -C "$live"
 bind "$work/packages" "$live/packages"
 chroot_run "$live" '
   set -e
+  mkdir -p /var/tmp
   for name in $(cat /packages/LIVE); do
     pkg=$(ls /packages/$name#*.pkg.tar.* 2>/dev/null | head -n 1)
     [ -n "$pkg" ] || continue

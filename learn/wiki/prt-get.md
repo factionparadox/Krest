@@ -48,7 +48,7 @@ the prt-utils port) lists them, and prt-get update rebuilds them.
 
 ## Build settings and logs
 /etc/pkgmk.conf: CFLAGS -O2 -march=native -pipe, MAKEFLAGS -j(all cores), sources in
-/usr/ports/distfiles, packages in /usr/ports/packages, work in /var/tmp/pkgmk/NAME, zstd
+/usr/ports/distfiles, packages in /usr/ports/packages, work in /var/tmp/pkgmk-NAME, zstd
 packages. /etc/prt-get.conf: writelog enabled, one log per port in /var/log/pkgbuild/NAME.log,
 kept even on success.
 
@@ -59,7 +59,7 @@ kept even on success.
                                 MISSING ones mean a build option or dependency is wrong
   md5sum or signature mismatch  the download changed: check, do not just -im it
   a build fails                 /var/log/pkgbuild/NAME.log ; the work folder is
-                                /var/tmp/pkgmk/NAME (pkgmk -kw keeps it)
+                                /var/tmp/pkgmk-NAME (pkgmk -kw keeps it)
 
 See also: pkgutils, pkgfiles, ports, from-arch ; man prt-get ; man prt-get.conf ;
 krest-handbook

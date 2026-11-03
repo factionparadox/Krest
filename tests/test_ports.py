@@ -41,6 +41,9 @@ class Pkgfiles(unittest.TestCase):
                 if '://' not in src:
                     self.assertTrue((PORTS / port / src).is_file(), f'{port}: {src}')
                     self.assertNotEqual(listed[src], '-', f'{port}: {src}')
+                    import hashlib
+                    got = hashlib.sha256((PORTS / port / src).read_bytes()).hexdigest()
+                    self.assertEqual(listed[src], got, f'{port}: {src} changed; update its sha256 line')
 
     def test_the_whole_system_depends_on_krests_own_ports(self):
         deps = re.search(r'^# Depends on:(.*)$', (PORTS / 'krest/Pkgfile').read_text(), re.M).group(1).split()

@@ -22,7 +22,7 @@ mounted, xfs_scrub checks online.
     cat /etc/fstab
     swapon --show
     xfs_info /                        XFS geometry
-    du -sh /usr/ports/distfiles /usr/ports/packages /var/tmp/pkgmk   what building keeps
+    du -sh /usr/ports/distfiles /usr/ports/packages /var/tmp/pkgmk-*  what building keeps
 Old sources and packages pile up in /usr/ports/distfiles and packages; delete the ones you no
 longer need (keep the last package of anything you may want to go back to).
 

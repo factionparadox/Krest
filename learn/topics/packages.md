@@ -31,7 +31,7 @@ is there for every user.
 Shortcuts in your shell (~/.bashrc): pk (search), pi (depinst), pr (remove), pu (krest-update).
 
 Builds use /etc/pkgmk.conf: -O2 -march=native, every core, sources kept in
-/usr/ports/distfiles, finished packages in /usr/ports/packages, the work in /var/tmp/pkgmk.
+/usr/ports/distfiles, finished packages in /usr/ports/packages, the work in /var/tmp/pkgmk-NAME.
 Each build's output goes to /var/log/pkgbuild/NAME.log. Packages built with -march=native run
 on this processor; they are not meant for another computer.
 

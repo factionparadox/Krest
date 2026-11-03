@@ -52,7 +52,7 @@ Format a stick (this erases it: check the name with lsblk first):
   df -h -x tmpfs -x devtmpfs     free space
   du -sh ~/* | sort -h           what is large in your home
   du -sh /usr/ports/distfiles /usr/ports/packages    sources and packages kept from builds
-  sudo rm -rf /var/tmp/pkgmk/*   build folders left by failed builds (none run meanwhile)
+  sudo rm -rf /var/tmp/pkgmk-*   build folders left by failed builds (none run meanwhile)
 
 See also: boot, prt-get ; man fstab ; man xfs ; man xfs_repair ; man fstrim ;
 https://docs.kernel.org/admin-guide/xfs.html
