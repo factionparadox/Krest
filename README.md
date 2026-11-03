@@ -1,8 +1,8 @@
-<p align="center"><img src="branding/krest-256.png" width="200" alt="Крест"></p>
+<p align="center"><img src="branding/pasha-256.png" width="220" alt="Паша, the Krest penguin"></p>
 
 # Крест · Krest
 
-*Krest* is Russian for "cross": CRUX is Latin for cross, and Crux is the Southern Cross, four stars that are its mark. It's a light, keyboard-driven laptop distribution of its own, built on **CRUX 3.8**: simple, BSD-style, and compiled on the laptop itself for its own processor. It's for writing, for learning Russian, and for lasting on battery. It's made for the Framework Laptop 13 Pro (Intel Core Ultra series 3, Panther Lake), and runs on most UEFI laptops.
+*Krest* is Russian for "cross": CRUX is Latin for cross, and Crux is the Southern Cross, four stars that are its mark. It's a light, keyboard-driven laptop distribution of its own, built on **CRUX 3.8**: simple, BSD-style, and compiled on the laptop itself for its own processor. It's for writing, for learning Russian, and for lasting on battery. Its mascot is Паша (Pasha), a red penguin with the cross's four stars on his front; he's the logo fastfetch shows. It's made for the Framework Laptop 13 Pro (Intel Core Ultra series 3, Panther Lake), and runs on most UEFI laptops.
 
 | | |
 | --- | --- |
