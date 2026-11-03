@@ -18,12 +18,12 @@
 
 ## Installing
 
-1. Build the ISO (below), or download one, and write it to a USB stick (Ventoy works).
+1. Build the ISO (below), or download one, and write it to a USB stick of 8 GB or more (Ventoy works). The ISO is about 4–5 GB because it carries every package the install needs.
 2. In the laptop's BIOS: **Secure Boot off**. Boot the stick in UEFI mode.
-3. The stick logs in by itself and opens **nmtui**. Connect to Wi-Fi (or just quit if Ethernet is plugged in). The installer starts once it can reach Void's package repository.
+3. The stick logs in by itself and starts the installer. No network is needed: everything installs from the stick.
 4. Answer: the disk, a computer name, your username, your password (twice), the timezone (London is preselected), and whether to log in automatically.
 5. Read the summary and choose **Erase and install**. That erases the whole chosen disk; it's the only point of no return.
-6. Wait while it downloads about 2.5 GB from Void (LibreOffice and Steam's 32-bit libraries are most of it), then reboot.
+6. Wait while it installs (progress shows as `[n of N unpacked]`), then reboot.
 
 It boots straight into the desktop (or asks for your password, if you chose that). Press **Super+?** for the keys, or **Ctrl+Super+Space** for the menu.
 
@@ -55,7 +55,7 @@ pustota-russian path              # the route from A1 to B2
 
 ## Building the ISO
 
-On Arch Linux (WSL2 works) or on Void, with about 10 GB free:
+On Arch Linux (WSL2 works) or on Void, with about 15 GB free. The first build downloads about 2.5 GB of Void packages into build/work/void-cache; later builds reuse them and fetch only what changed:
 
 ```sh
 git clone https://github.com/factionparadox/Pustota && cd Pustota
@@ -88,7 +88,7 @@ srcpkgs/     xbps-src templates for what Void lacks: x-terminal, intel-lpmd, web
              ollama-bin
 branding/    the Пустота roundel (the original and the sizes made from it)
 installer/   pustota-installer.py and the live image's network setup
-desktop/root the pustota-desktop package: /etc/pustota, /etc/skel, /usr/bin/pustota-*
+desktop/root the pustota-desktop package: /etc/pustota, /usr/share/pustota/skel, /usr/bin/pustota-*
 learn/       pustota-learn and its lessons
 russian/     the Russian kit (from Constellation), Ollama's runit service
 packages.txt every Void package Pustota installs, grouped and explained

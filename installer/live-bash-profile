@@ -4,6 +4,11 @@
 if [ "$(tty 2>/dev/null)" = /dev/tty1 ] && [ -z "${PUSTOTA_INSTALLER_STARTED:-}" ] &&
    [ -x /usr/bin/pustota-installer ]; then
     export PUSTOTA_INSTALLER_STARTED=1
-    # Wi-Fi first: the installer needs Void's package repository before it touches a disk.
-    sudo -n /usr/lib/pustota/live-network-setup.sh
+    if [ -s /usr/lib/pustota/void-repo/x86_64-repodata ]; then
+        # the offline ISO: everything is on the stick, no network needed
+        sudo -n /usr/bin/pustota-installer
+    else
+        # Wi-Fi first: the installer needs Void's package repository before it touches a disk.
+        sudo -n /usr/lib/pustota/live-network-setup.sh
+    fi
 fi

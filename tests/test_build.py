@@ -159,11 +159,11 @@ class Desktop(unittest.TestCase):
         self.assertIn('NetworkManager', PACKAGES)               # pustota-vpn uses nmcli
 
     def test_user_files_include_the_packaged_defaults(self):
-        self.assertIn('source /etc/pustota/ratpoisonrc', (DESK / 'etc/skel/.ratpoisonrc').read_text())
+        self.assertIn('source /etc/pustota/ratpoisonrc', (DESK / 'usr/share/pustota/skel/.ratpoisonrc').read_text())
         self.assertIn('include-file = /etc/pustota/polybar.ini',
-                      (DESK / 'etc/skel/.config/polybar/config.ini').read_text())
-        self.assertIn('exec /usr/bin/pustota-session', (DESK / 'etc/skel/.xinitrc').read_text())
-        self.assertIn('exec startx', (DESK / 'etc/skel/.bash_profile').read_text())
+                      (DESK / 'usr/share/pustota/skel/.config/polybar/config.ini').read_text())
+        self.assertIn('exec /usr/bin/pustota-session', (DESK / 'usr/share/pustota/skel/.xinitrc').read_text())
+        self.assertIn('exec startx', (DESK / 'usr/share/pustota/skel/.bash_profile').read_text())
 
 
 class Learn(unittest.TestCase):
@@ -590,4 +590,31 @@ class ProtonVpn(unittest.TestCase):
         self.assertIn('gnome-keyring-daemon --start --components=secrets',
                       (DESK / 'usr/bin/pustota-session').read_text())
         self.assertIn('have protonvpn-app && exec protonvpn-app', (DESK / 'usr/bin/pustota-open').read_text())
+
+
+class OfflineIso(unittest.TestCase):
+    def test_offline_repo_built_and_carried(self):
+        off = (ROOT / 'build/make-offline-repo.sh').read_text()
+        self.assertIn('-S -D -y', off)                                  # download only
+        self.assertIn('base-system pustota-desktop pustota-learn pustota-russian linux-mainline', off)
+        self.assertIn('ignorepkg=linux', off)
+        self.assertIn('xbps-rindex -a', off)
+        make = (ROOT / 'build/make-iso.sh').read_text()
+        self.assertIn('make-offline-repo.sh', make)
+        self.assertIn('/usr/lib/pustota/void-repo', make)
+        self.assertIn('/usr/lib/pustota/void-repo/x86_64-repodata',
+                      (ROOT / 'installer/live-bash-profile').read_text())
+
+
+class NoFileClashes(unittest.TestCase):
+    """XBPS refuses a package that ships a file another package owns: the 13 Pro install
+    stopped on /etc/skel/.bash_profile and .bashrc (owned by Void's base-files)."""
+    BASE_FILES = {'etc/skel/.bash_profile', 'etc/skel/.bash_logout', 'etc/skel/.bashrc',
+                  'etc/skel/.inputrc', 'etc/dunst/dunstrc', 'etc/NetworkManager/NetworkManager.conf',
+                  'etc/tlp.conf', 'etc/profile', 'etc/hosts', 'etc/fstab'}
+
+    def test_nothing_in_etc_skel_and_no_owned_files(self):
+        shipped = {str(p.relative_to(DESK)) for p in DESK.rglob('*') if not p.is_dir()}
+        self.assertFalse([f for f in shipped if f.startswith('etc/skel/')])
+        self.assertFalse(shipped & self.BASE_FILES)
 

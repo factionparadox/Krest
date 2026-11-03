@@ -32,6 +32,8 @@ import urllib.request
 TITLE = "Пустота / Pustota installer"
 TARGET = Path("/mnt/target")
 REPO = Path("/usr/lib/pustota/repo")
+# the offline ISO: every Void package the install needs (build/make-offline-repo.sh)
+VOID_LOCAL = Path("/usr/lib/pustota/void-repo")
 # a personal ISO (build-iso.sh with local/music) carries your music here
 MUSIC = Path("/usr/lib/pustota/music")
 # Void's mirrors (https://xmirror.voidlinux.org): the first that answers is used, and written
@@ -384,6 +386,21 @@ def uuid_of(device):
     return value
 
 
+def offline():
+    """True on an offline ISO: the install needs no network at all."""
+    return (VOID_LOCAL / "x86_64-repodata").is_file()
+
+
+def void_repositories(*extra):
+    """Where Void's packages come from: the ISO's copy, or the mirror (and its sub-repositories)."""
+    if offline():
+        return ["-R", str(VOID_LOCAL)]
+    args = ["-R", MIRROR]
+    for sub in extra:
+        args += ["-R", f"{MIRROR}/{sub}"]
+    return args
+
+
 def check_repository():
     """Choose the first Void mirror that answers (sets MIRROR); fail before touching a disk."""
     global MIRROR
@@ -447,7 +464,8 @@ def install(disk, hostname, username, password, timezone, autologin):
     mount(efi, TARGET / "boot/efi")
 
     stage("2/6  Installing Void (base-system, linux-mainline) and Pustota.\n"
-          "This downloads about 1.5 GB; on Wi-Fi it takes a while.")
+          + ("Everything comes from the USB stick: no network needed." if offline() else
+             "This downloads about 2.5 GB; on Wi-Fi it takes a while."))
     # A new XBPS root trusts nothing: copy Void's keys from this (verified) live system first,
     # or XBPS stops to ask about the signing key even with -y.
     keys = sorted(p for p in TRUSTED_KEYS.glob("*.plist") if p.is_file())
@@ -475,11 +493,11 @@ def install(disk, hostname, username, password, timezone, autologin):
         "# linux-mainline follows Void's newest kernel series instead.\n"
         "ignorepkg=linux\nignorepkg=linux-headers\n")
     run("xbps-install", "-r", TARGET, "-C", "etc/xbps.d", "-S", "-y",
-        "-R", REPO, "-R", MIRROR, "-R", MIRROR + "/nonfree", *PACKAGES)
+        "-R", REPO, *void_repositories("nonfree"), *PACKAGES)
     for pkg in STEAM_32BIT:
         try:
-            run("xbps-install", "-r", TARGET, "-C", "etc/xbps.d", "-y", "-R", MIRROR,
-                "-R", MIRROR + "/multilib", "-R", MIRROR + "/multilib/nonfree", pkg)
+            run("xbps-install", "-r", TARGET, "-C", "etc/xbps.d", "-y",
+                *void_repositories("nonfree", "multilib", "multilib/nonfree"), pkg)
         except sp.CalledProcessError:
             log(f"Steam's 32-bit {pkg}: not available, skipped (sudo xbps-install {pkg} later)")
     for pkg in PACKAGES + ["linux-mainline"]:
@@ -513,6 +531,13 @@ def install(disk, hostname, username, password, timezone, autologin):
     stage("4/6  Your account")
     existing = {line.split(":")[0] for line in (TARGET / "etc/group").read_text().splitlines()}
     groups = ",".join(g for g in GROUPS if g in existing)
+    # Pustota's home-folder files (.bash_profile, .xinitrc, .ratpoisonrc ...) come in
+    # /usr/share/pustota/skel: Void's base-files owns /etc/skel, and XBPS refuses two packages
+    # owning one file. Copied over /etc/skel here, so useradd -m gives them to the new account.
+    skel = TARGET / "usr/share/pustota/skel"
+    if skel.is_dir():
+        shutil.copytree(skel, TARGET / "etc/skel", symlinks=True, dirs_exist_ok=True)
+        log("home folder files: /usr/share/pustota/skel copied to /etc/skel")
     chroot("useradd", "-m", "-G", groups, "-s", "/bin/bash", username)
     chroot("chpasswd", input_text=f"{username}:{password}\n")       # on stdin, never on a command line
     chroot("chpasswd", input_text=f"root:{password}\n")
@@ -631,12 +656,13 @@ def main():
                        "The screen still locks with your password when the lid closes or it "
                        "sleeps.", 10, 76) == 0
 
-    stage("Checking Void's package repository...")
-    try:
-        check_repository()
-    except RuntimeError as error:
-        notice(str(error))
-        return 2
+    if not offline():                        # the offline ISO carries Void's packages itself
+        stage("Checking Void's package repository...")
+        try:
+            check_repository()
+        except RuntimeError as error:
+            notice(str(error))
+            return 2
     current = {d["path"]: d for d in disks()}
     if disk not in current:
         notice("That disk changed or is now mounted. Nothing has been changed.")

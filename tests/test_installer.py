@@ -182,6 +182,8 @@ class WholeInstall(unittest.TestCase):
                                               'account   include   system-auth\n')
             (t / 'usr/lib/security').mkdir(parents=True, exist_ok=True)
             (t / 'usr/lib/security/pam_fprintd.so').write_text('')
+            (t / 'usr/share/pustota/skel').mkdir(parents=True, exist_ok=True)
+            (t / 'usr/share/pustota/skel/.xinitrc').write_text('exec /usr/bin/pustota-session\n')
         if cmd[0] == 'xgenfstab':
             return 'UUID=r / xfs rw 0 1\nUUID=e /boot/efi vfat rw 0 2\nUUID=s none swap sw 0 0\n'
         if cmd[:2] == ['chroot', str(t)] and cmd[2] == 'xbps-reconfigure':
@@ -218,6 +220,7 @@ class WholeInstall(unittest.TestCase):
         self.assertIn('\nru_RU.UTF-8 UTF-8', '\n' + (t / 'etc/default/libc-locales').read_text())
         self.assertIn('LANG=en_GB.UTF-8', (t / 'etc/locale.conf').read_text())
         self.assertIn('KEYMAP="uk"', (t / 'etc/rc.conf').read_text())
+        self.assertIn('pustota-session', (t / 'etc/skel/.xinitrc').read_text())   # skel copied in
         ufw = (t / 'etc/ufw/ufw.conf').read_text()
         self.assertIn('ENABLED=yes', ufw)
         self.assertNotIn('ENABLED=no', ufw)
@@ -373,4 +376,25 @@ class NoBlankScreen(unittest.TestCase):
             inst.sp.run = saved
         self.assertNotIn('--clear', seen[0])
         self.assertIn('--clear', seen[1])
+
+
+class Offline(WholeInstall):
+    """An offline ISO installs from its own copy of Void's packages: no mirror, no network."""
+    def test_installs_from_the_stick(self):
+        local = self.target.parent / 'void-repo'
+        local.mkdir()
+        (local / 'x86_64-repodata').write_text('index')
+        saved = inst.VOID_LOCAL
+        inst.VOID_LOCAL = local
+        try:
+            inst.dialog = lambda *a, **k: 0
+            inst.install(self.disk, 'pustota', 'stephen', 'pw', 'Europe/London', autologin=False)
+        finally:
+            inst.VOID_LOCAL = saved
+        xbps = [c for c in self.ran if c[0] == 'xbps-install']
+        main = next(c for c in xbps if 'base-system' in c)
+        self.assertIn(str(local), main)
+        self.assertIn(str(inst.REPO), main)
+        for c in xbps:
+            self.assertFalse(any(a.startswith('http') for a in c), c)        # no network at all
 

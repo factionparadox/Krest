@@ -5,7 +5,7 @@ firmware -> GRUB -> kernel/initramfs -> XFS root -> runit -> services -> login -
 
 ## The desktop does not start
 Log in on another console (Ctrl+Alt+F2) and read ~/.local/share/xorg-session.log. Fix
-~/.xinitrc or ~/.ratpoisonrc, or move them aside: cp /etc/skel/.ratpoisonrc ~ puts back the
+~/.xinitrc or ~/.ratpoisonrc, or move them aside: cp /usr/share/pustota/skel/.ratpoisonrc ~ puts back the
 default.
 
 ## A new kernel misbehaves

@@ -46,6 +46,9 @@ fi
 rm -rf "$work/keys"
 bash "$root/build/sign-repo.sh" "$repo" "$key" "$work/keys"
 
+say "Offline: every Void package the install needs, onto the ISO"
+bash "$root/build/make-offline-repo.sh" "$repo" "$work/keys" "$work/void-offline"
+
 say "void-mklive (pinned)"
 rev=3aa194bdea9c83de0b5d78fb889a88f000a44fab   # Sep 2026; knows -v linux-mainline
 mk=$work/void-mklive
@@ -70,6 +73,9 @@ install -Dm644 "$root/installer/live-motd" "$ov/etc/motd"
 install -d "$ov/usr/lib/pustota/repo" "$ov/var/db/xbps/keys"
 cp "$repo"/*.xbps "$repo"/*.sig2 "$repo/x86_64-repodata" "$ov/usr/lib/pustota/repo/"
 cp "$work"/keys/*.plist "$ov/var/db/xbps/keys/"      # the installer copies these to the new system
+install -d "$ov/usr/lib/pustota/void-repo"           # the offline install: Void's packages
+ln "$work"/void-offline/* "$ov/usr/lib/pustota/void-repo/" 2>/dev/null ||
+  cp "$work"/void-offline/* "$ov/usr/lib/pustota/void-repo/"
 cp "$root/packages.txt" "$ov/usr/lib/pustota/packages.txt"
 # A personal ISO: your music (build-iso.sh --music, or local/music), copied to ~/Music by the
 # installer. (It goes into the live image with everything else; FLAC hardly compresses further.)
