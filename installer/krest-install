@@ -217,7 +217,7 @@ settings() {
 	mkdir -p "$T/usr/src" "$T/usr/share/doc/crux"
 	run cp -a "$MEDIA/krest/repo" "$T/usr/src/krest" || fail "copying the repository"
 	chown -R root:root "$T/usr/src/krest"
-	chroot "$T" git -C /usr/src/krest remote set-url origin https://github.com/factionparadox/Pustota.git 2>/dev/null
+	chroot "$T" git -C /usr/src/krest remote set-url origin https://github.com/factionparadox/Krest.git 2>/dev/null
 	cp "$MEDIA/crux/handbook.txt" "$T/usr/share/doc/crux/handbook.txt"
 	install -m644 "$T/usr/src/krest/build/crux/pkgmk.conf" "$T/etc/pkgmk.conf"
 	install -m644 "$T/usr/src/krest/build/crux/prt-get.conf" "$T/etc/prt-get.conf"

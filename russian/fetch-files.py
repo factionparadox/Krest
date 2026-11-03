@@ -22,7 +22,7 @@ import time
 from urllib import request
 
 CHUNK = 1 << 20
-USER_AGENT = 'krest/1 (+https://github.com/factionparadox/Pustota)'
+USER_AGENT = 'krest/1 (+https://github.com/factionparadox/Krest)'
 
 
 def read_manifest(path: Path) -> list[tuple[str, str]]:

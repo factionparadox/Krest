@@ -1,5 +1,5 @@
 # Description: Krest's desktop: the ratpoison session, menus, keys, bar, scripts and settings
-# URL: https://github.com/factionparadox/Pustota
+# URL: https://github.com/factionparadox/Krest
 # Maintainer: Krest
 # Depends on: brightnessctl dmenu dunst feh fontconfig libnotify maim nftables polybar ratpoison redshift slock sudo x-terminal xbanish xclip xorg-xrdb xorg-xset xorg-xsetroot xss-lock clipmenu
 

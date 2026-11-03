@@ -17,7 +17,7 @@ import sys
 from urllib import error, request
 
 CHUNK = 4 << 20
-USER_AGENT = 'krest/1 (+https://github.com/factionparadox/Pustota)'
+USER_AGENT = 'krest/1 (+https://github.com/factionparadox/Krest)'
 
 
 def get(url: str, headers: dict | None = None, timeout: int = 60):

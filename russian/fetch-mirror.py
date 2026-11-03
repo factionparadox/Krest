@@ -23,7 +23,7 @@ import tarfile
 import time
 from urllib import request
 
-USER_AGENT = 'krest/1 (+https://github.com/factionparadox/Pustota)'
+USER_AGENT = 'krest/1 (+https://github.com/factionparadox/Krest)'
 CHUNK = 4 << 20
 
 

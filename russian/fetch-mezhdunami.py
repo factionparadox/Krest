@@ -26,7 +26,7 @@ import sys
 import time
 from urllib import error, parse, request
 
-USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) krest/1 (+https://github.com/factionparadox/Pustota)'
+USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) krest/1 (+https://github.com/factionparadox/Krest)'
 ATTR = re.compile(r'''(\b(?:href|src)\s*=\s*)(["'])(.*?)\2''', re.I | re.S)
 CSS_URL = re.compile(r'''url\(\s*(["']?)([^"')]+)\1\s*\)''', re.I)
 IFRAME = re.compile(r'''<iframe\b[^>]*\bsrc\s*=\s*(["'])([^"']*soundcloud[^"']*)\1[^>]*>.*?</iframe>''', re.I | re.S)

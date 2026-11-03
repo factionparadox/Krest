@@ -175,7 +175,7 @@ SOURCES = (
     ("polybar wiki", "https://github.com/polybar/polybar/wiki"),
     ("PipeWire documentation", "https://docs.pipewire.org/"),
     ("XFS documentation", "https://docs.kernel.org/admin-guide/xfs.html"),
-    ("Krest source (the installer, the ports, the desktop)", "https://github.com/factionparadox/Pustota"),
+    ("Krest source (the installer, the ports, the desktop)", "https://github.com/factionparadox/Krest"),
 )
 
 

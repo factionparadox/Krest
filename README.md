@@ -41,7 +41,7 @@ prt-get search foo      # find a port; sudo prt-get depinst foo builds and insta
 On any x86_64 Linux with sudo (Arch on WSL2 works), with about 30 GB free:
 
 ```sh
-git clone https://github.com/factionparadox/Pustota && cd Pustota
+git clone https://github.com/factionparadox/Krest && cd Krest
 bash build/build-iso.sh            # -> out/krest-x86_64.iso and its .sha256
 ```
 

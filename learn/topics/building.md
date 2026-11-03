@@ -1,6 +1,6 @@
 # How Krest is built
 
-Everything is in https://github.com/factionparadox/Pustota (on this laptop: /usr/src/krest).
+Everything is in https://github.com/factionparadox/Krest (on this laptop: /usr/src/krest).
 The install stick is CRUX 3.8's own ISO with a few things added, made on any x86_64 Linux
 machine with sudo (Arch in WSL2 works) by:   bash build/build-iso.sh
 

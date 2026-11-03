@@ -21,7 +21,7 @@ set -Eeuo pipefail
 
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 REPO=$(cd -- "$HERE/.." && pwd)
-SRC=/var/lib/krest/russian RELEASE=content-v2 GH_REPO=factionparadox/Pustota DRY=0
+SRC=/var/lib/krest/russian RELEASE=content-v2 GH_REPO=factionparadox/Krest DRY=0
 OUT="$HOME/krest-mirror"
 PART=${KREST_MIRROR_PART_SIZE:-1900M}
 
