@@ -142,7 +142,11 @@ arch=$cache/arch
 ARCH_PKGS="linux linux-firmware-intel linux-firmware-realtek linux-firmware-other linux-firmware-whence sof-firmware wireless-regdb"
 # into pacman's own cache (pacman downloads as its own user, which can't write in your home);
 # explicit names, so pacman fetches them even when this computer has them installed
-sudo pacman -Syw --noconfirm $ARCH_PKGS
+for try in 1 2 3; do
+  sudo pacman -Syw --noconfirm $ARCH_PKGS && break
+  [[ $try -lt 3 ]] || die "pacman could not download Arch's packages (the network or the mirror; run again)"
+  echo "    the download stalled; trying again ($try of 3; what's already downloaded is kept)"; sleep 5
+done
 safe_rm "$arch/pkgs"; mkdir -p "$arch/pkgs"
 pcache=$(pacman-conf CacheDir 2>/dev/null | head -n 1); pcache=${pcache:-/var/cache/pacman/pkg/}
 pacman -Sp --print-format '%n %f' $ARCH_PKGS | while read -r n f; do
