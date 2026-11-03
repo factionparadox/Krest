@@ -45,7 +45,7 @@ git clone https://github.com/factionparadox/Krest && cd Krest
 bash build/build-iso.sh            # -> out/krest-x86_64.iso and its .sha256
 ```
 
-It starts from CRUX 3.8's own ISO (SHA-256 checked), builds the 7.3 kernel and NetworkManager in a CRUX build root so the installer works on the 13 Pro, and adds the installer. See [docs/BUILDING.md](docs/BUILDING.md).
+It starts from CRUX 3.8's own ISO (SHA-256 checked), adds Arch Linux's ready-built kernel and Intel firmware so the installer works on the 13 Pro, NetworkManager from CRUX's own packages, and the installer. Nothing is compiled on the computer that builds the ISO: everything is compiled on the laptop during the install. See [docs/BUILDING.md](docs/BUILDING.md).
 
 ## Layout
 

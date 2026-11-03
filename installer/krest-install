@@ -173,7 +173,7 @@ base() {
 	for name in $(cat "$MEDIA"/krest/packages/LIVE); do
 		p=$(ls "$MEDIA"/krest/packages/"$name"#*.pkg.tar.* 2>/dev/null | head -n 1)
 		[ -n "$p" ] || continue
-		say "  $name (built for the stick)"
+		say "  $name (from the stick)"
 		if grep -qx "$name" <(awk 'BEGIN{RS=""} {print $1}' "$T/var/lib/pkg/db"); then
 			pkgadd -r "$T" -u -f "$p" >>"$LOG" 2>&1 || fail "pkgadd $name"
 		else

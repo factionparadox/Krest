@@ -5,20 +5,21 @@
 #   bash build/build-iso.sh        -> out/krest-x86_64.iso and its .sha256
 #
 # The ISO is CRUX's own, with:
-#   - the 7.3 kernel (ports/linux) for the installer itself, so the Framework 13 Pro's Wi-Fi,
-#     graphics and keyboard work from the first second, and newer Intel firmware;
-#   - NetworkManager (nmtui) in the installer, for Wi-Fi;
+#   - Arch Linux's ready-built kernel and Intel firmware for the installer itself, so the
+#     Framework 13 Pro's Wi-Fi, graphics and keyboard work from the first second;
+#   - NetworkManager (nmtui) in the installer, for Wi-Fi, from the CRUX ISO's packages;
 #   - Krest's installer (installer/krest-install), which starts on tty1;
 #   - those packages ready-built in /krest/packages, and this repository in /krest/repo.
-# Everything else is compiled on the laptop during the install, from the ports.
+# Nothing is compiled on this computer. Everything is compiled on the laptop during the
+# install, from the ports.
 #
 # What it does, in order (each step shows its commands; nothing is hidden):
 #   1. xorriso, cpio, rsync, curl, xz on this computer
 #   2. CRUX 3.8's ISO, checked against its published SHA-256
 #   3. a CRUX build root: CRUX's own live system, with every core package from the ISO
 #      installed into it (in ~/.cache/krest; made once, reused)
-#   4. in the build root: the ports (ports -u), then the kernel and NetworkManager built
-#      (prt-get), packages into build/work/packages
+#   4. Arch's kernel and firmware (pacman -Sw) made into a CRUX package, and NetworkManager's
+#      packages from the ISO, into build/work/packages
 #   5. the installer's live system and its initramfs, with those added
 #   6. the ISO
 set -Eeuo pipefail
@@ -33,10 +34,6 @@ CRUX_ISO=crux-3.8.iso
 CRUX_ISO_SHA256=8eebf2a58114def46b78fe4fb2afb3175d9becd583699ed2b5e9e2660521e31f
 CRUX_MIRRORS="https://ftp.spline.inf.fu-berlin.de/pub/crux/crux-3.8/iso
 https://mirrors.dotsrc.org/crux/crux-3.8/iso"
-KVER=7.3.1-krest
-# packages built here for the installer (and installed first on the laptop, so it has its
-# network and its kernel before anything else is compiled)
-LIVE_PORTS="linux linux-firmware networkmanager"
 
 [[ $(uname -m) == x86_64 ]] || die "an x86_64 builder is needed"
 [[ $EUID -ne 0 ]] || die "run as yourself; it asks for sudo when needed"
@@ -123,40 +120,79 @@ if [[ ! -f $root/.krest-ready ]]; then
   sudo touch "$root/.krest-ready"
 fi
 
+# depmod for a tree whose modules are in /lib/modules (Arch's own depmod looks in /usr/lib/modules)
+depmod_b() {
+  local made=
+  if [[ ! -e $1/usr/lib/modules ]]; then sudo mkdir -p "$1/usr/lib"; sudo ln -s ../../lib/modules "$1/usr/lib/modules"; made=1; fi
+  sudo depmod -b "$1" "$2"
+  [[ -z $made ]] || { sudo rm "$1/usr/lib/modules"; sudo rmdir "$1/usr/lib" "$1/usr" 2>/dev/null || true; }
+}
+
 # --------------------------------------------------------------------- 4. packages for the stick
-say "Building in the CRUX root: ${LIVE_PORTS} (prt-get; the kernel takes a while)"
-mkdir -p "$work/packages" "$cache/distfiles"
+# Nothing is compiled on this computer. The stick gets ready-built binaries only:
+#   - Arch Linux's kernel and Intel firmware (pacman downloads them and checks Arch's
+#     signatures), made into one CRUX package, linux-arch: the kernel, its modules, and its
+#     firmware in /lib/firmware/<kernel version>, which only that kernel reads;
+#   - NetworkManager (nmtui) and what it needs, from the CRUX ISO's own packages.
+# The laptop compiles everything else during the install, Krest's own 7.3 kernel included;
+# linux-arch stays on as the fallback kernel in the boot menu.
+say "Arch's ready-built kernel and Intel firmware (downloaded by pacman; nothing is compiled)"
+command -v pacman >/dev/null || die "this step uses pacman: run the build on Arch (WSL is fine)"
+arch=$cache/arch
+mkdir -p "$arch/pkgs"
+ARCH_PKGS="linux linux-firmware-intel linux-firmware-realtek linux-firmware-other linux-firmware-whence sof-firmware wireless-regdb"
+# (explicit names: pacman fetches them even when this computer has them installed)
+sudo pacman -Syw --noconfirm --cachedir "$arch/pkgs" $ARCH_PKGS
+akpkg=$(ls -t "$arch"/pkgs/linux-[0-9]*.pkg.tar.zst | head -n 1)
+[[ -n $akpkg ]] || die "pacman downloaded no kernel package"
+st=$work/linux-arch
+safe_rm "$st"; sudo mkdir -p "$st/x"
+sudo bsdtar -xpf "$akpkg" -C "$st/x" usr/lib/modules
+KVER=$(ls "$st/x/usr/lib/modules" | head -n 1)
+[[ -f $st/x/usr/lib/modules/$KVER/vmlinuz ]] || die "no vmlinuz in $(basename "$akpkg")"
+echo "    kernel $KVER"
+sudo mkdir -p "$st/pkg/boot" "$st/pkg/lib/modules" "$st/pkg/lib/firmware/$KVER"
+sudo mv "$st/x/usr/lib/modules/$KVER/vmlinuz" "$st/pkg/boot/vmlinuz-$KVER"
+sudo rm -f "$st/x/usr/lib/modules/$KVER/pkgbase" "$st/x/usr/lib/modules/$KVER/build"
+sudo mv "$st/x/usr/lib/modules/$KVER" "$st/pkg/lib/modules/"
+# CRUX's kmod and the initramfs's busybox read plain modules only
+sudo find "$st/pkg/lib/modules" -name '*.ko.zst' -exec zstd -q -d --rm {} +
+depmod_b "$st/pkg" "$KVER"
+[[ -s $st/pkg/lib/modules/$KVER/modules.dep ]] || die "depmod wrote no modules.dep"
+for f in "$arch"/pkgs/{linux-firmware-*,sof-firmware,wireless-regdb}-[0-9]*.pkg.tar.zst; do
+  [[ -f $f ]] || continue
+  sudo rm -rf "$st/x"; sudo mkdir -p "$st/x"
+  sudo bsdtar -xpf "$f" -C "$st/x"
+  [[ -d $st/x/usr/lib/firmware ]] && sudo cp -a "$st/x/usr/lib/firmware/." "$st/pkg/lib/firmware/$KVER/"
+done
+sudo rm -rf "$st/x"
+ls "$st/pkg/lib/firmware/$KVER"/iwlwifi-* >/dev/null 2>&1 || die "no Intel Wi-Fi firmware in Arch's packages"
+safe_rm "$work/packages"; mkdir -p "$work/packages"
+pkgv=${KVER//-/_}
+sudo bsdtar --uid 0 --gid 0 --zstd -cf "$work/packages/linux-arch#$pkgv-1.pkg.tar.zst" -C "$st/pkg" boot lib
+echo "    $(du -h "$work/packages/linux-arch#$pkgv-1.pkg.tar.zst" | cut -f1) linux-arch package"
+
+say "NetworkManager for the stick, from the CRUX ISO's packages"
+mkdir -p "$cache/distfiles"
 bind "$media" "$root/media"
 bind "$project" "$root/usr/src/krest"
-bind "$work/packages" "$root/packages"
-bind "$cache/distfiles" "$root/distfiles"
-sudo install -m644 "$project/build/crux/pkgmk.conf" "$root/etc/pkgmk.conf"
-sudo install -m644 "$project/build/crux/prt-get.conf" "$root/etc/prt-get.conf"
-sudo sed -i -e 's|^PKGMK_SOURCE_DIR=.*|PKGMK_SOURCE_DIR="/distfiles"|' \
-  -e 's|^PKGMK_PACKAGE_DIR=.*|PKGMK_PACKAGE_DIR="/packages"|' \
-  -e 's|^export CFLAGS=.*|export CFLAGS="-O2 -march=x86-64-v3 -pipe"|' "$root/etc/pkgmk.conf"
 chroot_run "$root" "
   set -e
-  mkdir -p /var/tmp
   for f in /etc/ports/*.inactive; do [ -e \"\$f\" ] && mv \"\$f\" \"\${f%.inactive}\"; done
-  ports -u core opt xorg contrib compat-32
-  sh /usr/src/krest/build/krest-ports sync /usr/src/krest /usr/ports/krest
-  sh /usr/src/krest/build/krest-ports verify /usr/ports/krest linux
-  # The ISO's core is from April 2025 and today's ports need today's build tools (meson ...).
-  # Only what the stick needs is updated here, build tools first: the rest of the system is
-  # brought up to date by the installer, on the Framework.
-  outdated=\" \$(prt-get quickdiff) \"
-  upd=
-  for p in python3 meson ninja cmake pkgconf \$(prt-get quickdep $LIVE_PORTS); do
-    case \"\$outdated\" in *\" \$p \"*) case \" \$upd \" in *\" \$p \"*) ;; *) upd=\"\$upd \$p\" ;; esac ;; esac
-  done
-  if [ -n \"\$upd\" ]; then echo \"updating:\$upd\"; prt-get update \$upd; fi
-  sh /usr/src/krest/installer/iso-binaries /media/crux \$(prt-get quickdep $LIVE_PORTS)
-  prt-get depinst $LIVE_PORTS
-  prt-get quickdep $LIVE_PORTS > /packages/LIVE
+  ports -u core opt xorg
+  prt-get quickdep networkmanager > /tmp/nm-order
 "
-built=$(cat "$work/packages/LIVE")
-echo "    $(echo $built | wc -w) packages for the stick"
+cleanup
+live_names="linux-arch"
+for name in $(sudo cat "$root/tmp/nm-order"); do
+  f=$(ls "$media"/crux/{core,opt,xorg}/"$name"#*.pkg.tar.* 2>/dev/null | head -n 1)
+  if [[ -z $f ]]; then echo "    note: $name is not on the CRUX ISO"; continue; fi
+  cp "$f" "$work/packages/"
+  live_names="$live_names $name"
+done
+echo "$live_names" | tr ' ' '\n' > "$work/packages/LIVE"
+grep -qx networkmanager "$work/packages/LIVE" || die "the CRUX ISO has no NetworkManager package"
+echo "    $(wc -l < "$work/packages/LIVE") packages for the stick"
 
 # --------------------------------------------------------------------- 5. the live system
 say "The installer's live system: CRUX's, plus the kernel, NetworkManager and the installer"
@@ -174,6 +210,8 @@ chroot_run "$live" '
   done
   rm -rf /lib/modules/6.*
   depmod '"$KVER"'
+  # every library nmtui needs is there
+  ! ldd /usr/bin/nmtui | grep "not found"
 '
 cleanup
 sudo install -m755 "$project/installer/krest-install" "$live/usr/bin/krest-install"
@@ -182,12 +220,12 @@ sudo install -m644 "$project/installer/live-bash_profile" "$live/root/.bash_prof
 sudo tar -C "$live" --one-file-system -cf - . | xz -T0 -6 > "$work/rootfs.tar.xz"
 safe_rm "$live"
 
-say "The initramfs: CRUX's, with the 7.3 kernel's storage and filesystem modules"
+say "The initramfs: CRUX's, with the $KVER kernel's storage and filesystem modules"
 ird=$work/initramfs.d
 safe_rm "$ird"; mkdir -p "$ird"
 (cd "$ird" && sudo cpio -idm --quiet < "$media/boot/initramfs")
 sudo rm -rf "$ird"/lib/modules/*
-modsrc=$root/lib/modules/$KVER
+modsrc=$st/pkg/lib/modules/$KVER
 for d in kernel/fs kernel/lib kernel/crypto kernel/drivers/usb kernel/drivers/scsi kernel/drivers/ata \
          kernel/drivers/cdrom kernel/drivers/mmc kernel/drivers/block kernel/drivers/nvme \
          kernel/drivers/hid kernel/drivers/input; do
@@ -197,7 +235,7 @@ done
 sudo cp -a "$modsrc"/modules.order "$modsrc"/modules.builtin* "$ird/lib/modules/$KVER/"
 # the initramfs's busybox modprobe reads plain modules only
 sudo find "$ird/lib/modules" -name '*.ko.zst' -exec zstd -q -d --rm {} \;
-sudo depmod -b "$ird" "$KVER"
+depmod_b "$ird" "$KVER"
 # the live system is bigger now: give its RAM disk room
 sudo sed -i 's/-o size=1650m/-o size=75%/' "$ird/init"
 (cd "$ird" && sudo find . | sudo cpio -o -H newc --quiet) > "$work/initramfs"
@@ -214,7 +252,7 @@ sed -i -e 's/Install\/Upgrade CRUX 3.8 (UEFI mode)/Крест \/ Krest installer
 iso=$project/out/krest-x86_64.iso
 rm -f "$iso"
 xorriso -indev "$iso_in" -outdev "$iso" -boot_image any replay \
-  -map "$root/boot/vmlinuz-$KVER" /boot/vmlinuz \
+  -map "$st/pkg/boot/vmlinuz-$KVER" /boot/vmlinuz \
   -map "$work/initramfs" /boot/initramfs \
   -map "$work/rootfs.tar.xz" /rootfs.tar.xz \
   -map "$work/grub.cfg" /boot/grub/grub.cfg \
