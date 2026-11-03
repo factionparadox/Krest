@@ -1,9 +1,9 @@
 #!/bin/bash
-# krest-aur: turn an AUR recipe (PKGBUILD) into a Krest port, then build and install it.
+# port-aurum (aurum: Latin for gold, and AUR): turn an AUR recipe (PKGBUILD) into a Krest port, then build and install it.
 #
-#   krest-aur NAME...       fetch NAME from the AUR, show you its PKGBUILD, convert it to a
+#   port-aurum NAME...       fetch NAME from the AUR, show you its PKGBUILD, convert it to a
 #                           port in /usr/ports/aur/NAME, then build and install it (prt-get)
-#   krest-aur -c NAME...    convert only: the port is left for you to read, edit and build
+#   port-aurum -c NAME...    convert only: the port is left for you to read, edit and build
 #                           (cd /usr/ports/aur/NAME && pkgmk -d, or prt-get install NAME)
 #
 # How it converts:
@@ -18,12 +18,12 @@
 #     Sources the PKGBUILD marks SKIP (git checkouts, mostly) can't be checked.
 #
 # AUR recipes are written by anyone. A PKGBUILD runs as root while it's converted and
-# built, so krest-aur shows it to you first and builds nothing you haven't said yes to.
+# built, so port-aurum shows it to you first and builds nothing you haven't said yes to.
 # Recipes for Arch's systemd, or that use Arch-only tools, may need editing.
 set -euo pipefail
 AUR=https://aur.archlinux.org
 DEST=/usr/ports/aur
-die() { echo "krest-aur: $*" >&2; exit 1; }
+die() { echo "port-aurum: $*" >&2; exit 1; }
 say() { printf '\n==> %s\n' "$*"; }
 [ "$(id -u)" = 0 ] || exec sudo "$0" "$@"
 
@@ -145,7 +145,7 @@ convert() {   # convert NAME: fetch, show, convert to $DEST/NAME
 	{
 		echo "# Description: ${desc:-$name (from the AUR)}"
 		echo "# URL: ${url:-$AUR/packages/$name}"
-		echo "# Maintainer: converted from $AUR/packages/$name by krest-aur"
+		echo "# Maintainer: converted from $AUR/packages/$name by port-aurum"
 		echo "# Depends on: $(printf '%s\n' "${deps[@]}" | awk 'NF && !seen[$0]++' | tr '\n' ' ' | sed 's/ $//')"
 		[ ${#missing[@]} -eq 0 ] || echo "# Not found in CRUX, Krest or the AUR (port these first): ${missing[*]}"
 		for n in "${notes[@]}"; do echo "# Note: $n"; done

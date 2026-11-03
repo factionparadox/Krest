@@ -41,9 +41,9 @@ prt-get search foo      # find a port; sudo prt-get depinst foo builds and insta
 Arch's AUR recipes (PKGBUILDs) are close cousins of CRUX's Pkgfiles, so Krest converts them:
 
 ```sh
-krest-aur foo         # shows you foo's PKGBUILD, converts it to /usr/ports/aur/foo, checks its
+port-aurum foo        # shows you foo's PKGBUILD, converts it to /usr/ports/aur/foo, checks its
                       # downloads against the PKGBUILD's sha256sums, then builds and installs it
-krest-aur -c foo      # convert only, to read or edit the port first
+port-aurum -c foo     # convert only, to read or edit the port first
 ```
 
 Dependencies get CRUX's names (`python-foo` is `python3-foo`, `libx11` is `xorg-libx11`). One that's only on the AUR is converted too; one that's nowhere is listed at the top of the Pkgfile for you to port. Recipes that need systemd say so in the Pkgfile, and may need editing. CRUX's and Krest's own ports always come first.
