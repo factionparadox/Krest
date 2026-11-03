@@ -43,37 +43,7 @@ LIVE_PORTS="linux linux-firmware networkmanager"
 sudo -v
 mkdir -p "$work" "$project/out" "$cache"
 
-# --------------------------------------------------------------------- 1. tools
-say "Tools: xorriso, cpio, rsync, curl, xz"
-need=()
-for t in xorriso cpio rsync curl xz zstd depmod; do command -v $t >/dev/null || need+=("$t"); done
-if [[ ${#need[@]} -gt 0 ]]; then
-  if command -v pacman >/dev/null; then sudo pacman -S --needed --noconfirm libisoburn cpio rsync curl xz zstd kmod
-  elif command -v apt-get >/dev/null; then sudo apt-get install -y xorriso cpio rsync curl xz-utils zstd kmod
-  elif command -v dnf >/dev/null; then sudo dnf install -y xorriso cpio rsync curl xz zstd kmod
-  else die "install: ${need[*]}"; fi
-fi
-
-# --------------------------------------------------------------------- 2. CRUX's ISO
-iso_in=$cache/$CRUX_ISO
-if ! echo "$CRUX_ISO_SHA256  $iso_in" | sha256sum -c --status 2>/dev/null; then
-  say "CRUX 3.8's ISO (1.7 GB, SHA-256 checked)"
-  for m in $CRUX_MIRRORS; do
-    curl -fL --retry 3 -C - -o "$iso_in" "$m/$CRUX_ISO" && break || true
-  done
-  echo "$CRUX_ISO_SHA256  $iso_in" | sha256sum -c - ||
-    { rm -f "$iso_in"; die "the CRUX ISO failed its checksum (deleted; run again)"; }
-fi
-media=$cache/media
-if [[ ! -f $media/crux-media ]]; then
-  say "Unpacking the ISO's files to $media"
-  safe_rm "$media"; mkdir -p "$media"
-  xorriso -osirrox on -indev "$iso_in" -extract / "$media" 2>&1 | grep -v '^xorriso : UPDATE' || true
-  chmod -R u+w "$media"
-fi
-
-# --------------------------------------------------------------------- 3. the build root
-root=$cache/buildroot
+# --------------------------------------------------------------------- helpers
 mounts=()
 bind() { sudo mkdir -p "$2"; mountpoint -q "$2" || { sudo mount --bind "$1" "$2"; mounts+=("$2"); }; }
 cleanup() {
@@ -105,6 +75,38 @@ chroot_run() {   # chroot_run ROOT COMMAND: with /proc, /sys, /dev and the netwo
   sudo chroot "$r" /usr/bin/env -i HOME=/root TERM="${TERM:-linux}" \
     PATH=/usr/sbin:/usr/bin:/sbin:/bin MAKEFLAGS="-j$(nproc)" /bin/sh -c "$*"
 }
+
+# --------------------------------------------------------------------- 1. tools
+say "Tools: xorriso, cpio, rsync, curl, xz"
+need=()
+for t in xorriso cpio rsync curl xz zstd depmod; do command -v $t >/dev/null || need+=("$t"); done
+if [[ ${#need[@]} -gt 0 ]]; then
+  if command -v pacman >/dev/null; then sudo pacman -S --needed --noconfirm libisoburn cpio rsync curl xz zstd kmod
+  elif command -v apt-get >/dev/null; then sudo apt-get install -y xorriso cpio rsync curl xz-utils zstd kmod
+  elif command -v dnf >/dev/null; then sudo dnf install -y xorriso cpio rsync curl xz zstd kmod
+  else die "install: ${need[*]}"; fi
+fi
+
+# --------------------------------------------------------------------- 2. CRUX's ISO
+iso_in=$cache/$CRUX_ISO
+if ! echo "$CRUX_ISO_SHA256  $iso_in" | sha256sum -c --status 2>/dev/null; then
+  say "CRUX 3.8's ISO (1.7 GB, SHA-256 checked)"
+  for m in $CRUX_MIRRORS; do
+    curl -fL --retry 3 -C - -o "$iso_in" "$m/$CRUX_ISO" && break || true
+  done
+  echo "$CRUX_ISO_SHA256  $iso_in" | sha256sum -c - ||
+    { rm -f "$iso_in"; die "the CRUX ISO failed its checksum (deleted; run again)"; }
+fi
+media=$cache/media
+if [[ ! -f $media/crux-media ]]; then
+  say "Unpacking the ISO's files to $media"
+  safe_rm "$media"; mkdir -p "$media"
+  xorriso -osirrox on -indev "$iso_in" -extract / "$media" 2>&1 | grep -v '^xorriso : UPDATE' || true
+  chmod -R u+w "$media"
+fi
+
+# --------------------------------------------------------------------- 3. the build root
+root=$cache/buildroot
 if [[ ! -f $root/.krest-ready ]]; then
   say "A CRUX build root in $root: the ISO's live system, then every core package"
   safe_rm "$root"; sudo mkdir -p "$root"
