@@ -249,6 +249,10 @@ compile() {   # runs on the new system (in the chroot, or after booting it)
 	stage 4 "Compiling Krest on this laptop (prt-get): the long step"
 	in_target "ports -u" || fail "ports -u (is the network up?)"
 	in_target "sh /usr/src/krest/build/krest-ports sync /usr/src/krest && sh /usr/src/krest/build/krest-ports verify" || fail "Krest's ports did not verify"
+	# the stick's core is from April 2025 and today's ports need today's tools: update it first,
+	# as CRUX's handbook says to after installing (prt-get sysup)
+	say "  bringing CRUX's core up to date first (prt-get sysup)"
+	in_target "prt-get sysup" || fail "prt-get sysup (updating CRUX's core)"
 	# the build order, so the screen can count builds
 	in_target "prt-get quickdep krest > /tmp/krest-order" || fail "prt-get quickdep"
 	local total n=0
