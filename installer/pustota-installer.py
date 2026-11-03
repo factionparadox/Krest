@@ -178,7 +178,10 @@ def fstab_ok(fstab):
 # ------------------------------------------------------------------ dialog
 def dialog(*args, output=False):
     progress_close()               # a question or a notice replaces the progress view
-    command = ["dialog", "--clear", "--stdout", "--backtitle", TITLE, "--title", "Pustota",
+    # --clear erases the screen when dialog exits: right after a question, but an --infobox
+    # exits at once, so with --clear its message vanished and left a blank blue screen.
+    clear = [] if "--infobox" in map(str, args) else ["--clear"]
+    command = ["dialog", *clear, "--stdout", "--backtitle", TITLE, "--title", "Pustota",
                *map(str, args)]
     result = sp.run(command, text=True, stdout=sp.PIPE)
     return (result.returncode, result.stdout.strip()) if output else result.returncode

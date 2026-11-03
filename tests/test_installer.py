@@ -358,3 +358,17 @@ class Progress(unittest.TestCase):
     def test_steps_get_a_title(self):
         self.assertEqual(inst.STEP.match('2/6  Installing').group(1, 2), ('2', '6'))
 
+
+class NoBlankScreen(unittest.TestCase):
+    def test_infobox_is_never_cleared(self):
+        seen = []
+        saved = inst.sp.run
+        inst.sp.run = lambda cmd, **k: seen.append(cmd) or inst.sp.CompletedProcess(cmd, 0, '')
+        try:
+            inst.dialog('--infobox', 'working', 9, 78)
+            inst.dialog('--msgbox', 'done', 9, 78)
+        finally:
+            inst.sp.run = saved
+        self.assertNotIn('--clear', seen[0])
+        self.assertIn('--clear', seen[1])
+
