@@ -1,0 +1,96 @@
+#!/bin/sh
+# port-help: every package command on Krest, on one page.
+#
+#   port-help           all of them
+#   port-help prt-get   one tool's section (prt-get, pkgmk, pkgadd, pkginfo, ports,
+#                       port-aurum, krest-update)
+R=$(printf '\033[1;31m') N=$(printf '\033[0m')
+[ -t 1 ] || { R= N=; }
+
+section() { [ -z "$want" ] || [ "$want" = "$1" ]; }
+want=${1:-}
+
+{
+if section krest-update; then cat <<EOF
+${R}krest-update${N}  keeping the whole system up to date
+  krest-update                  Krest's ports, CRUX's ports, then rebuild what's newer
+  krest-update --dry            only show what would be rebuilt
+
+EOF
+fi
+if section prt-get; then cat <<EOF
+${R}prt-get${N}  finding, building and installing ports (with their dependencies)
+  prt-get search WORD           ports whose name has WORD in it
+  prt-get dsearch WORD          ...whose name or description has WORD in it
+  prt-get fsearch FILE          which port installs FILE
+  prt-get info PORT             a port's version, description, dependencies
+  prt-get readme PORT           a port's README, if it has one
+  sudo prt-get depinst PORT     build and install PORT and everything it needs
+  sudo prt-get install PORT     build and install PORT alone
+  sudo prt-get update PORT      rebuild PORT at its newer version
+  sudo prt-get remove PORT      uninstall PORT
+  sudo prt-get sysup            rebuild every installed port that has a newer version
+  prt-get diff                  installed ports that have a newer version
+  prt-get depends PORT          what PORT needs (all the way down)
+  prt-get deptree PORT          ...as a tree
+  prt-get dependent PORT        installed ports that need PORT
+  prt-get listinst              everything installed
+  prt-get isinst PORT           is PORT installed?
+  prt-get path PORT             which collection PORT comes from
+  sudo prt-get lock PORT        never update PORT (unlock to undo)
+
+EOF
+fi
+if section ports; then cat <<EOF
+${R}ports${N}  the collections of recipes (in /usr/ports)
+  sudo ports -u                 fetch the newest recipes for every collection
+  ports -l                      list every port
+  ports -d                      ports whose version differs from what's installed
+
+EOF
+fi
+if section pkgmk; then cat <<EOF
+${R}pkgmk${N}  building one port by hand (run it in the port's folder: cd /usr/ports/COLLECTION/PORT)
+  pkgmk -d                      download the sources and build the package
+  pkgmk -do                     only download the sources
+  sudo pkgmk -d -i              build and install it
+  sudo pkgmk -d -u              build and upgrade the installed one
+  pkgmk -f                      build again even if the package is up to date
+  pkgmk -kw                     keep the build folder afterwards (to look at a failure)
+  pkgmk -um                     write the .md5sum for the sources
+  pkgmk -uf                     write the .footprint (the list of files it installs)
+  pkgmk -c                      remove the built package and the downloaded sources
+
+EOF
+fi
+if section pkgadd; then cat <<EOF
+${R}pkgadd / pkgrm${N}  installing a package file that's already built
+  sudo pkgadd FILE.pkg.tar.*    install it
+  sudo pkgadd -u FILE...        upgrade the installed one
+  sudo pkgadd -f FILE...        install even over files another package owns
+  sudo pkgrm PACKAGE            uninstall it
+  Settings: /etc/pkgadd.conf (files an upgrade must not overwrite)
+
+EOF
+fi
+if section pkginfo; then cat <<EOF
+${R}pkginfo${N}  what's installed
+  pkginfo -i                    every installed package and its version
+  pkginfo -l PACKAGE            the files PACKAGE installed
+  pkginfo -o PATTERN            which package owns files matching PATTERN
+
+EOF
+fi
+if section port-aurum; then cat <<EOF
+${R}port-aurum${N}  software from Arch's AUR
+  port-aurum PORT               show its PKGBUILD, convert it, check it, build and install it
+  port-aurum -c PORT            convert only, into /usr/ports/aur/PORT, to read or edit first
+
+EOF
+fi
+cat <<EOF
+Where things are: recipes /usr/ports/<collection>/<port>, downloads /usr/ports/distfiles,
+built packages /usr/ports/packages, build logs /var/log/pkgbuild, settings /etc/prt-get.conf
+and /etc/pkgmk.conf. More: man prt-get, man pkgmk, krest-handbook.
+EOF
+} | if [ -t 1 ] && [ -z "$want" ]; then less -R; else cat; fi

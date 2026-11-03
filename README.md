@@ -34,6 +34,7 @@ If the compiling stops, restart, log in, and run `sudo krest-install --continue`
 krest-update          # Krest's ports (git pull), CRUX's (ports -u), then prt-get sysup
 krest-update --dry    # only show what would be rebuilt
 prt-get search foo      # find a port; sudo prt-get depinst foo builds and installs it
+port-help               # every package command (prt-get, pkgmk, pkgadd, pkginfo ...) on one page
 ```
 
 ## Software from the AUR
