@@ -1,13 +1,17 @@
 # Sound: PipeWire
 
-PipeWire carries all audio (and screen capture). It runs as YOUR program, started by
-pustota-session, not as a system service. Two configuration links make it complete:
-/etc/pipewire/pipewire.conf.d/10-wireplumber.conf starts WirePlumber (which picks devices and
-remembers volumes) and 20-pipewire-pulse.conf serves programs that expect PulseAudio. ALSA
-programs reach it through /etc/alsa/conf.d.
+PipeWire carries all audio. It runs as YOUR program, not as a system service: system.scm
+installs pipewire, wireplumber (which picks devices and remembers volumes) and pipewire-pulse
+(for programs that expect PulseAudio, Firefox among them), and they run inside your session,
+using the session's D-Bus and the XDG_RUNTIME_DIR elogind makes.
 
-The Framework's speakers and microphones sit behind Intel's audio DSP: the SOF firmware
-(sof-firmware) and SoundWire drivers in Linux 7.x run them.
+Nothing in system.scm starts them. If  pgrep -a pipewire  shows nothing after logging in, start
+all three from ~/.config/rassvet/autostart (an executable script the session runs):
+    #!/bin/sh
+    pipewire & sleep 1 ; wireplumber & pipewire-pulse &
+
+The Framework's speakers and microphones sit behind Intel's audio DSP, run by the kernel's SOF
+and SoundWire drivers with firmware from linux-firmware.
 
 ## Use
     the volume and mute keys          (pamixer, bound in ratpoison)
@@ -19,4 +23,4 @@ The Framework's speakers and microphones sit behind Intel's audio DSP: the SOF f
     wpctl status                      everything PipeWire sees
     aplay -l                          the sound cards the kernel found
 
-References: https://docs.voidlinux.org/config/media/pipewire.html
+References: rassvet-learn wiki sound ; man pipewire ; https://docs.pipewire.org/

@@ -2,59 +2,48 @@
 
 From power button to desktop, in order:
 
-  1. UEFI firmware      finds the EFI system partition (FAT, 1 GiB, mounted at /boot/efi) and
-                        runs the boot loader named in its boot list, or the fallback
-                        EFI/BOOT/BOOTX64.EFI
-  2. GRUB               shows the menu, loads the kernel (/boot/vmlinuz-VERSION) and its
-                        initramfs (/boot/initramfs-VERSION.img), passes the command line
-  3. kernel + initramfs dracut's small early system: loads the drivers needed to reach the
-                        root filesystem, resumes from hibernation if there is an image,
-                        mounts / (XFS) and hands over
-  4. runit              stage 1 (start-up), stage 2 (services, logins) (see: runit)
-  5. ly on tty1         the login screen (logs you in by itself, if you chose that); it
-                        starts X and /usr/share/xsessions/pustota.desktop: pustota-session
+  1. UEFI firmware      finds the EFI system partition (FAT32, 1 GiB, mounted at /boot/efi)
+                        and runs the boot loader named in its boot list
+  2. GRUB               shows the menu: the current generation, and every older one under
+                        "GNU system, old configurations...". Loads that generation's kernel
+                        and initrd straight from /gnu/store and passes its command line
+  3. kernel + initrd    Guix's initrd, with Intel's microcode in front: loads the drivers
+                        needed to reach the root, resumes from hibernation if there is an
+                        image, mounts / (XFS) and starts the system named by gnu.system=
+  4. Shepherd           process 1: activates the system (/etc, accounts, setuid programs)
+                        and starts the services (see: shepherd)
+  5. ly on tty1         agetty hands tty1 to ly, the login screen (it logs you in by itself,
+                        if you chose that); ly starts X and rassvet-session
 
 ## GRUB
-  /etc/default/grub                    settings; the kernel command line is
-                                       GRUB_CMDLINE_LINUX_DEFAULT="loglevel=4 resume=UUID=..."
-  sudo grub-mkconfig -o /boot/grub/grub.cfg    write the menu after changing them
-  /boot/grub/grub.cfg                  the generated menu (do not edit by hand)
+system.scm's bootloader-configuration: grub-efi-bootloader installed to /boot/efi, a 3-second
+timeout, Rassvet's keyboard layout, white on red for the highlighted entry. Guix writes
+/boot/grub/grub.cfg on every reconfigure (and installs GRUB when needed); do not edit it, it
+is overwritten. guix system delete-generations also takes them out of the menu.
 
-Void's kernel packages run grub-mkconfig themselves when a kernel is installed or removed
-(hooks in /etc/kernel.d), so the menu follows updates without help. "Advanced options" in the
-menu lists every installed kernel: the way back if a new one misbehaves.
-
-At the menu, e edits an entry for this boot only (add  single  for rescue mode, or remove
-quiet to see messages), and Ctrl+x boots it.
-
-The installer ran grub-install twice: once normally (an entry "Pustota" in the firmware's
-boot list, files in /boot/efi/EFI/Pustota/) and once with --removable (EFI/BOOT/BOOTX64.EFI),
-which firmware boots even if its boot list is reset.
-
+At the menu, e edits an entry for this boot only (remove quiet to see messages, or add an
+argument), and Ctrl+x boots it.
   efibootmgr -v                        the firmware's boot list
 
-## The initramfs: dracut
-dracut builds the initramfs when a kernel is installed (or reconfigured). Its settings:
-
-  /etc/dracut.conf.d/*.conf            Pustota's: hostonly="yes" (only this laptop's drivers:
-                                       smaller and faster), the resume module, compression
-  sudo xbps-reconfigure -f linux-mainline      rebuild after changing anything
-  lsinitrd /boot/initramfs-$(uname -r).img | less     what is inside
+## The initrd
+Nonguix's microcode-initrd: Guix's base initrd (a small Guile program with the modules for
+NVMe, XFS and the rest) with Intel's (and AMD's) CPU microcode prepended, so it is loaded before
+anything else. It is built with each generation; nothing to rebuild by hand. Its modules are the
+initrd-modules field of the operating system (Guix's defaults on Rassvet).
+  dmesg | grep -i microcode            "microcode updated early to revision ..."
 
 ## The kernel command line
   cat /proc/cmdline                    what this boot used
-Useful additions (in GRUB_CMDLINE_LINUX_DEFAULT, then grub-mkconfig):
-  loglevel=3 quiet                     fewer messages while booting
-  single                               rescue runlevel (see: runit)
-  rd.break                             stop inside the initramfs, before / is mounted
-
-## Microcode
-intel-ucode (from the nonfree repository) puts Intel's CPU fixes into the initramfs, loaded
-before anything else (dracut's early_microcode). Check: dmesg | grep -i microcode
+Guix adds --root=, gnu.system= and gnu.load= itself; Rassvet adds nvme.noacpi=1 (lower SSD
+power use), resume=UUID=... (when there is a swap partition) and Guix's default, quiet.
+To add more, use kernel-arguments in /etc/config.scm (see: system). Useful at the GRUB prompt:
+  --repl                               stop in the initrd with a Guile REPL, before / is mounted
+  modprobe.blacklist=NAME              keep a module from loading this once
 
 ## When it does not boot
-pustota-learn learn recovery: booting the install stick, xchroot and repairing GRUB.
+Pick an older generation in GRUB's "old configurations" menu; once it is up,
+sudo guix system roll-back makes it the default. rassvet-learn learn recovery has the rest
+(the install stick, chroot, reinstalling GRUB).
 
-See also: kernel, elogind (hibernation), filesystems ; man grub-mkconfig ; man dracut.conf ;
-man efibootmgr ; https://docs.voidlinux.org/config/kernel.html ;
-https://docs.voidlinux.org/installation/guides/fde.html (encrypted disks, for a future install)
+See also: kernel, elogind (hibernation), system ; info "(guix) Bootloader Configuration" ;
+info "(guix) Initial RAM Disk" ; man efibootmgr

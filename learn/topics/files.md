@@ -7,10 +7,14 @@ bottom are the actions:
     Ctrl+\    a list of favourite folders     Alt+?  find files
     Enter on an archive (.zip, .tar.gz) opens it like a folder.
 
-mcedit, mc's editor, is also the system's EDITOR (/etc/profile.d/pustota.sh): sudoedit and git
-use it. Ctrl+s or F2 saves, F10 quits. For writing, acme is there too (pustota-learn learn plan9).
+mcedit, mc's editor, is also the system's EDITOR (/etc/profile.d/rassvet.sh): sudoedit, git and
+guix edit use it. Ctrl+s or F2 saves, F10 quits. For writing, acme is there too
+(rassvet-learn learn plan9).
 
 ## Look around the system with it
-/etc (settings), /var/log (logs), /usr/share/doc (documentation), your home folder.
+There is no /usr: Guix keeps every package in /gnu/store, read-only, and the system's programs
+and documentation are reached through /run/current-system/profile (bin, share/doc, share/info).
+Much of /etc is links into the store, written by the system declaration; /etc/config.scm is
+yours. Logs are in /var/log; your files and settings in your home folder.
 
 References: man mc ; man mcedit ; https://midnight-commander.org/

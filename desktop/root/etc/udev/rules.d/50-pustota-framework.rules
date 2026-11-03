@@ -1,4 +1,0 @@
-# Pustota, for the Framework Laptop 13 (from nixos-hardware's Framework modules):
-# the Ethernet Expansion Card (Realtek RTL8156, 0bda:8156) suspends after 20 ms idle, so it
-# does not keep the laptop awake.
-ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="0bda", ATTR{idProduct}=="8156", ATTR{power/autosuspend}="20"

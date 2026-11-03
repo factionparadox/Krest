@@ -4,24 +4,28 @@ Press Super+? for the keys. Ctrl+Super+Space opens the menu; everything in it is
 can also type. Super+Return opens a terminal.
 
 ## Three places to learn from
-- These lessons (pustota-learn): how THIS system is put together, and why.
-- Void's Handbook, installed offline (void-docs): how Void recommends doing things.
-- Manual pages (man xbps-install, man sv, ...): exactly what the installed commands accept.
+- These lessons (rassvet-learn): how THIS system is put together, and why.
+- The Guix manual and Cookbook, installed offline (rassvet-handbook, or info guix): how Guix
+  is meant to be used.
+- Manual pages (man nmcli, man ratpoison, ...): exactly what the installed commands accept.
 
 ## Start by looking, not changing
-    pustota-learn doctor             what is running, in one screen
-    pustota-learn explain "sudo xbps-install -Su"   what a command would do (it is NOT run)
-    lsblk -f                         disks and filesystems
-    sv status /var/service/*         services (needs sudo for some)
-    xbps-query -x pustota-desktop    every package Pustota added
-    fastfetch                        the system at a glance, with the Пустота logo
+    rassvet-learn doctor             what is running, in one screen
+    rassvet-learn explain "guix system reconfigure /etc/config.scm"   what it would do (NOT run)
+    cat /etc/config.scm              this laptop's whole system, in a few lines
+    guix system list-generations     every system you can go back to
+    sudo herd status                 services
+    fastfetch                        the system at a glance, with the Рассвет logo
 
 ## Keeping up to date
-    sudo xbps-install -Su            (or Ctrl+Super+Space -> System -> Update everything)
-Void is a rolling release: everything updates together. If XBPS says it must update itself
-first, run the same command twice.
+    rassvet-update                   (or Ctrl+Super+Space -> System -> Update everything)
+It runs guix pull (the newest Guix, Nonguix and Rassvet), then
+sudo guix system reconfigure /etc/config.scm: a new system generation. The old one stays in the
+boot menu; sudo guix system roll-back goes back. The first update takes longest: guix pull
+compiles Guix itself, and the security grafts the offline installer left out are applied now.
+Programs you installed yourself update separately:  guix upgrade
 
 ## Your files and the system's
-Your settings are in your home folder (~/.ratpoisonrc, ~/.config/...). System defaults are in
-/etc and /usr/share and belong to packages: xbps-query -o /etc/pustota/ratpoisonrc tells you
-which. Change your copies, not the packaged ones, and updates will never overwrite your work.
+Your settings are in your home folder (~/.ratpoisonrc, ~/.config/...). The system's files are in
+/gnu/store and cannot be edited; /etc/rassvet/ratpoisonrc is a link there. Change your own
+copies, or the system declaration, and an update never overwrites your work.

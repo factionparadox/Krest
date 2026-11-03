@@ -1,59 +1,68 @@
-# From Arch to Void
+# From Arch to Guix
 
-Void and Arch are both rolling, simple and close to upstream. They differ in the init system
-(runit, not systemd), the package manager (XBPS, not pacman) and in leaving out what systemd
-would otherwise provide. Most Arch knowledge carries straight over; this table is the rest.
+Arch and Guix are both rolling and close to upstream, but Guix works differently underneath:
+packages live in a read-only store, the system is one declaration you rebuild rather than a set
+of files you edit, every change is a generation you can go back to, and the init is Shepherd,
+not systemd. Most Arch knowledge about programs carries straight over; this table is the rest.
 
 ## Packages
-  pacman -Syu                 sudo xbps-install -Su
-  pacman -S foo               sudo xbps-install foo
-  pacman -Rns foo             sudo xbps-remove -R foo
-  pacman -Ss word             xbps-query -Rs word
-  pacman -Qi foo / -Si foo    xbps-query foo / xbps-query -R foo
-  pacman -Ql foo              xbps-query -f foo
-  pacman -Qo /path            xbps-query -o /path (installed) ; xlocate /path (any package)
-  pacman -Qdt ; -Rns $(...)   sudo xbps-remove -o            (orphans)
-  pacman -Qe                  xbps-query -m                  (installed on purpose)
-  pacman -Sc                  sudo xbps-remove -O            (old packages in the cache)
-  IgnorePkg in pacman.conf    ignorepkg=foo in /etc/xbps.d/*.conf ; or xbps-pkgdb -m hold foo
-  downgrade (AUR)             xdowngrade /var/cache/xbps/foo-1.2_1.x86_64.xbps
-  makepkg / PKGBUILD          xbps-src / template            (see: xbps-src)
-  the AUR                     no equivalent: templates you write or adopt (Pustota's srcpkgs/)
-  pacman-key                  keys in /var/db/xbps/keys, imported on first use
+  pacman -Syu                 rassvet-update   (guix pull, then sudo guix system reconfigure)
+  pacman -Sy                  guix pull                    (new package definitions)
+  pacman -S foo               guix install foo             (for you; no sudo)
+                              or add it to the system's packages (see: system)
+  pacman -Rns foo             guix remove foo              (then guix gc frees the space)
+  pacman -Ss word             guix search word
+  pacman -Qi foo / -Si foo    guix show foo
+  pacman -Ql foo              ls -R $(guix build foo)      (its store folder)
+  pacman -Qo /path            readlink -f /path names the store item ; guix locate FILE
+  pacman -Q / -Qe             guix package -I              (what you installed)
+  pacman -Qdt ; -Rns $(...)   guix gc                      (unused store items)
+  pacman -Sc                  guix gc -d 1m                (old generations, then collect)
+  IgnorePkg in pacman.conf    pin a version: guix install foo@1.2, or a manifest, or
+                              guix time-machine for an older Guix
+  downgrade (AUR)             guix package --roll-back ; sudo guix system roll-back
+  makepkg / PKGBUILD          guix build -L DIR / a package definition (see: guix-packaging)
+  the AUR                     channels: Nonguix, or your own (see: channels)
+  pacman-key                  channel introductions; substitute keys in /etc/guix/acl
+  pacman -U file.pkg.tar.zst  guix archive --import < file.nar
 
 ## Services and the system
-  systemctl enable --now foo  sudo ln -s /etc/sv/foo /var/service/
-  systemctl disable --now foo sudo rm /var/service/foo
-  systemctl start/stop foo    sudo sv up foo / sudo sv down foo
-  systemctl restart foo       sudo sv restart foo
-  systemctl status foo        sudo sv status foo
-  systemctl list-units        sudo sv status /var/service/*
-  journalctl -f               sudo tail -f /var/log/socklog/everything/current
-  journalctl -k               dmesg
+  systemctl enable --now foo  add (service foo-service-type) to the declaration, reconfigure
+  systemctl disable foo       remove it from the declaration, reconfigure
+  systemctl start/stop foo    sudo herd start foo / sudo herd stop foo
+  systemctl restart foo       sudo herd restart foo
+  systemctl status foo        sudo herd status foo
+  systemctl list-units        sudo herd status
+  journalctl -f               sudo tail -f /var/log/messages
+  journalctl -u foo           sudo herd status foo (recent messages) ; /var/log/foo.log
+  journalctl -k               sudo dmesg
   systemctl suspend           loginctl suspend               (elogind)
-  systemctl poweroff/reboot   loginctl poweroff / reboot ; or poweroff / reboot
-  timedatectl set-timezone    sudo ln -sf /usr/share/zoneinfo/Europe/London /etc/localtime
-  localectl / locale.gen      /etc/default/libc-locales then xbps-reconfigure -f glibc-locales
-  hostnamectl set-hostname    echo NAME | sudo tee /etc/hostname
-  mkinitcpio -P               sudo xbps-reconfigure -f linux-mainline   (runs dracut)
-  systemd-timesyncd           chronyd (a runit service)
-  systemd-networkd/resolved   NetworkManager (Pustota), or dhcpcd / wpa_supplicant / iwd
-  systemd timers, cron        none installed: cronie, fcron or snooze   (see: time)
-  systemd --user services     a runsvdir for your user              (see: runit)
-  /etc/systemd/logind.conf    /etc/elogind/logind.conf and logind.conf.d/
-  arch-chroot                 xchroot (xtools)
-  genfstab -U                 xgenfstab -U (xtools)
+  systemctl poweroff/reboot   loginctl poweroff / reboot ; or sudo shutdown / sudo reboot
+  timedatectl set-timezone    #:timezone in /etc/config.scm, reconfigure
+  localectl / locale.gen      #:locale (and locale-definitions), reconfigure
+  hostnamectl set-hostname    #:host-name in /etc/config.scm, reconfigure
+  mkinitcpio -P               nothing: each generation builds its own initrd
+  /etc/fstab                  the file-systems field              (see: filesystems)
+  /etc/default/grub           the bootloader and kernel-arguments fields   (see: boot)
+  systemd-timesyncd           ntpd (ntp-service-type)
+  systemd-networkd/resolved   NetworkManager (Rassvet)
+  systemd timers, cron        mcron jobs in the declaration     (see: time)
+  systemd --user services     Guix Home's Shepherd               (see: shepherd)
+  /etc/systemd/logind.conf    elogind-configuration in the declaration   (see: elogind)
+  arch-chroot                 mount --rbind, chroot, start guix-daemon   (learn recovery)
+  genfstab -U                 nothing: the installer wrote UUIDs into /etc/config.scm
 
 ## Things that differ in spirit
-- No unit files: a service is a folder with a shell script that runs the program in the
-  foreground. Read /etc/sv/*/run; most are three lines.
-- No journal: logging is plain text through syslog (socklog), per facility.
-- Partial upgrades are as unsupported as on Arch. When XBPS itself has an update,
-  xbps-install -Su updates XBPS first and asks you to run it again.
-- Package names: -devel instead of nothing (headers are split out, as in Debian), and kernels are
-  versioned packages (linux6.18, linux7.3); see kernel.
-- Void has a glibc and a musl edition. Pustota is glibc (x86_64).
+- No editing /etc: most of it is generated from the declaration and replaced at reconfigure.
+  The one file to edit is /etc/config.scm.
+- No partial-upgrade problem: each package refers to the exact store items it was built with,
+  so installing one new program cannot break another.
+- Updates can be undone whole: the previous system generation is in the GRUB menu.
+- Users install software without root, into their own profile; guix shell tries a program
+  without installing it.
+- No journal: plain text logs through syslog in /var/log.
+- Guix proper takes only free software; Nonguix provides the full kernel, firmware, Firefox
+  and Steam.
 
-See also: xbps, runit, the Void Handbook (https://docs.voidlinux.org/xbps/), and the Arch Wiki's
-table of package-manager commands, which has an XBPS column:
-https://wiki.archlinux.org/title/Pacman/Rosetta
+See also: guix-packages, shepherd, system, channels ; info "(guix) Getting Started" ;
+the Arch Wiki's package-manager table: https://wiki.archlinux.org/title/Pacman/Rosetta

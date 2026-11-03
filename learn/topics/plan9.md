@@ -1,8 +1,10 @@
 # Plan 9 tools: acme, sam, rc and the plumber
 
 Plan 9 was Bell Labs' successor to Unix, by the same people. plan9port brings its tools to
-Linux, installed in /usr/lib/plan9 (PLAN9 and PATH are set in /etc/profile.d/plan9.sh). Run
-them with the "9" wrapper so the Plan 9 versions win:  9 acme,  9 man rc.
+Linux; Guix installs it in /run/current-system/profile/plan9. rassvet-acme and rassvet-plumb set
+PLAN9 and PATH for themselves; in a shell of your own:
+    export PLAN9=/run/current-system/profile/plan9 PATH=$PATH:$PLAN9/bin
+Then run them with the "9" wrapper so the Plan 9 versions win:  9 acme,  9 man rc.
 
 ## acme (Ctrl+Super+c): text as the interface
 acme is an editor in which any text is a command. The mouse buttons do the work:
@@ -17,10 +19,10 @@ On a touchpad: a three-finger tap is the middle button, two fingers the right (l
 - sam: acme's predecessor, with a structural regular-expression language; 9 sam.
 - rc: Plan 9's shell, simpler quoting than sh;  9 rc.
 - plumber: routes right-clicked text to the right program (files to acme, URLs to the browser).
-  pustota-acme starts it; its rules are in $PLAN9/plumb/initial.plumbing.
+  rassvet-acme starts it; its rules are in $PLAN9/plumb/basic.
 
-Fonts: pustota-acme asks fontsrv for DejaVu (variable /mnt/font/DejaVuSans/14a/font, fixed
-DejaVuSansMono): edit the script's -f and -F to change size.
+Fonts: rassvet-acme asks fontsrv for DejaVu (variable /mnt/font/DejaVuSans/14a/font, fixed
+DejaVuSansMono): copy the script to ~/.local/bin and change -f and -F for another size.
 
 References: https://9fans.github.io/plan9port/ ; 9 man 1 acme ;
 "Acme: A User Interface for Programmers": https://doc.cat-v.org/plan_9/4th_edition/papers/acme/

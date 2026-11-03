@@ -1,0 +1,15 @@
+#!/bin/sh
+# The handbooks, offline. The GNU Guix Reference Manual covers the whole system: packages,
+# guix pull and reconfigure, generations, services (Shepherd), the boot and the store. The
+# Cookbook is its companion of worked examples. Both come with Guix itself, as info manuals.
+#   rassvet-handbook            the Guix manual (info: arrows and Enter follow a link, l goes
+#                               back, s searches, q quits)
+#   rassvet-handbook cookbook   the Guix Cookbook
+#   rassvet-handbook mc         Midnight Commander: the Rassvet wiki, with the manual one key away
+case "${1:-guix}" in
+  guix)     exec rassvet-term "Guix manual" info guix ;;
+  cookbook) exec rassvet-term "Guix cookbook" info guix-cookbook ;;
+  mc)       exec rassvet-term "Handbook" mc /run/current-system/profile/share/rassvet/learn/wiki \
+              /run/current-system/profile/share/info ;;
+  *)        echo "usage: rassvet-handbook [guix|cookbook|mc]" >&2; exit 2 ;;
+esac

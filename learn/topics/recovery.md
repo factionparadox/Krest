@@ -1,54 +1,47 @@
 # When something breaks
 
 Find the first layer that failed, collect the exact error, then change one thing.
-firmware -> GRUB -> kernel/initramfs -> XFS root -> runit -> services -> login -> X -> ratpoison
+firmware -> GRUB -> kernel/initrd -> XFS root -> Shepherd -> services -> ly -> X -> ratpoison
+
+## An update went wrong: go back a generation
+Every guix system reconfigure (every rassvet-update) makes a new system generation and keeps
+the old ones, kernel and all. Going back is a whole-system undo:
+    sudo guix system roll-back            the previous generation becomes the current one
+    guix system list-generations          what there is to go back to
+    sudo guix system switch-generation 7  any one of them
+or, if it does not boot: in GRUB, "GNU system, old configurations...", and pick an older
+entry. Booting an old entry does not change the default; roll back once it is up.
+Your own packages have the same undo:  guix package --roll-back  (and guix pull --roll-back
+for Guix itself). Nothing is deleted until you delete generations and run guix gc.
 
 ## The desktop does not start
-Log in on another console (Ctrl+Alt+F2) and read ~/.local/share/xorg-session.log. Fix
-~/.xinitrc or ~/.ratpoisonrc, or move them aside: cp /usr/share/pustota/skel/.ratpoisonrc ~ puts back the
-default.
+Log in on another console (Ctrl+Alt+F2) and read ~/.local/share/xorg/Xorg.0.log. Fix
+~/.xinitrc or ~/.ratpoisonrc, or move them aside: the defaults are in
+/run/current-system/profile/share/rassvet/skel/ (cp from there to put one back).
 
-## A new kernel misbehaves
-GRUB, "Advanced options": boot the previous kernel. Then  sudo xbps-reconfigure -f linux7.N
-(rebuild its initramfs), or wait for the next update.
+## A service fails
+    sudo herd status                      which ones are stopped or failing
+    sudo herd status NAME                 its state and recent messages
+    sudo tail -n 50 /var/log/messages     the system log; some services have /var/log/NAME.log
+    sudo herd restart NAME
 
-## An update went wrong (there are no snapshots: this is the undo)
-XFS has no snapshots, so Pustota cannot roll the whole system back the way ZFS boot
-environments do. What it has instead: XBPS keeps every package it downloaded in /var/cache/xbps,
-so the version you had before an update is still on the disk.
-
-1. Find what changed. The update's own output, or the log of what XBPS did:
-       grep -h 'xbps' /var/log/socklog/everything/current | tail -n 50
-       xilog | tail -n 30                         what was installed or updated last (xtools)
-       ls -t /var/cache/xbps | head -n 20          the newest downloads first
-2. Put the old version back. xdowngrade (from xtools) installs a package file from the cache:
-       ls /var/cache/xbps/firefox-*                 the versions you still have
-       sudo xdowngrade /var/cache/xbps/firefox-133.0_1.x86_64.xbps
-3. Stop the next update bringing the broken one straight back:
-       sudo xbps-pkgdb -m hold firefox               (and later: -m unhold firefox)
-       xbps-query -H                                 what is on hold
-4. Check the database is consistent:  sudo xbps-pkgdb -a
-
-Keep the cache: sudo xbps-remove -O deletes the old versions. Do that only when things work
-(it frees space: du -sh /var/cache/xbps). The kernel has its own safety net, above: Void keeps
-the previous one until  sudo vkpurge rm  removes it.
-
-If the desktop itself will not start after an update, do this from another console
-(Ctrl+Alt+F2). If nothing boots, use the install stick (below) and run the same commands
-inside  xchroot /mnt.
-
-## It does not boot at all: repair from the install stick
-Boot the Pustota stick, then on tty2 (user anon, password voidlinux):
-    sudo mount /dev/nvme0n1p3 /mnt ; sudo mount /dev/nvme0n1p1 /mnt/boot/efi
-    sudo xchroot /mnt                 a shell inside the installed system
-    xbps-reconfigure -fa ; grub-install --target=x86_64-efi --efi-directory=/boot/efi \
-        --bootloader-id=Pustota ; grub-mkconfig -o /boot/grub/grub.cfg
-The XFS root can be checked only unmounted:  sudo xfs_repair /dev/nvme0n1p3
+## It does not boot at all
+First try an older generation from GRUB: that covers almost every case. If even that fails
+(a broken disk, GRUB itself gone), boot the Rassvet stick, press Alt+F3 for a root shell,
+mount the disk and go into it, as in the Guix manual's "Chrooting into an existing system":
+    mount /dev/nvme0n1p3 /mnt ; mount /dev/nvme0n1p1 /mnt/boot/efi
+    for d in /dev /proc /sys; do mount --rbind $d /mnt$d; done
+    chroot /mnt /bin/sh
+    source /var/guix/profiles/system/profile/etc/profile
+    source /home/YOU/.config/guix/current/etc/profile
+    guix-daemon --build-users-group=guixbuild --disable-chroot &
+    guix system reconfigure /etc/config.scm       rebuilds the system and reinstalls GRUB
+The XFS root can be checked only unmounted, from the stick:  xfs_repair /dev/nvme0n1p3
 
 ## Logs
-    sudo tail -n 100 /var/log/socklog/everything/current
+    sudo tail -n 100 /var/log/messages
     sudo dmesg | tail -n 50
-    less /var/log/pustota-install.log
+    less /var/log/rassvet-install.log
 
-References: https://docs.voidlinux.org/installation/guides/chroot.html ; man xfs_repair ;
-https://docs.voidlinux.org/xbps/troubleshooting/
+References: info "(guix) Chrooting into an existing system" ; info "(guix) Invoking guix system" ;
+man xfs_repair

@@ -1,0 +1,3 @@
+# Your ratpoison settings. Rassvet's defaults come first; add your own below.
+# Reload after editing: Super+Shift+r  (or Ctrl+t then :source ~/.ratpoisonrc)
+source /etc/rassvet/ratpoisonrc

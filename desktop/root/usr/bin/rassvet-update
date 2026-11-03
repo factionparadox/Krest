@@ -1,0 +1,15 @@
+#!/bin/sh
+# Update everything: the newest Guix, Nonguix and Rassvet (guix pull), then a new system
+# generation from /etc/config.scm (sudo guix system reconfigure). The old generation stays in
+# the boot menu, so a bad update is one restart away from undone:
+#   sudo guix system roll-back      or pick the older entry in the boot menu.
+# Your own packages (guix install ...) update with:  guix upgrade
+set -e
+echo "==> guix pull (the channels in /etc/guix/channels.scm)"
+guix pull
+echo
+echo "==> sudo guix system reconfigure /etc/config.scm"
+# root runs your newly pulled guix, so the system is built from exactly what you just pulled
+sudo -E "$HOME/.config/guix/current/bin/guix" system reconfigure /etc/config.scm
+echo
+echo "Done. guix system list-generations shows every generation; restart to use a new kernel."

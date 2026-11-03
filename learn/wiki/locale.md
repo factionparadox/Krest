@@ -1,39 +1,40 @@
 # Locale, keyboard, console and time zone
 
 ## Locales (language and formats)
-glibc compiles only the locales you ask for. The list is /etc/default/libc-locales: one per
-line, a # in front means off. Pustota turns on en_GB.UTF-8, ru_RU.UTF-8 and en_US.UTF-8.
+glibc locales are built from the operating system's locale-definitions. Rassvet's system.scm
+defines three: en_GB.utf8, en_US.utf8 and ru_RU.utf8. The system's own, LANG for everyone, is
+the locale field: #:locale in /etc/config.scm, en_GB.utf8 unless you change it (English,
+British spelling, dates, paper size).
 
-  sudo mcedit /etc/default/libc-locales         remove the # from a line, for example
-                                                ja_JP.UTF-8 UTF-8
-  sudo xbps-reconfigure -f glibc-locales        compile them
+  locale                                        what this shell uses
   locale -a                                     what is available
 
-/etc/locale.conf chooses the system's: LANG=en_GB.UTF-8 (English, British spelling, dates,
-paper size) and LC_COLLATE=C (sort file names byte by byte). One part can differ:
-  LC_TIME=ru_RU.UTF-8                           Russian dates, English everything else
-For just your account, put  export LANG=ru_RU.UTF-8  in ~/.bash_profile.
+One part can differ, for just your account, in ~/.bash_profile:
+  export LC_TIME=ru_RU.utf8                     Russian dates, English everything else
+  export LANG=ru_RU.utf8                        Russian throughout, where programs have it
+For the whole system:  #:locale "ru_RU.utf8"  in /etc/config.scm, then reconfigure. A locale
+not among the three needs a locale-definition of its own (info "(guix) Locales").
 
-## /etc/rc.conf
-Read by runit's stages 1 and 3, at boot and shutdown (see: runit):
-  KEYMAP="uk"             the text console's keyboard (loadkeys; the names are in
-                          /usr/share/kbd/keymaps)
-  FONT="ter-v24n"         the console font: Terminus, 24 pixels (terminus-font; the list is
-                          /usr/share/kbd/consolefonts)
-  HARDWARECLOCK="UTC"     the hardware clock keeps UTC (right for Linux-only machines)
-Try a font now without rebooting: setfont ter-v32n
+Programs from your profile find the system's locales through GUIX_LOCPATH, which Guix System
+sets; nothing to install.
 
-## The keyboard in X
-/etc/X11/xorg.conf.d/00-keyboard.conf sets English (UK) and Russian (phonetic) with
-Alt+Shift switching. setxkbmap -query shows the current settings; try another layout with
+## The keyboard
+One keyboard-layout in system.scm serves GRUB, the text console and X:
+  (keyboard-layout "gb,ru" ",phonetic" #:options '("grp:alt_shift_toggle"))
+English (UK) and Russian phonetic, Alt+Shift to switch. setxkbmap -query shows what X uses;
+try another layout for this session with
   setxkbmap -layout gb,ru -variant ,phonetic -option grp:alt_shift_toggle
-and make it permanent in that file.
+A permanent change is a keyboard-layout of your own in the declaration (in X it is part of
+rassvet-xorg-configuration; info "(guix) Keyboard Layout").
+
+## The console
+The text consoles (Ctrl+Alt+F2 ...) use Guix's console-font-service with its default font,
+which has Cyrillic. setfont tries another for the moment.
 
 ## Time zone
-/etc/localtime is a link into /usr/share/zoneinfo:
-  sudo ln -sf /usr/share/zoneinfo/Europe/Moscow /etc/localtime
-  date                                         check
-The night light (pustota-nightlight) works out sunset from this zone.
+The timezone field: #:timezone in /etc/config.scm ("Europe/London" unless you chose another),
+then reconfigure. /etc/localtime follows it. For one shell:  TZ=Europe/Moscow date
+The night light (rassvet-nightlight) works out sunset from this zone.
 
-See also: time ; man locale.conf ; man rc.conf (Void's rc.conf is commented) ; man setxkbmap ;
-https://docs.voidlinux.org/config/locales.html ; https://docs.voidlinux.org/config/rc-files.html
+See also: time, system ; info "(guix) Locales" ; info "(guix) Keyboard Layout" ;
+man setxkbmap ; man locale

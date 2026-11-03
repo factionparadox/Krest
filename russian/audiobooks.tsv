@@ -1,7 +1,7 @@
 # Russian-language LibriVox recordings (public domain), fetched from the Internet Archive
 # by scripts/build/fetch-archive.py and checked against the Archive's MD5 and SHA-1.
 # The level is the earliest point at which the book is worth listening to; the
-# written texts are in the Russian Wikisource ZIM (pustota-russian read wikisource).
+# written texts are in the Russian Wikisource ZIM (rassvet-russian read wikisource).
 # identifier<TAB>level
 #
 # A2: folk tales, fables and children's stories

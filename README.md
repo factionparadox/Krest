@@ -1,42 +1,54 @@
-<p align="center"><img src="branding/pustota-256.png" width="200" alt="Пустота"></p>
+<p align="center"><img src="branding/rassvet-256.png" width="200" alt="Рассвет"></p>
 
-# Пустота · Pustota
+# Рассвет · Rassvet
 
-*Pustota* is Russian for "void" or "emptiness". It's a light, keyboard-driven laptop system built on **Void Linux**. It's made for writing and for learning Russian, and to last a long time on battery. It's built for the Framework Laptop 13 Pro (Intel Core Ultra series 3, Panther Lake), and runs on most UEFI laptops.
+*Rassvet* is Russian for "dawn". It's a light, keyboard-driven laptop system built on **GNU Guix System**, for writing, for learning Russian, and for lasting on battery. It's made for the Framework Laptop 13 Pro (Intel Core Ultra series 3, Panther Lake) and runs on most UEFI laptops.
+
+The whole system is one Scheme file, [guix/rassvet/system.scm](guix/rassvet/system.scm). Every change makes a new *generation*; the old ones stay in the boot menu, so a bad update is one restart from undone. The store (`/gnu/store`) is read-only: nothing changes a package once it is built.
 
 | | |
 | --- | --- |
-| Base | Void Linux x86_64 glibc, **runit**, XBPS. **Linux 7.x** (`linux-mainline`: Void's newest kernel series, which the 13 Pro needs) |
+| Base | Guix System with **Nonguix** (the Linux kernel, firmware and Intel microcode). **Shepherd** for services, elogind for sessions and sleep. No systemd |
 | Disk | GPT: 1 GiB EFI, swap the size of the RAM (for hibernation), **XFS** root |
-| Desktop | X11: **ratpoison** (each window fills the screen), **polybar** (the X11 counterpart of Waybar), **dmenu** menus, dunst notifications, slock screen lock, **X-терминал** (Pustota's own terminal: st with scrollback and a Plan 9 look) |
-| Tools | **Midnight Commander** for files, **acme** and the rest of **Plan 9** (sam, rc, the plumber), Firefox, **WebCord** (Discord), **FreeTube** (YouTube), **Steam**, the **Proton VPN** app, **LibreOffice** (British English and Russian, with spelling), mpv, zathura, ani-cli, clipboard history, night light, fastfetch (with the Пустота logo), `framework_tool` |
-| Laptop | Wi-Fi and Bluetooth menus, PipeWire sound, brightness and volume keys, TLP and thermald, zram, suspend that turns into hibernation after two hours, low-battery hibernation, tap-to-click, ufw firewall, fingerprint for sudo |
-| Russian | Constellation's kit: a 10,000-word drill, the AI tutor (Qwen3.6 35B-A3B, on the laptop), Piper voices, FSI/DLI/Peace Corps courses, *Между нами*, Wiktionary, audiobooks. English (UK) and Russian phonetic keyboard; Alt+Shift switches |
-| Learning | `pustota-learn`: 22 lessons on how this system works, the **Pustota wiki** (Void explained page by page, in the manner of the Arch Wiki: runit, XBPS, xbps-src, elogind, boot, kernels, from-Arch …), `search` across both, `explain` (shows what a command would do, without running it), `doctor` (a read-only map of the running system), and Void's Handbook offline (`pustota-handbook`: in mc beside the wiki, as a PDF or in Firefox) |
-| Installer | Automatic: five questions, one Yes/No, then the whole Void chroot install by itself |
-| Packages | Void's repository, plus Pustota's own signed one: its packages, and what Void lacks (`x-terminal`, `intel-lpmd`, `webcord`, `freetube`, the Proton VPN app, `ani-cli`, `ollama-bin`), built with xbps-src from `srcpkgs/` |
+| Desktop | X11: **ratpoison** (each window fills the screen), **polybar**, **dmenu** menus, dunst, slock, **ly** as the login screen, **X-терминал** (Rassvet's terminal: st with scrollback and a Plan 9 look) |
+| Tools | **Midnight Commander**, **acme** and the rest of **Plan 9** (plan9port), Firefox, **Steam**, **LibreOffice**, mpv, zathura, ani-cli, clipboard history, night light, fastfetch with the Рассвет logo |
+| Laptop | PipeWire sound, brightness and volume keys, TLP and thermald, zram, suspend that turns into hibernation after two hours, low-battery hibernation, tap-to-click, nftables firewall, fingerprint for sudo |
+| Russian | Constellation's kit: a 10,000-word drill, the AI tutor (Qwen3.6 35B-A3B through llama.cpp, on the laptop), Piper voices, FSI/DLI/Peace Corps courses, *Между нами*, Wiktionary, audiobooks. English (UK) and Russian phonetic keyboard; Alt+Shift switches |
+| Learning | `rassvet-learn`: 22 lessons on how this system works, the Rassvet wiki (Guix explained page by page: generations, Shepherd, channels, packaging, from-Arch), `search`, `explain` (what a command would do, without running it), `doctor` (a read-only map of the running system), and the Guix manual and cookbook offline (`rassvet-handbook`) |
+| Installer | Five questions, one Yes/No, then the manual Guix install by itself, **offline** |
+
+Not packaged for Guix, so not included: framework_tool, WebCord, FreeTube, the Proton VPN app, bluetuith and networkmanager_dmenu. The menu hides what is missing and uses the nearest thing: nmtui for Wi-Fi, bluetoothctl for Bluetooth, Firefox for Discord and YouTube, WireGuard files in NetworkManager for the VPN (`rassvet-vpn`).
 
 ## Installing
 
-1. Build the ISO (below), or download one, and write it to a USB stick of 8 GB or more (Ventoy works). The ISO is about 4–5 GB because it carries every package the install needs.
-2. In the laptop's BIOS: **Secure Boot off**. Boot the stick in UEFI mode.
-3. The stick logs in by itself and starts the installer. No network is needed: everything installs from the stick.
-4. Answer: the disk, a computer name, your username, your password (twice), the timezone (London is preselected), and whether to log in automatically.
-5. Read the summary and choose **Erase and install**. That erases the whole chosen disk; it's the only point of no return.
-6. Wait while it installs (progress shows as `[n of N unpacked]`), then reboot.
+1. Build the ISO (below) and write it to a USB stick of 8 GB or more.
+2. In the laptop's firmware: **Secure Boot off**. Boot the stick in UEFI mode.
+3. The installer starts by itself. Answer: the disk, a computer name, your username, your password (twice), the timezone (London is preselected), and whether to log in automatically.
+4. Read the summary and choose **Erase and install**. That erases the whole disk; it's the only point of no return.
+5. Each step and its output show on screen. Then restart.
 
-It boots straight into the desktop (or asks for your password, if you chose that). Press **Super+?** for the keys, or **Ctrl+Super+Space** for the menu.
+The steps are the manual Guix install: partitions and `mkfs`, `herd start cow-store /mnt`, the whole system copied from the stick (`guix archive --import`), `/etc/config.scm` with your answers, and `guix system init`. `/var/log/rassvet-install.log` keeps every command with its output; Alt+F3 opens a shell during the install.
 
-What the installer does, step by step, is the manual chroot install from Void's handbook: partitions, `mkfs`, `xbps-install -r /mnt base-system …`, `xgenfstab -U`, locales, users, runit service links, `xbps-reconfigure -fa`, GRUB. After installing, `pustota-learn learn install` shows each command it ran, and `/var/log/pustota-install.log` holds them with their output. If anything fails, it stops with the reason on screen; Alt+F2 opens a shell to read the log.
+It starts in the desktop (or ly asks for your password). **Super+?** shows the keys, **Ctrl+Super+Space** opens the menu.
+
+## Updating
+
+```sh
+rassvet-update                    # guix pull, then sudo guix system reconfigure /etc/config.scm
+sudo guix system roll-back        # back to the previous generation (or choose it in the boot menu)
+guix install hello                # a program just for you, without touching the system
+```
+
+The first update also applies Guix's security grafts, which the offline install leaves out (see [docs/BUILDING.md](docs/BUILDING.md)).
 
 ## First things to try
 
 ```sh
-pustota-learn                     # the lessons; start with architecture and install
-pustota-learn doctor              # what is running, read-only
-pustota-learn explain "sudo xbps-install -Su"
-sudo pustota-content              # download the Russian material (choose the packs)
-pustota-russian path              # the route from A1 to B2
+rassvet-learn                     # the lessons; start with architecture
+rassvet-learn doctor              # what is running, read-only
+rassvet-learn explain "guix system reconfigure /etc/config.scm"
+sudo rassvet-content              # download the Russian material (choose the packs)
+rassvet-russian path              # the route from A1 to B2
 ```
 
 | Keys | |
@@ -45,9 +57,9 @@ pustota-russian path              # the route from A1 to B2
 | Super+Tab | overview: pick a window or workstation |
 | Super+q / f / r | close, full size, width 33→50→67→100% |
 | Super+Space | run any program (dmenu) |
-| Ctrl+Super+w / t / d / v / e / a / p | Firefox / terminal / Discord / video / files (mc) / ani-cli / VPN |
+| Ctrl+Super+w / t / d / v / e / a / p / o / y / g | Firefox / terminal / Discord / video / files (mc) / ani-cli / VPN / office / YouTube / Steam |
 | Ctrl+Super+c / r / n / b / m | acme / Russian / Wi-Fi / Bluetooth / sound mixer |
-| Ctrl+Super+Space | the Pustota menu (Russian, Learn, System, Power) |
+| Ctrl+Super+Space | the Rassvet menu (Russian, Learn, System, Power) |
 | Super+x / z / Escape | lock / suspend / power menu |
 | Super+Shift+s | screenshot of an area |
 | Alt+Shift | English ↔ Russian |
@@ -55,75 +67,47 @@ pustota-russian path              # the route from A1 to B2
 
 ## Building the ISO
 
-On Arch Linux (WSL2 works) or on Void, with about 15 GB free. The first build downloads about 2.5 GB of Void packages into build/work/void-cache; later builds reuse them and fetch only what changed:
+On any x86_64 Linux with sudo (Arch on WSL2 works), with about 30 GB free:
 
 ```sh
 git clone https://github.com/factionparadox/Pustota && cd Pustota
-bash build/build-iso.sh            # -> out/pustota-x86_64.iso and its .sha256
-# with your own music in local/music (git-ignored): -> out/pustota-personal-x86_64.iso,
-# copied to ~/Music at install; that ISO is for you only. See docs/BUILDING.md.
+bash build/build-iso.sh            # -> out/rassvet-x86_64.iso and its .sha256
+# with your own music in local/music (git-ignored): -> out/rassvet-personal-x86_64.iso
 ```
 
-On Arch, it downloads Void's official root filesystem and checks it against Void's release key and a pinned SHA-256, then builds inside it. It needs no Docker and changes nothing on Arch beyond installing `curl minisign xz tar openssl`. Then it:
+It installs Guix if the computer has none (the 1.5.0 release, SHA-256 checked), then builds everything with `guix time-machine -C channels.scm`: Guix and Nonguix at pinned, authenticated commits. Almost everything comes prebuilt from Guix's and Nonguix's substitute servers; only Rassvet's own packages (ly, X-терминал and the scripts) compile. The first build downloads about 4 GB. Details: [docs/BUILDING.md](docs/BUILDING.md).
 
-1. builds the packages Void lacks from `srcpkgs/` with Void's own xbps-src;
-2. makes Pustota's three packages;
-3. signs the repository with your key, `~/.config/pustota/repo-key.pem`, made on the first build. Back it up: installed systems trust it;
-4. writes the ISO, its squashfs and initramfs compressed with **zstd at level 3**.
-
-Nothing large is compiled (Ollama is repackaged from its official release), so it takes minutes, not hours. See [docs/BUILDING.md](docs/BUILDING.md).
-
-**Publishing the repository**, so installed systems get updates with `sudo xbps-install -Su`:
-
-```sh
-bash build/publish-repo.sh         # uploads build/work/repo to the release "repo-x86_64" (needs gh auth login)
-```
+This repository is also the **rassvet** Guix channel, which installed laptops pull from. Its commits are not signed, so unlike Guix and Nonguix it has no channel introduction and `guix pull` does not authenticate it.
 
 ## Layout
 
 ```
-build/       build-iso.sh (Arch or Void), make-iso.sh (inside Void), build-srcpkgs.sh, build-packages.sh,
-             sign-repo.sh, publish-repo.sh, make-branding.py, Void's key
-srcpkgs/     xbps-src templates for what Void lacks: x-terminal, intel-lpmd, webcord, freetube, ani-cli,
-             ollama-bin
-branding/    the Пустота roundel (the original and the sizes made from it)
-installer/   pustota-installer.py and the live image's network setup
-desktop/root the pustota-desktop package: /etc/pustota, /usr/share/pustota/skel, /usr/bin/pustota-*
-learn/       pustota-learn and its lessons
-russian/     the Russian kit (from Constellation), Ollama's runit service
-packages.txt every Void package Pustota installs, grouped and explained
-tests/       python3 -m unittest discover tests
+channels.scm     Guix and Nonguix, pinned (the ISO's build and the installer use exactly these)
+.guix-channel    this repository as a channel (modules in guix/)
+guix/rassvet/    system.scm (the operating system), packages.scm (Rassvet's packages),
+                 installer.scm (the USB stick), files/ (Nonguix's substitute key)
+installer/       rassvet-install.py, the installer on the stick
+build/           build-iso.sh, offline-items.py, the two configs the ISO is built from,
+                 make-branding.py, publish-content.sh
+desktop/root     the rassvet-desktop package: /etc/rassvet, skel, rassvet-* commands
+extras/          X-терминал's config.h and patches.h
+learn/           rassvet-learn, its lessons and wiki
+russian/         the Russian kit (from Constellation) and its downloaders
+branding/        the Рассвет sunrise mark
+tests/           python3 -m pytest tests
 ```
 
 ## Status
 
-This is version 0.1, written on 31 October 2026. **Nothing has been built or booted yet.**
+Version 0.2, 3 November 2026.
 
-- **Tested here:** 117 automated tests pass. They cover:
-  - the templates, signing order, zstd level 3, and the fastfetch config and logo;
-  - the installer's whole sequence against a fake system, from partitions to GRUB, plus every one of its decisions;
-  - the Russian kit's downloader, checksums and tutor (Constellation's 37 tests, ported);
-  - the menu and the learning tool;
-  - the wiring: every file the build copies exists, every key runs an installed program, and every bar module is defined.
-- **Checked against Void itself:** every package name was checked against void-packages, and `linux-mainline` is 7.3. The void-mklive options were read at the pinned commit, and the patch was applied to that exact file. The templates follow Void's conventions, checked against existing templates. Every distfile checksum was taken from the published checksum or from git at the pinned commit.
-- **Not yet tested:**
-  - the ISO build, including the first xbps-src run in ethereal mode;
-  - XBPS reading the repository from a GitHub release;
-  - booting on the 13 Pro (including whether polybar's battery `BAT1` and `intel_backlight` names match);
-  - the real install;
-  - suspend, hibernate and resume;
-  - audio;
-  - the tutor's speed with 32 GB of RAM.
-
-  The ISO build reuses the route that built Archon/Cognoscenti's Void ISO successfully on the same Arch WSL builder.
-
-Report what happens on real hardware, and `pustota-learn doctor` output, in an issue.
+STATUS-PLACEHOLDER
 
 ## Credits
 
-- **Void Linux** and void-mklive: the base, the live image and the handbook this follows.
-- **Archon/Cognoscenti**: the Void build route, the installer's safety design and the learning tool and lessons, rewritten here.
+- **GNU Guix** and **Nonguix**: the base, the installation system and the manual this follows.
+- **Archon/Cognoscenti**: the installer's safety design and the learning tool, rewritten here.
 - **Constellation/Kirin**: the Russian kit, word list and content mirror.
-- **plan9port, ratpoison, polybar, Midnight Commander, dmenu, Piper, Ollama, Qwen, Kiwix**: their authors.
+- **plan9port, ratpoison, polybar, ly, Midnight Commander, dmenu, st-flexipatch, Piper, llama.cpp, Qwen, Kiwix**: their authors.
 
-Pustota is GPL-3.0. Every Void package keeps its own licence. The Russian material keeps its own: US government courses and LibriVox recordings are public domain, the word list is CC BY-SA 4.0, and *Между нами* is CC BY-NC-ND and is downloaded for your personal use only.
+Rassvet is GPL-3.0. Every package keeps its own licence. The Russian material keeps its own: US government courses and LibriVox recordings are public domain, the word list is CC BY-SA 4.0, and *Между нами* is CC BY-NC-ND and is downloaded for your personal use only.

@@ -1,4 +1,4 @@
-"""pustota-russian: the tutor, speech, library, word drill, audiobooks and reading."""
+"""rassvet-russian: the tutor, speech, library, word drill, audiobooks and reading."""
 import contextlib
 import importlib.machinery
 import importlib.util
@@ -10,8 +10,8 @@ import unittest
 from unittest.mock import patch
 
 PKG = Path(__file__).resolve().parents[1] / 'russian'
-loader = importlib.machinery.SourceFileLoader('pustota_russian', str(PKG / 'pustota-russian'))
-spec = importlib.util.spec_from_loader('pustota_russian', loader)
+loader = importlib.machinery.SourceFileLoader('rassvet_russian', str(PKG / 'rassvet-russian'))
+spec = importlib.util.spec_from_loader('rassvet_russian', loader)
 ru = importlib.util.module_from_spec(spec)
 loader.exec_module(ru)
 
@@ -43,18 +43,21 @@ class TutorAndSpeechTests(unittest.TestCase):
         sent = {}
         def fake_urlopen(req, timeout):
             sent.update(json.loads(req.data)); sent['url'] = req.full_url
-            return FakeResponse(b'{"message":{"content":"\\u041f\\u0440\\u0438"}}\n{"message":{"content":"\\u0432\\u0435\\u0442"}}\n')
+            return FakeResponse(b'data: {"choices":[{"delta":{"content":"\\u041f\\u0440\\u0438"}}]}\n\n'
+                                b'data: {"choices":[{"delta":{"content":"\\u0432\\u0435\\u0442"}}]}\n\ndata: [DONE]\n')
         out = io.StringIO()
         with patch.object(ru.request, 'urlopen', fake_urlopen), contextlib.redirect_stdout(out):
             ru.tutor('How do I say hello?', 'B1')
         self.assertEqual(sent['model'], 'tutor:test')
         self.assertTrue(sent['url'].startswith('http://127.0.0.1:'))
+        self.assertTrue(sent['url'].endswith('/v1/chat/completions'))
+        self.assertEqual(sent['chat_template_kwargs'], {'enable_thinking': False})
         self.assertIn('level B1', sent['messages'][0]['content'])
         self.assertIn('Привет', out.getvalue())
         self.assertIn('can be wrong', out.getvalue())
 
     def test_default_model_is_the_large_tutor(self):
-        self.assertEqual(ru.DEFAULTS['model'], 'qwen3.6:35b-a3b')
+        self.assertEqual(ru.DEFAULTS['model'], 'qwen3.6-35b-a3b')
 
     def test_say_strips_stress_and_plays(self):
         calls = []
@@ -141,7 +144,7 @@ class WordTests(unittest.TestCase):
             ru.main(['path'])
         self.assertIn('A1:     0/2 mastered, 0 learned, 1 started', out.getvalue())
         self.assertIn('B2  Confident Russian', out.getvalue())
-        self.assertIn('pustota-russian read mezhdunami', out.getvalue())
+        self.assertIn('rassvet-russian read mezhdunami', out.getvalue())
 
     def test_listen_lists_and_plays_by_level(self):
         books = self.root / 'books'

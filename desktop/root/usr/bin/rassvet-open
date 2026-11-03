@@ -1,0 +1,22 @@
+#!/bin/sh
+# The programs behind the Ctrl+Super chords. Each uses the bigger program if you have installed
+# it (kitty, VLC) and Rassvet's light one if not. Discord is WebCord.
+have() { command -v "$1" >/dev/null 2>&1; }
+case "${1:-}" in
+  web)      exec firefox ;;
+  terminal) have kitty && exec kitty; exec rassvet-term ;;
+  discord)  have webcord && exec webcord        # WebCord: Discord, with its tracking blocked
+            have discord && exec discord
+            exec firefox --new-window https://discord.com/app ;;
+  youtube)  have freetube && exec freetube
+            exec firefox --new-window https://www.youtube.com ;;
+  games)    exec steam ;;
+  video)    have vlc && exec vlc
+            exec mpv --player-operation-mode=pseudo-gui ;;   # drop a file or link on the window
+  files)    exec rassvet-term Files mc ;;
+  anime)    exec rassvet-term ani-cli ani-cli ;;
+  vpn)      have protonvpn-app && exec protonvpn-app   # the Proton VPN app
+            exec rassvet-vpn ;;                       # else: WireGuard files in NetworkManager
+  office)   exec libreoffice ;;
+  *)        echo "usage: rassvet-open web|terminal|discord|youtube|games|video|files|anime|vpn|office" >&2; exit 2 ;;
+esac

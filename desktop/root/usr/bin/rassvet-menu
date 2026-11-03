@@ -1,0 +1,126 @@
+#!/bin/sh
+# Rassvet's menu (Ctrl+Super+Space): dmenu lists, one per topic, like the classic right-click menu.
+#   rassvet-menu [main|russian|learn|power|system]
+# Each entry is "label<TAB>command"; edit /usr/bin/rassvet-menu's lists, or copy it to
+# ~/.local/bin/rassvet-menu and change your copy.
+dm() { dmenu -i -l 14 -p "$1" -fn 'DejaVu Sans Mono-12' -nb '#16161c' -nf '#d8d8d8' -sb '#c8323c' -sf '#ffffff'; }
+installed() {  # the entries whose programs are installed (optional ones may not be)
+  while IFS= read -r line; do
+    cmd=${line#*	}
+    for prog in "${cmd%% *}" framework_tool bluetuith; do
+      case $prog in framework_tool|bluetuith) case $cmd in *"$prog"*) ;; *) continue ;; esac ;; esac
+      case $prog in rassvet-menu|*\)*) continue ;; esac
+      command -v "$prog" >/dev/null 2>&1 || continue 2
+    done
+    printf '%s\n' "$line"
+  done
+}
+pick() {  # pick PROMPT, entries on stdin
+  entries=$(installed)
+  label=$(printf '%s\n' "$entries" | cut -f1 | dm "$1") || exit 0
+  printf '%s\n' "$entries" | awk -F'\t' -v l="$label" '$1 == l { print $2; exit }'
+}
+run() { [ -n "$1" ] && setsid -f sh -c "$1" >/dev/null 2>&1; }
+
+case "${1:-main}" in
+main)
+  run "$(pick 'Рассвет' <<'M'
+Terminal	rassvet-term
+Files (Midnight Commander)	rassvet-term Files mc
+Write (acme)	rassvet-acme
+Web	firefox
+Office (LibreOffice)	libreoffice
+Discord	rassvet-open discord
+YouTube	rassvet-open youtube
+Games (Steam)	steam
+Russian ›	rassvet-menu russian
+Learn the system ›	rassvet-menu learn
+Wi-Fi	networkmanager_dmenu
+Wi-Fi (full screen)	rassvet-term Wi-Fi nmtui
+Proton VPN	protonvpn-app
+VPN on/off (WireGuard files)	rassvet-vpn
+Bluetooth	rassvet-term Bluetooth bluetuith
+Bluetooth (bluetoothctl)	rassvet-term Bluetooth bluetoothctl
+Sound	rassvet-term Sound pulsemixer
+System ›	rassvet-menu system
+Screenshot	rassvet-screenshot
+Keys	rassvet-keys
+Power ›	rassvet-menu power
+M
+)" ;;
+russian)
+  run "$(pick 'Русский' <<'M'
+Where to start (the route to B2)	rassvet-term Russian rassvet-russian --pause path
+Words (10 minutes, spaced repetition)	rassvet-term Слова rassvet-russian --pause words
+Tutor (AI, on this laptop)	rassvet-term Репетитор rassvet-russian --pause tutor
+Listen (audiobooks)	rassvet-term Listen rassvet-russian --pause listen --pick
+Course library (FSI, DLI, Peace Corps)	rassvet-russian library --open
+Textbook: Между нами	rassvet-russian read mezhdunami
+Dictionary (Wiktionary)	rassvet-russian read wiktionary
+Download material…	rassvet-term Downloads sh -c 'sudo rassvet-content; read -r -p "Enter to close " _'
+M
+)" ;;
+learn)
+  run "$(pick 'Learn' <<'M'
+Lessons	rassvet-term Learn rassvet-learn browse
+Wiki: Guix explained (Shepherd, guix, generations ...)	rassvet-term Wiki rassvet-learn wiki
+Wiki page…	rassvet-menu wikipage
+Search the lessons and the wiki…	rassvet-menu search
+System map (what is running)	rassvet-term 'System map' sh -c 'rassvet-learn doctor; read -r -p "Enter to close " _'
+Explain a command…	rassvet-menu explain
+Guix manual (info, offline)	rassvet-handbook
+Guix cookbook (info, offline)	rassvet-handbook cookbook
+Guix manual and the wiki, side by side (mc)	rassvet-handbook mc
+Manual page…	rassvet-menu manual
+Where things come from	rassvet-term Sources sh -c 'rassvet-learn sources | less'
+M
+)" ;;
+explain)
+  cmd=$(printf '' | dm 'Explain (nothing is run):') || exit 0
+  [ -n "$cmd" ] && setsid -f rassvet-term Explain sh -c 'rassvet-learn explain "$1" | less' _ "$cmd" ;;
+clickforce)
+  force=$(printf 'low\nmedium\nhigh\n' | dm 'Touchpad click force (fewer false clicks: high):') || exit 0
+  [ -n "$force" ] && setsid -f rassvet-term Touchpad sh -c 'sudo framework_tool --click-force "$1"; read -r -p "Enter to close " _' _ "$force" ;;
+wikipage)
+  page=$(ls /usr/share/rassvet/learn/wiki | sed 's/\.md$//' | dm 'Wiki page:') || exit 0
+  [ -n "$page" ] && setsid -f rassvet-term "Wiki: $page" rassvet-learn wiki "$page" ;;
+search)
+  words=$(printf '' | dm 'Search the lessons and the wiki:') || exit 0
+  [ -n "$words" ] && setsid -f rassvet-term "Search: $words" sh -c 'rassvet-learn search $1 | less' _ "$words" ;;
+manual)
+  page=$(printf '' | dm 'man') || exit 0
+  [ -n "$page" ] && setsid -f rassvet-term "man $page" man "$page" ;;
+system)
+  run "$(pick 'System' <<'M'
+Update everything (guix pull, then a new generation)	rassvet-term Update sh -c 'rassvet-update; read -r -p "Enter to close " _'
+Generations (what you can go back to)	rassvet-term Generations sh -c 'guix system list-generations | less'
+Go back one generation	rassvet-term 'Roll back' sh -c 'sudo guix system roll-back; read -r -p "Enter to close " _'
+Services (herd status)	rassvet-term Services sh -c 'sudo herd status | less'
+The log (/var/log/messages)	rassvet-term Log sudo less +G /var/log/messages
+Processes (htop)	rassvet-term htop htop
+Battery report (powertop)	rassvet-term powertop sudo powertop
+Sleep check (suspends for 1 minute)	rassvet-term 'Sleep check' sh -c 'rassvet-sleepcheck; read -r -p "Enter to close " _'
+Touchscreen off (saves power)	rassvet-term Touchscreen sh -c 'sudo framework_tool --touchscreen-enable false; read -r -p "Enter to close " _'
+Touchscreen on	rassvet-term Touchscreen sh -c 'sudo framework_tool --touchscreen-enable true; read -r -p "Enter to close " _'
+Keyboard light off	rassvet-term 'Keyboard light' sh -c 'sudo framework_tool --kblight 0; read -r -p "Enter to close " _'
+Keyboard light on (50 %)	rassvet-term 'Keyboard light' sh -c 'sudo framework_tool --kblight 50; read -r -p "Enter to close " _'
+Touchpad click: light / medium / firm…	rassvet-menu clickforce
+Disks	rassvet-term Disks sh -c 'lsblk -f; df -h -x tmpfs -x devtmpfs; read -r -p "Enter to close " _'
+Night light on/off	rassvet-nightlight toggle
+Fingerprint: add a finger (for sudo)	rassvet-term Fingerprint sh -c 'fprintd-enroll; read -r -p "Enter to close " _'
+Firewall rules (nftables)	rassvet-term Firewall sh -c 'sudo nft list ruleset | less'
+Firmware updates (fwupdtool)	rassvet-term Firmware sh -c 'sudo fwupdtool refresh; sudo fwupdtool get-updates; read -r -p "Enter to close " _'
+M
+)" ;;
+power)
+  run "$(pick 'Power' <<'M'
+Lock	loginctl lock-session
+Suspend	loginctl suspend
+Hibernate	loginctl hibernate
+Log out	ratpoison -c quit
+Restart	loginctl reboot
+Power off	loginctl poweroff
+M
+)" ;;
+*) echo "usage: rassvet-menu [main|russian|learn|system|power]" >&2; exit 2 ;;
+esac

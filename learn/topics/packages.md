@@ -1,31 +1,37 @@
-# XBPS: installing, updating and asking questions
+# Guix: installing, updating and asking questions
 
-XBPS (the X Binary Package System) is Void's package manager. It downloads signed repository
-indexes, checks every package against them, works out dependencies, and remembers which
-package owns each file. Pustota itself is three XBPS packages built with Void's own tools:
-pustota-desktop (settings and scripts; it depends on every program Pustota uses),
-pustota-learn and pustota-russian.
+Guix keeps every package in /gnu/store, each in its own read-only folder whose name begins with
+a hash of everything that went into it. Nothing is installed "over" anything else, so two
+versions can sit side by side, and an update never breaks what is running. A profile is a set
+of packages linked together; each change makes a new generation of it, and the old one stays
+until you delete it.
+
+There are two kinds of profile:
+- the system's (/run/current-system/profile): what system.scm lists, Rassvet's own packages
+  included. It changes only through  sudo guix system reconfigure /etc/config.scm.
+- yours (~/.guix-profile): what you install with guix install. No sudo needed; each user has
+  their own.
 
 ## Ask (read-only)
-    xbps-query -Rs mpv             search the repositories (names and descriptions)
-    xbps-query -R mpv              details of a package you have not installed
-    xbps-query -l                  everything installed
-    xbps-query -f mpv              files owned by an installed package
-    xbps-query -o /usr/bin/mpv     which package owns a file
-    xbps-query -x pustota-desktop  what a package depends on
-    xbps-query -X mpv              what depends on it
-    xbps-pkgdb -a                  check the package database
+    guix search mpv                 names and descriptions
+    guix show mpv                   details: version, dependencies, licence, home page
+    guix package -I                 what you installed yourself
+    guix package -l                 your profile's generations
+    guix size mpv                   how much disk it takes, with everything it needs
+    ls /run/current-system/profile/bin    the system's commands
 
 ## Change
-    sudo xbps-install -Su          update everything (do this rather than updating one package)
-    sudo xbps-install gimp         install, with dependencies
-    sudo xbps-remove -R gimp       remove it and the dependencies nothing else needs
-    sudo xbps-remove -Oo           clean the download cache and orphans
-    sudo xbps-reconfigure -f PKG   run a package's setup again
-Shortcuts in your shell: xi (install), xq (search), xr (remove), xu (update).
+    rassvet-update                  update the whole system (guix pull, then reconfigure)
+    guix install gimp               install for you, with its dependencies
+    guix remove gimp                remove it from your profile
+    guix upgrade                    update what you installed
+    guix package --roll-back        undo your last install, remove or upgrade
+    guix shell gimp -- gimp         try a program without installing it
+    guix gc                         free the disk: delete store items no generation uses
+Shortcuts in your shell: gs (search), gi (install), gr (remove), gu (rassvet-update).
 
-Void is rolling: avoid partial upgrades (updating only some of the system). When XBPS updates
-itself it asks you to run the update again. The download cache in /var/cache/xbps keeps old
-versions: sudo xbps-install -f /var/cache/xbps/NAME-VERSION.x86_64.xbps goes back one.
+There are no partial upgrades to avoid: every package is built against exact versions of its
+dependencies. Prebuilt packages (substitutes) come from Guix's servers and Nonguix's; anything
+not prebuilt yet is built on this laptop, which is slower but gives the same result.
 
-References: https://docs.voidlinux.org/xbps/ ; man xbps-install ; man xbps-query
+References: info "(guix) Package Management" ; rassvet-learn wiki guix-packages

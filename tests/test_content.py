@@ -1,4 +1,5 @@
-"""pustota-content against a fake installed system, a stub Ollama and a local web server."""
+"""rassvet-content against a fake installed system, a stub herd and a local web server
+(standing in for Kiwix, the Internet Archive and Hugging Face)."""
 import functools
 import hashlib
 import http.server
@@ -12,19 +13,19 @@ import threading
 import unittest
 
 PKG = Path(__file__).resolve().parents[1] / 'russian'
-TOOL = PKG / 'pustota-content'
+TOOL = PKG / 'rassvet-content'
 
 
 def stage(root: Path) -> None:
-    """Lay the package out as its PKGBUILD's package() does."""
-    lib, share = root / 'usr/lib/pustota/content', root / 'usr/share/pustota/russian'
+    """Lay the package out as guix/rassvet/packages.scm's install plan does."""
+    lib, share = root / 'usr/lib/rassvet/content', root / 'usr/share/rassvet/russian'
     lib.mkdir(parents=True); share.mkdir(parents=True)
     for f in PKG.glob('fetch-*.py'):
         shutil.copy(f, lib)
     shutil.copy(PKG / 'mirror.json', lib)
     for f in ('vocab.tsv', 'library.tsv', 'audiobooks.tsv', 'voices.tsv'):
         shutil.copy(PKG / f, share)
-    (root / 'var/lib/pustota/russian').mkdir(parents=True)
+    (root / 'var/lib/rassvet/russian').mkdir(parents=True)
 
 
 class ContentTests(unittest.TestCase):
@@ -34,21 +35,37 @@ class ContentTests(unittest.TestCase):
         base = Path(self.temp.name)
         self.root = base / 'root'
         stage(self.root)
-        self.data = self.root / 'var/lib/pustota/russian'
+        self.data = self.root / 'var/lib/rassvet/russian'
         (self.data / 'russian.json').write_text(json.dumps({'model': 'tutor'}))
         self.site = base / 'site'; self.site.mkdir()
-        handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(self.site))
-        handler.log_message = lambda *a: None
+        site = self.site
+
+        class Handler(http.server.SimpleHTTPRequestHandler):
+            def log_message(self, *args):
+                pass
+
+            def end_headers(self):
+                # Hugging Face's large files: their SHA-256 and size in the headers
+                if self.path.startswith('/hf/'):
+                    f = site / self.path.lstrip('/')
+                    if f.is_file():
+                        data = f.read_bytes()
+                        self.send_header('X-Linked-Etag', f'"{hashlib.sha256(data).hexdigest()}"')
+                        self.send_header('X-Linked-Size', str(len(data)))
+                super().end_headers()
+        handler = functools.partial(Handler, directory=str(self.site))
         httpd = http.server.ThreadingHTTPServer(('127.0.0.1', 0), handler)
         threading.Thread(target=httpd.serve_forever, daemon=True).start()
         self.addCleanup(httpd.server_close); self.addCleanup(httpd.shutdown)
         self.url = f'http://127.0.0.1:{httpd.server_port}'
-        # Stub Ollama: remembers pulled tags in a file.
-        self.ollama = base / 'ollama'
-        self.ollama.write_text('#!/bin/sh\nS="$(dirname "$0")/pulled"\ncase "$1" in\n'
-                               '  list) echo "NAME ID SIZE"; [ ! -f "$S" ] || sed "s/$/ x 1GB/" "$S" ;;\n'
-                               '  pull) echo "$2" >> "$S" ;;\n  rm) grep -vx "$2" "$S" > "$S.n"; mv "$S.n" "$S" ;;\nesac\n')
-        self.ollama.chmod(0o755)
+        # Stub herd: records what it was asked
+        self.herd = base / 'herd'
+        self.herd.write_text('#!/bin/sh\necho "$@" >> "$(dirname "$0")/herd-args"\n')
+        self.herd.chmod(0o755)
+        # the tutor's model on the stand-in Hugging Face
+        model = self.site / 'hf/unsloth/Qwen3.6-35B-A3B-GGUF/resolve/main'
+        model.mkdir(parents=True)
+        (model / 'Qwen3.6-35B-A3B-UD-Q4_K_XL.gguf').write_bytes(b'GGUF' + b'x' * 5000)
 
     def publish_zim(self, directory, name, data=b'zim'):
         d = self.site / 'zim' / directory; d.mkdir(parents=True, exist_ok=True)
@@ -58,24 +75,45 @@ class ContentTests(unittest.TestCase):
         listing.write_text((listing.read_text() if listing.exists() else '') + f'<a href="{name}">{name}</a>\n')
 
     def run_tool(self, *args, input='', env=None):
-        env = {**os.environ, 'PUSTOTA_CONTENT_ROOT': str(self.root),
-               'PUSTOTA_CONTENT_OLLAMA': str(self.ollama),
-               'PUSTOTA_CONTENT_KIWIX': self.url + '/zim', 'PUSTOTA_CONTENT_ARCHIVE': self.url + '/archive/',
-               'PUSTOTA_CONTENT_MEZHDUNAMI': self.url + '/mn/index.shtml',
-               'PUSTOTA_CONTENT_YTDLP': 'no-such-ytdlp',
-               'PUSTOTA_CONTENT_MIRROR': self.url + '/no-mirror/', **(env or {})}
+        env = {**os.environ, 'RASSVET_CONTENT_ROOT': str(self.root),
+               'RASSVET_CONTENT_LIB': str(self.root / 'usr/lib/rassvet/content'),
+               'RASSVET_CONTENT_SHARE': str(self.root / 'usr/share/rassvet/russian'),
+               'RASSVET_CONTENT_HERD': str(self.herd), 'RASSVET_CONTENT_FREE_GB': '500', 'RASSVET_CONTENT_HF': self.url + '/hf',
+               'RASSVET_CONTENT_KIWIX': self.url + '/zim', 'RASSVET_CONTENT_ARCHIVE': self.url + '/archive/',
+               'RASSVET_CONTENT_MEZHDUNAMI': self.url + '/mn/index.shtml',
+               'RASSVET_CONTENT_YTDLP': 'no-such-ytdlp',
+               'RASSVET_CONTENT_MIRROR': self.url + '/no-mirror/', **(env or {})}
         return subprocess.run([sys_python(), str(TOOL), *args], capture_output=True, text=True, env=env, input=input)
 
     def config(self):
         return json.loads((self.data / 'russian.json').read_text())
 
-    def test_tutor_model_goes_through_ollama(self):
+    def herd_args(self):
+        f = self.herd.parent / 'herd-args'
+        return f.read_text() if f.exists() else ''
+
+    def test_tutor_model_is_verified_and_its_service_started(self):
         r = self.run_tool('install', 'ai-tutor')
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        self.assertIn('qwen3.6:35b-a3b', (self.ollama.parent / 'pulled').read_text())
+        tutor = self.data / 'tutor'
+        self.assertEqual(os.readlink(tutor / 'tutor.gguf'), 'Qwen3.6-35B-A3B-UD-Q4_K_XL.gguf')
+        self.assertTrue((tutor / 'tutor.gguf').read_bytes().startswith(b'GGUF'))
+        self.assertIn('start rassvet-tutor', self.herd_args())
         self.assertRegex(self.run_tool('list').stdout, r'ai-tutor\s+installed')
         self.run_tool('remove', 'ai-tutor')
-        self.assertNotIn('qwen3', (self.ollama.parent / 'pulled').read_text())
+        self.assertEqual(list(tutor.iterdir()), [])
+        self.assertIn('stop rassvet-tutor', self.herd_args())
+
+    def test_tampered_model_refused(self):
+        model = self.site / 'hf/unsloth/Qwen3.6-35B-A3B-GGUF/resolve/main/Qwen3.6-35B-A3B-UD-Q4_K_XL.gguf'
+        # the headers describe one file, a different one arrives
+        site_bytes = model.read_bytes()
+        r = self.run_tool('install', 'ai-tutor')                     # good copy first
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        (self.data / 'tutor/Qwen3.6-35B-A3B-UD-Q4_K_XL.gguf').write_bytes(site_bytes[:-1] + b'!')
+        r = self.run_tool('install', 'ai-tutor')                     # changed on disk: fetched again
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual((self.data / 'tutor/tutor.gguf').read_bytes(), site_bytes)
 
     def test_dictionaries_are_verified_and_configured(self):
         self.publish_zim('wiktionary', 'wiktionary_en_all_nopic_2026-09.zim')
@@ -84,9 +122,9 @@ class ContentTests(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         cfg = self.config()
         self.assertEqual(cfg['kiwix']['wiktionary'],
-                         '/var/lib/pustota/russian/dictionary/wiktionary_en_all_nopic_2026-09.zim')
+                         '/var/lib/rassvet/russian/dictionary/wiktionary_en_all_nopic_2026-09.zim')
         self.assertEqual(cfg['kiwix']['wiktionary-ru'],
-                         '/var/lib/pustota/russian/dictionary/wiktionary_ru_all_nopic_2026-08.zim')
+                         '/var/lib/rassvet/russian/dictionary/wiktionary_ru_all_nopic_2026-08.zim')
         self.assertEqual(cfg['model'], 'tutor')                        # existing settings kept
         self.assertRegex(self.run_tool('list').stdout, r'ru-dictionaries\s+installed')
         self.run_tool('remove', 'ru-dictionaries')
@@ -105,40 +143,19 @@ class ContentTests(unittest.TestCase):
     def test_interactive_choice_and_unknown_pack(self):
         r = self.run_tool(input='2\n')
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        self.assertIn('qwen3', (self.ollama.parent / 'pulled').read_text())
+        self.assertTrue((self.data / 'tutor/tutor.gguf').is_file())
         self.assertEqual(self.run_tool('install', 'nonsense').returncode, 2)
 
     def test_packaged_files_exist(self):
-        """build-packages.sh puts every kit file in the pustota-russian package."""
-        build = (PKG.parent / 'build/build-packages.sh').read_text()
-        for name in ('fetch-files.py', 'fetch-kiwix.py', 'fetch-archive.py', 'fetch-mezhdunami.py', 'fetch-mirror.py',
-                     'library.tsv', 'audiobooks.tsv', 'voices.tsv', 'vocab.tsv', 'mirror.json'):
+        """guix/rassvet/packages.scm puts every kit file in the rassvet-russian package."""
+        recipe = (PKG.parent / 'guix/rassvet/packages.scm').read_text()
+        for name in ('fetch-files.py', 'fetch-kiwix.py', 'fetch-archive.py', 'fetch-mezhdunami.py',
+                     'fetch-mirror.py', 'fetch-hf.py', 'library.tsv', 'audiobooks.tsv', 'voices.tsv',
+                     'vocab.tsv', 'mirror.json'):
             self.assertTrue((PKG / name).is_file(), name)
-        for pattern in ('fetch-*.py', 'mirror.json', '{vocab,library,audiobooks,voices}.tsv',
-                        'pustota-russian', 'pustota-content', 'ollama-bin'):
-            self.assertIn(pattern, build, pattern)
-
-    def test_tutor_switches_on_the_ollama_package_and_its_service(self):
-        """Ollama is the ollama-bin package: installed if missing, then its runit service linked."""
-        binary = self.root / 'usr/bin/ollama'
-        xbps = self.root.parent / 'xbps-install'
-        # a stand-in xbps-install: "installs" ollama-bin (the binary and its service definition)
-        xbps.write_text('#!/bin/sh\necho "$@" > "$(dirname "$0")/xbps-args"\n'
-                        f'mkdir -p "{binary.parent}" "{self.root}/etc/sv/ollama"\n'
-                        f'cp "{self.ollama}" "{binary}"\n')
-        xbps.chmod(0o755)
-        (self.root / 'etc/sv/ollama').mkdir(parents=True, exist_ok=True)
-        (self.root / 'etc/sv/ollama/down').touch()          # as left by removing the tutor
-        r = self.run_tool('install', 'ai-tutor', env={'PUSTOTA_CONTENT_OLLAMA': str(binary),
-                                                      'PUSTOTA_CONTENT_XBPS_INSTALL': str(xbps)})
-        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        self.assertEqual((xbps.parent / 'xbps-args').read_text().split(), ['-Sy', 'ollama-bin'])
-        self.assertIn('qwen3.6:35b-a3b', (binary.parent / 'pulled').read_text())
-        self.assertEqual(os.readlink(self.root / 'var/service/ollama'), '/etc/sv/ollama')
-        self.assertFalse((self.root / 'etc/sv/ollama/down').exists())
-        # removing the tutor removes the model and keeps the service off, even after a reboot
-        self.run_tool('remove', 'ai-tutor', env={'PUSTOTA_CONTENT_OLLAMA': str(binary)})
-        self.assertNotIn('qwen3.6', (binary.parent / 'pulled').read_text())
+        for pattern in ('"rassvet-russian" "bin/"', '"rassvet-content" "bin/"', r'fetch-.*\\.py',
+                        r'mirror\\.json', r'\\.tsv'):
+            self.assertIn(pattern, recipe, pattern)
 
 
 def sys_python():

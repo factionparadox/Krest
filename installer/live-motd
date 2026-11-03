@@ -1,6 +1,0 @@
-
-  Пустота / Pustota — installer
-
-  tty1 runs the installer (sudo pustota-installer to start it again).
-  This console is an ordinary shell: lsblk, nmtui, less /tmp/pustota-install.log
-

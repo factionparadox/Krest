@@ -1,5 +1,0 @@
-#!/bin/sh
-# Pustota: TRIM once a week, so the SSD stays fast (Void runs no TRIM by itself).
-# snooze-weekly (a runit service) runs everything in /etc/cron.weekly; a week missed while the
-# laptop was off runs at the next chance. pustota-learn wiki filesystems
-exec fstrim -a

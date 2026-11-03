@@ -1,24 +1,28 @@
-# Booting: UEFI, GRUB, kernel, initramfs
+# Booting: UEFI, GRUB, kernel, initrd
 
 The disk is GPT. Its first partition (1 GiB, FAT32) is the EFI system partition, mounted at
-/boot/efi; the firmware reads GRUB from it. GRUB shows the menu (kernels in /boot), loads the
-chosen kernel and its initramfs, and passes the kernel line from /etc/default/grub.
+/boot/efi; the firmware reads GRUB from it. Guix writes GRUB's menu (/boot/grub/grub.cfg) at
+every guix system reconfigure: the newest generation first, every older one under
+"GNU system, old configurations...". The kernel and initrd are read straight from /gnu/store,
+so each generation boots exactly the kernel it was built with.
 
-The initramfs is a small early system made by dracut. It loads the drivers needed to reach the
-root filesystem, checks whether to resume from hibernation (resume=UUID=... on the kernel line),
-then mounts / and starts runit. Pustota asks dracut for a host-only initramfs (only this
-computer's drivers: smaller and quicker) in /etc/dracut.conf.d/20-pustota.conf.
+The initrd is Guix's own small early system (a Guile program), with Intel's microcode added in
+front by Nonguix's microcode-initrd. It loads the drivers needed to reach the root, resumes
+from hibernation if there is an image (resume=UUID=... on the kernel line), mounts / and
+starts Shepherd.
 
 ## Look (read-only)
     cat /proc/cmdline                the kernel line this boot used
-    ls /boot                         kernels and initramfs images
+    guix system list-generations     what GRUB offers
     findmnt /boot/efi ; efibootmgr -v
-    grep CMDLINE /etc/default/grub
+    guix system describe             this generation's kernel, root device and channels
 
 ## Change (deliberately)
-    sudoedit /etc/default/grub ; sudo grub-mkconfig -o /boot/grub/grub.cfg
-    sudo xbps-reconfigure -f linux7.3      rebuild that kernel's initramfs (use your version)
-GRUB is installed twice: as "Pustota" in the firmware's boot list, and at the fallback path
-EFI/BOOT/BOOTX64.EFI that firmware always tries. Secure Boot must stay off.
+Kernel arguments, the GRUB timeout and the rest are fields of the operating system, not files
+in /etc. Rassvet sets nvme.noacpi=1, resume= (when there is swap) and Guix's defaults; to add
+one, wrap the system in /etc/config.scm (rassvet-learn wiki system shows how), then
+    sudo guix system reconfigure /etc/config.scm
+At the GRUB menu, e edits an entry for this boot only; Ctrl+x boots it. Secure Boot must stay off.
 
-References: https://docs.voidlinux.org/config/kernel.html ; man dracut ; man grub-mkconfig
+References: info "(guix) Bootloader Configuration" ; info "(guix) Initial RAM Disk" ;
+rassvet-learn wiki boot

@@ -1,35 +1,28 @@
 # Time and scheduled jobs
 
-## The clock: chrony
-chronyd (a runit service) keeps the clock right over the network, gently, even with the laptop
-asleep half the day.
-  chronyc tracking          how far off the clock is, and how it is being corrected
-  chronyc sources -v        the time servers it is using
+## The clock: ntpd
+ntp-service-type in system.scm runs ntpd, which keeps the clock right over the network
+(Guix's pool of servers, 0.guix.pool.ntp.org and so on, unless told otherwise). Guix keeps the hardware clock in UTC.
+  sudo herd status ntpd
   date ; sudo hwclock --show
-Settings: /etc/chrony.conf (servers: pool lines). rc.conf's HARDWARECLOCK="UTC" says what the
-hardware clock keeps.
+  guix shell ntp -- ntpq -p         the servers ntpd is using, and how far off each is
+Other servers: (ntp-configuration (servers ...)) in the declaration; info "(guix) Networking
+Services" has the fields. Time zone: see locale.
 
-## Scheduled jobs: there is no cron
-Void installs no cron daemon; choose one if you want scheduled jobs. The common ones:
-
-  snooze     the smallest: one runit service per schedule. Void's package includes services
-             snooze-hourly, snooze-daily, snooze-weekly and snooze-monthly, which run the
-             scripts in /etc/cron.hourly, /etc/cron.daily ... A job missed while the laptop was
-             off or asleep runs when it next can.
-  cronie     the classic cron with crontab -e (and anacron for missed jobs)
-  fcron      cron that also catches up on missed jobs
-
-Pustota installs snooze and enables snooze-weekly, for the weekly TRIM (see: filesystems).
-To run your own script every day, put it in /etc/cron.daily (executable, a name of letters,
-digits, - and _ only: run-parts skips names with dots) and enable that schedule:
-  sudo ln -s /etc/sv/snooze-daily /var/service/
-
-A single job at a set time can also be its own runit service:  exec snooze -H3 -M30 backup.sh
-(every day at 03:30; man snooze).
+## Scheduled jobs: mcron
+Guix's cron is mcron, written in Guile. Jobs are declared, like everything else; the service
+runs them. Rassvet has one: fstrim-service-type adds a weekly TRIM of the SSD (see: filesystems).
+  sudo herd schedule mcron          upcoming jobs and when they run
+  sudo herd status mcron
+To add your own, in /etc/config.scm's services (see: system):
+  (simple-service 'my-jobs mcron-service-type
+    (list #~(job "30 3 * * *" "rsync -a /home/you/ /media/backup/" #:user "you")))
+The schedule is a crontab line (here: every day at 03:30), or Guile code such as
+'(next-hour '(3)). A job missed while the laptop was asleep or off is not run later.
 
 ## Once, later
-  sleep 600 && notify-send 'Tea'            in a terminal
-  at                                        (package at) for jobs at a time, from a shell
+  sleep 600 && notify-send 'Tea'     in a terminal
+  guix shell at                      the at command, for jobs at a time (it needs atd running)
 
-See also: runit, locale (time zone) ; man chronyc ; man snooze ; man crontab ;
-https://docs.voidlinux.org/config/date-time.html ; https://docs.voidlinux.org/config/cron.html
+See also: shepherd, locale (time zone) ; info "(guix) Scheduled Job Execution" ;
+https://www.gnu.org/software/mcron/manual/ ; man ntpd

@@ -1,0 +1,544 @@
+#!/usr/bin/env python3
+"""Rassvet Learn: offline lessons about this system, read-only inspection, manuals.
+
+From Archon/Rassvet's learning tool, rewritten for Rassvet (GNU Guix System with Nonguix,
+Shepherd, XFS, ratpoison, Plan 9). It never runs a command it explains and never asks for root.
+"""
+import argparse
+import os
+from pathlib import Path
+import re
+import shlex
+import shutil
+import subprocess
+import sys
+import webbrowser
+
+
+def doc_root():
+    """The lessons and the wiki: $RASSVET_LEARN_ROOT, else beside this script (in the store:
+    bin/../share/rassvet/learn; in a checkout of the repository: learn/ itself), else the
+    system profile."""
+    if os.environ.get("RASSVET_LEARN_ROOT"):
+        return Path(os.environ["RASSVET_LEARN_ROOT"])
+    here = Path(__file__).resolve().parent
+    for candidate in (here.parent / "share/rassvet/learn", here):
+        if (candidate / "topics").is_dir():
+            return candidate
+    return Path("/run/current-system/profile/share/rassvet/learn")
+
+
+DOC_ROOT = doc_root()
+MANUAL_WEB = "https://guix.gnu.org/manual/en/html_node/"
+TOPIC_NAME = re.compile(r"[a-z][a-z0-9-]{0,60}\Z")
+MAN_NAME = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9_.+-]{0,70}\Z")
+# command (or "guix SUBCOMMAND", "guix system ACTION") -> lesson (rassvet-learn learn TOPIC)
+ALIASES = {
+    "guix": "packages", "guix install": "packages", "guix remove": "packages",
+    "guix upgrade": "packages", "guix search": "packages", "guix show": "packages",
+    "guix package": "packages", "guix gc": "packages", "guix shell": "packages",
+    "guix size": "packages", "guix weather": "channels",
+    "guix pull": "channels", "guix describe": "channels", "guix time-machine": "channels",
+    "guix archive": "channels",
+    "guix build": "building", "guix edit": "building", "guix lint": "building",
+    "guix system": "architecture", "guix system reconfigure": "first-steps",
+    "guix system roll-back": "recovery", "guix system list-generations": "recovery",
+    "guix system switch-generation": "recovery", "guix system delete-generations": "recovery",
+    "guix system init": "install", "guix system describe": "architecture",
+    "rassvet-update": "first-steps",
+    "herd": "services", "shepherd": "services", "halt": "services", "shutdown": "services",
+    "reboot": "services",
+    "loginctl": "power", "tlp": "power", "tlp-stat": "power", "powertop": "power",
+    "zramctl": "power", "brightnessctl": "power", "rassvet-sleepcheck": "power",
+    "rassvet-battery": "power", "swapon": "storage",
+    "nmtui": "network", "nmcli": "network", "ip": "network", "rassvet-vpn": "network",
+    "iw": "network", "ping": "network", "bluetoothctl": "network",
+    "nft": "security", "ss": "security", "passwd": "security", "sudo": "security",
+    "lsblk": "storage", "findmnt": "storage", "blkid": "storage", "mount": "storage",
+    "umount": "storage", "mkfs.xfs": "storage", "xfs_info": "storage", "xfs_repair": "storage",
+    "xfs_growfs": "storage", "df": "storage", "fstrim": "storage", "udiskie": "storage",
+    "grub-install": "boot", "efibootmgr": "boot",
+    "uname": "kernel", "dmesg": "kernel", "lsmod": "kernel", "modprobe": "kernel",
+    "lspci": "hardware", "fwupdtool": "hardware", "fwupdmgr": "hardware", "vainfo": "hardware",
+    "man": "manuals", "apropos": "manuals", "info": "manuals", "rassvet-handbook": "manuals",
+    "ratpoison": "ratpoison", "rassvet-width": "ratpoison", "rassvet-overview": "ratpoison",
+    "startx": "desktop", "ly": "desktop", "xinit": "desktop", "rassvet-session": "desktop",
+    "polybar": "desktop", "dmenu": "desktop", "dmenu_run": "desktop", "dunst": "desktop",
+    "slock": "desktop", "xss-lock": "desktop", "xrdb": "desktop", "setxkbmap": "desktop",
+    "rassvet-menu": "desktop", "rassvet-open": "desktop", "rassvet-term": "desktop",
+    "x-terminal": "desktop",
+    "mc": "files", "mcedit": "files",
+    "acme": "plan9", "sam": "plan9", "rc": "plan9", "plumber": "plan9", "9": "plan9",
+    "rassvet-acme": "plan9", "rassvet-plumb": "plan9",
+    "pipewire": "sound", "wireplumber": "sound", "pamixer": "sound", "pulsemixer": "sound",
+    "wpctl": "sound",
+    "rassvet-russian": "russian", "rassvet-content": "russian", "llama-server": "russian",
+    "kiwix-serve": "russian",
+    "chroot": "recovery",
+}
+# commands whose wiki page goes deeper than the lesson (rassvet-learn wiki PAGE)
+WIKI_FOR = {
+    "guix": "guix-packages", "guix install": "guix-packages", "guix remove": "guix-packages",
+    "guix upgrade": "guix-packages", "guix search": "guix-packages",
+    "guix package": "guix-packages", "guix gc": "guix-packages",
+    "guix show": "guix-tools", "guix edit": "guix-tools", "guix graph": "guix-tools",
+    "guix size": "guix-tools", "guix describe": "guix-tools", "guix locate": "guix-tools",
+    "guix time-machine": "guix-tools", "guix shell": "guix-tools", "guix weather": "channels",
+    "guix processes": "guix-tools", "guix repl": "guix-tools", "guix challenge": "guix-tools",
+    "guix build": "guix-packaging", "guix lint": "guix-packaging", "guix import": "guix-packaging",
+    "guix download": "guix-packaging", "guix hash": "guix-packaging",
+    "guix refresh": "guix-packaging",
+    "guix pull": "channels", "guix archive": "channels", "channels": "channels",
+    "substitutes": "channels",
+    "guix system": "system", "rassvet-update": "system", "config.scm": "system",
+    "generations": "system",
+    "herd": "shepherd", "shepherd": "shepherd", "services": "shepherd",
+    "dmesg": "logging", "syslog": "logging",
+    "loginctl": "elogind", "elogind": "elogind",
+    "modprobe": "kernel", "lsmod": "kernel", "uname": "kernel", "modinfo": "kernel",
+    "grub-install": "boot", "efibootmgr": "boot", "grub": "boot",
+    "passwd": "users", "sudo": "users", "groups": "users", "id": "users",
+    "ntpd": "time", "ntpq": "time", "mcron": "time", "date": "time",
+    "locale": "locale", "setxkbmap": "locale", "setfont": "locale",
+    "fstrim": "filesystems", "mkfs.xfs": "filesystems", "xfs_repair": "filesystems",
+    "xfs_growfs": "filesystems", "lsblk": "filesystems", "mount": "filesystems",
+    "udisksctl": "filesystems",
+    "nmcli": "network", "nmtui": "network", "nft": "network", "ip": "network",
+    "rassvet-vpn": "network",
+    "wpctl": "sound", "pipewire": "sound", "pamixer": "sound", "wireplumber": "sound",
+    "vainfo": "graphics", "xrandr": "graphics",
+    "fwupdtool": "firmware", "fwupdmgr": "firmware", "framework_tool": "framework",
+    "rassvet-sleepcheck": "framework", "info": "handbook", "rassvet-handbook": "handbook",
+    "pacman": "from-arch", "systemctl": "from-arch", "journalctl": "from-arch",
+    "mkinitcpio": "from-arch", "makepkg": "from-arch", "yay": "from-arch",
+    # Void's names, from before Rassvet moved to Guix, so they still lead somewhere
+    "xbps-install": "guix-packages", "xbps-query": "guix-packages",
+    "xbps-remove": "guix-packages", "xbps": "guix-packages", "sv": "shepherd",
+    "runit": "shepherd", "xbps-src": "guix-packaging", "xtools": "guix-tools",
+    "repositories": "channels",
+}
+MANUALS = {
+    "guix": 'info guix', "rassvet-update": 'info "(guix) Invoking guix system"',
+    "guix package": 'info "(guix) Invoking guix package"',
+    "guix install": 'info "(guix) Invoking guix package"',
+    "guix remove": 'info "(guix) Invoking guix package"',
+    "guix upgrade": 'info "(guix) Invoking guix package"',
+    "guix search": 'info "(guix) Invoking guix package"',
+    "guix show": 'info "(guix) Invoking guix package"',
+    "guix pull": 'info "(guix) Invoking guix pull"',
+    "guix system": 'info "(guix) Invoking guix system"',
+    "guix gc": 'info "(guix) Invoking guix gc"',
+    "guix build": 'info "(guix) Invoking guix build"',
+    "guix shell": 'info "(guix) Invoking guix shell"',
+    "guix describe": 'info "(guix) Invoking guix describe"',
+    "guix time-machine": 'info "(guix) Invoking guix time-machine"',
+    "guix size": 'info "(guix) Invoking guix size"',
+    "guix graph": 'info "(guix) Invoking guix graph"',
+    "guix edit": 'info "(guix) Invoking guix edit"',
+    "guix weather": 'info "(guix) Invoking guix weather"',
+    "guix archive": 'info "(guix) Invoking guix archive"',
+    "herd": "man herd ; info shepherd", "shepherd": "info shepherd",
+    "nmtui": "man 1 nmtui", "nmcli": "man 1 nmcli", "nft": "man 8 nft",
+    "lsblk": "man 8 lsblk", "findmnt": "man 8 findmnt", "mkfs.xfs": "man 8 mkfs.xfs",
+    "xfs_repair": "man 8 xfs_repair", "grub-install": "man 8 grub-install", "man": "man 1 man",
+    "ratpoison": "man 1 ratpoison", "polybar": "man 1 polybar", "dmenu": "man 1 dmenu",
+    "mc": "man 1 mc", "loginctl": "man 1 loginctl", "tlp": "man 8 tlp",
+    "fwupdtool": "man 1 fwupdtool", "info": "info info",
+    "acme": "9 man 1 acme", "sam": "9 man 1 sam", "rc": "9 man 1 rc", "plumber": "9 man 4 plumber",
+}
+SOURCES = (
+    ("GNU Guix Reference Manual (offline)", "info guix   (or: rassvet-handbook)"),
+    ("GNU Guix Cookbook (offline)", "info guix-cookbook   (or: rassvet-handbook cookbook)"),
+    ("GNU Shepherd manual (offline)", "info shepherd"),
+    ("GNU Guix Reference Manual (online)", MANUAL_WEB),
+    ("GNU Guix Cookbook (online)", "https://guix.gnu.org/cookbook/en/html_node/"),
+    ("Guix: the system configuration", MANUAL_WEB + "System-Configuration.html"),
+    ("Guix: services", MANUAL_WEB + "Services.html"),
+    ("Guix: channels", MANUAL_WEB + "Channels.html"),
+    ("Guix: manual installation", MANUAL_WEB + "Manual-Installation.html"),
+    ("Guix: power management services", MANUAL_WEB + "Power-Management-Services.html"),
+    ("Guix packages, searchable", "https://packages.guix.gnu.org/"),
+    ("Guix source (package definitions)", "https://codeberg.org/guix/guix"),
+    ("Nonguix (kernel, firmware, Firefox, Steam; substitutes)", "https://gitlab.com/nonguix/nonguix"),
+    ("GNU Shepherd manual (online)", "https://www.gnu.org/software/shepherd/manual/"),
+    ("ratpoison manual", "https://www.nongnu.org/ratpoison/doc/"),
+    ("Plan 9 from User Space (plan9port)", "https://9fans.github.io/plan9port/"),
+    ("acme, by Rob Pike (paper)", "https://doc.cat-v.org/plan_9/4th_edition/papers/acme/"),
+    ("Midnight Commander", "https://midnight-commander.org/"),
+    ("polybar wiki", "https://github.com/polybar/polybar/wiki"),
+    ("PipeWire documentation", "https://docs.pipewire.org/"),
+    ("XFS documentation", "https://docs.kernel.org/admin-guide/xfs.html"),
+    ("Linux kernel documentation", "https://docs.kernel.org/"),
+    ("Rassvet source (and its Guix channel)", "https://github.com/factionparadox/Pustota"),
+)
+
+
+def topics():
+    root = DOC_ROOT / "topics"
+    if not root.is_dir():
+        return {}
+    return {p.stem: p for p in sorted(root.glob("*.md"))
+            if p.is_file() and TOPIC_NAME.fullmatch(p.stem)}
+
+
+def read_topic(name):
+    if not TOPIC_NAME.fullmatch(name):
+        return None
+    path = topics().get(name)
+    return path.read_text(encoding="utf-8") if path else None
+
+
+def learn(name=None):
+    if name is None:
+        available = topics()
+        if not available:
+            print("Rassvet offline lessons are missing.", file=sys.stderr)
+            return 2
+        print("RASSVET LEARN — understand, inspect, adapt\n")
+        for key, path in available.items():
+            heading = next((line[2:] for line in path.read_text(encoding="utf-8").splitlines()
+                            if line.startswith("# ")), key)
+            print(f"  {key:<16} {heading}")
+        print("\nRead: rassvet-learn learn packages")
+        print("Browse: rassvet-learn browse")
+        print("The wiki (Guix in depth): rassvet-learn wiki ; search: rassvet-learn search WORD")
+        print("Explain without running: rassvet-learn explain \"sudo herd status elogind\"")
+        return 0
+    page = read_topic(name)
+    if page is None:
+        print("Unknown lesson. List lessons with rassvet-learn learn.",
+              file=sys.stderr)
+        return 2
+    print(page)
+    return 0
+
+
+def wiki_pages():
+    root = DOC_ROOT / "wiki"
+    if not root.is_dir():
+        return {}
+    return {p.stem: p for p in sorted(root.glob("*.md"))
+            if p.is_file() and TOPIC_NAME.fullmatch(p.stem)}
+
+
+def show(text):
+    """Long pages go through less in a terminal; otherwise print them."""
+    pager = shutil.which("less")
+    if pager and sys.stdout.isatty() and text.count("\n") > 40:
+        subprocess.run([pager, "-R"], input=text, text=True, check=False)
+    else:
+        print(text)
+
+
+def wiki(name=None):
+    pages = wiki_pages()
+    if not pages:
+        print("The Rassvet wiki is missing (rassvet-learn package).", file=sys.stderr)
+        return 2
+    if name is None:
+        name = "index"
+    name = WIKI_FOR.get(name, name)
+    if not TOPIC_NAME.fullmatch(name) or name not in pages:
+        print(f"No wiki page '{name}'. The index: rassvet-learn wiki ; "
+              f"search: rassvet-learn search {name}", file=sys.stderr)
+        return 2
+    show(pages[name].read_text(encoding="utf-8"))
+    return 0
+
+
+def search(words):
+    """Every line in the lessons and the wiki containing all the words (any case)."""
+    words = [w.lower() for w in words if w.strip()]
+    if not words:
+        print("Usage: rassvet-learn search WORD [WORD...]", file=sys.stderr)
+        return 2
+    found = 0
+    for kind, pages in (("wiki", wiki_pages()), ("learn", topics())):
+        for name, path in pages.items():
+            for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+                if all(w in line.lower() for w in words):
+                    print(f"{kind} {name}:{number}: {line.strip()}")
+                    found += 1
+    if not found:
+        print("Nothing found. The wiki's index: rassvet-learn wiki")
+        return 1
+    print(f"\nRead a page: rassvet-learn wiki NAME  (or: rassvet-learn learn NAME)")
+    return 0
+
+
+def browse():
+    while True:
+        available = list(topics())
+        if not available:
+            return learn()
+        print("\nRASSVET LEARN — offline lessons\n")
+        for i, item in enumerate(available, 1):
+            print(f"  {i:2}. {item}")
+        print("   q. Quit")
+        try:
+            response = input("Choose a lesson: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            return 0
+        if response.lower() in ("", "q", "quit", "exit"):
+            return 0
+        if not response.isdigit() or int(response) not in range(1, len(available) + 1):
+            print("Enter a listed number.")
+            continue
+        print("\n" + (read_topic(available[int(response) - 1]) or "Missing lesson"))
+        try:
+            input("\nEnter to return to the lessons...")
+        except (EOFError, KeyboardInterrupt):
+            return 0
+
+
+def lookup_key(tokens):
+    """The most specific table key for a command line: "guix system roll-back", then
+    "guix system", then "guix"; for anything else, the command's own name."""
+    command = Path(tokens[0]).name.lower()
+    if command != "guix":
+        return [command]
+    words = [t for t in tokens[1:] if not t.startswith("-")]
+    keys = []
+    if len(words) >= 2:
+        keys.append(f"guix {words[0]} {words[1]}")
+    if words:
+        keys.append(f"guix {words[0]}")
+    keys.append("guix")
+    return keys
+
+
+def first(table, keys):
+    return next((table[k] for k in keys if k in table), None)
+
+
+def explain(parts):
+    if not parts:
+        print('Usage: rassvet-learn explain "guix system reconfigure /etc/config.scm"',
+              file=sys.stderr)
+        return 2
+    command_line = " ".join(parts)
+    try:
+        tokens = shlex.split(command_line)
+    except ValueError as error:
+        print("Invalid command: " + str(error), file=sys.stderr)
+        return 2
+    if not tokens:
+        return 2
+    # sudo (run as root), sudo -E and 9 (run the Plan 9 version) only wrap the real command
+    while len(tokens) > 1 and (Path(tokens[0]).name in ("sudo", "9") or
+                               (tokens[0].startswith("-") and len(tokens[0]) <= 3)):
+        tokens = tokens[1:]
+    keys = lookup_key(tokens)
+    command = keys[-1] if keys[-1] == "guix" else keys[0]
+    print("Command: " + command_line)
+    print("READ ONLY: This command was NOT executed.\n")
+    lesson_name = first(ALIASES, keys)
+    lesson = read_topic(lesson_name) if lesson_name else None
+    print(lesson or "No dedicated lesson for this command. Read its manual page.")
+    words = [t for t in tokens[1:] if not t.startswith("-")]
+    if command == "guix" and words[:2] == ["system", "reconfigure"]:
+        print("\nThis builds a new system generation and switches to it; the previous one stays")
+        print("in the boot menu. Undo: sudo guix system roll-back")
+    if command == "guix" and words[:1] == ["pull"]:
+        print("\nguix pull updates your guix and the package definitions, nothing else; the")
+        print("system changes at the next reconfigure (rassvet-update does both).")
+    if command in ("mkfs.xfs", "mkfs.vfat", "wipefs", "sgdisk", "xfs_repair", "dd") or (
+            command == "guix" and ("delete-generations" in words or
+                                   any(t in ("-d", "--delete-generations") or
+                                       t.startswith("--delete-generations=")
+                                       for t in tokens[1:]))):
+        print("\nCAUTION: this command can change or destroy system state"
+              + (" (deleted generations cannot be rolled back to)." if command == "guix" else "."))
+    wiki_page = first(WIKI_FOR, keys)
+    if wiki_page:
+        print("\nIn depth: rassvet-learn wiki " + wiki_page)
+    print("Reference: " + (first(MANUALS, keys) or "man " + command))
+    return 0
+
+
+def read_only(argv, timeout=4):
+    if not shutil.which(argv[0]):
+        return "unavailable: " + argv[0]
+    try:
+        result = subprocess.run(argv, capture_output=True, text=True,
+                                check=False, timeout=timeout)
+    except (OSError, subprocess.TimeoutExpired):
+        return "not available"
+    if result.returncode != 0:
+        return "unavailable or inactive"
+    return result.stdout.strip().split("\n")[0][:190] or "no output"
+
+
+def battery():
+    for bat in sorted(Path("/sys/class/power_supply").glob("BAT*")):
+        try:
+            return (f"{bat.name} {(bat / 'capacity').read_text().strip()} % "
+                    f"{(bat / 'status').read_text().strip().lower()}")
+        except OSError:
+            continue
+    return "no battery reported"
+
+
+def first_line(path):
+    try:
+        return Path(path).read_text(encoding="utf-8", errors="replace").split("\n")[0].strip()
+    except OSError:
+        return None
+
+
+def channels():
+    """guix describe, as one line: each channel's name and short commit."""
+    if not shutil.which("guix"):
+        return "unavailable: guix"
+    try:
+        result = subprocess.run(["guix", "describe"], capture_output=True, text=True,
+                                check=False, timeout=20)
+    except (OSError, subprocess.TimeoutExpired):
+        return "not available"
+    # "  guix dda299a" lines; the indented "    commit: ..." details below them are skipped
+    found = re.findall(r"^\s+([A-Za-z][\w.-]*)\s+([0-9a-f]{7,40})\s*$", result.stdout, re.M)
+    if not found:
+        return "unavailable (guix pull has not run for this user)"
+    return "  ".join(f"{name} {commit[:7]}" for name, commit in found)
+
+
+def service(name, process):
+    """A Shepherd service: herd's word for it as root; otherwise whether its process runs."""
+    if os.geteuid() == 0 and shutil.which("herd"):
+        try:
+            result = subprocess.run(["herd", "status", name], capture_output=True, text=True,
+                                    check=False, timeout=4)
+        except (OSError, subprocess.TimeoutExpired):
+            return "not available"
+        lines = [l.strip() for l in result.stdout.splitlines() if l.strip()]
+        if result.returncode != 0 or len(lines) < 2:
+            return "no such service" if result.returncode else "unknown"
+        return lines[1][:150]                  # "It is running since ...", "It is stopped."
+    if not shutil.which("pgrep"):
+        return "unknown"
+    try:
+        result = subprocess.run(["pgrep", "-x", process], capture_output=True, text=True,
+                                check=False, timeout=4)
+    except (OSError, subprocess.TimeoutExpired):
+        return "unknown"
+    pids = result.stdout.split()
+    return f"running ({process}, pid {pids[0]})" if pids else f"not running ({process})"
+
+
+def doctor():
+    print("RASSVET SYSTEM MAP: observations only; nothing is changed or sent anywhere.\n")
+    current = Path("/run/current-system")
+    values = (
+        ("Init (PID 1)", lambda: first_line("/proc/1/comm") or "unknown"),
+        ("Kernel", lambda: read_only(["uname", "-r"])),
+        ("System", lambda: str(current.resolve()) if current.exists() else "not Guix System"),
+        ("Generation", lambda: read_only(["guix", "system", "describe"], timeout=20)),
+        ("Channels", channels),
+        ("Store", lambda: read_only(["findmnt", "-n", "-o", "SOURCE,OPTIONS", "/gnu/store"])),
+        ("Root filesystem", lambda: read_only(["findmnt", "-n", "-o", "SOURCE,FSTYPE,OPTIONS",
+                                               "--target", "/"])),
+        ("Swap", lambda: read_only(["swapon", "--show=NAME,TYPE,SIZE", "--noheadings"])),
+        ("zram", lambda: read_only(["zramctl", "--noheadings", "--output",
+                                    "NAME,DISKSIZE,ALGORITHM"])),
+        ("D-Bus", lambda: service("dbus-system", "dbus-daemon")),
+        ("elogind", lambda: service("elogind", "elogind")),
+        ("NetworkManager", lambda: service("NetworkManager", "NetworkManager")),
+        ("Bluetooth", lambda: service("bluetooth", "bluetoothd")),
+        ("thermald", lambda: service("thermald", "thermald")),
+        ("Clock (ntpd)", lambda: service("ntpd", "ntpd")),
+        ("Tutor", lambda: service("rassvet-tutor", "llama-server")),
+        ("Power profile", lambda: first_line("/sys/firmware/acpi/platform_profile")
+                                  or "not reported"),
+    )
+    for label, get in values:
+        print(f"{label:<17} {get()}")
+    print(f"{'Battery':<17} {battery()}")
+    print(f"{'Display':<17} {os.environ.get('DISPLAY', 'not in X')}  (window manager: ratpoison)")
+    if os.geteuid() != 0:
+        print("\nServices are shown by their processes; sudo herd status lists every one.")
+    print("Generations:      guix system list-generations")
+    print("\nWhat each line means: rassvet-learn learn architecture")
+    print("Sources and manuals:  rassvet-learn sources")
+    return 0
+
+
+def open_reference(target):
+    try:
+        return 0 if webbrowser.open(target) else 2
+    except (OSError, webbrowser.Error):
+        return 2
+
+
+def handbook():
+    """The Guix manual, offline, in info (rassvet-handbook does the same in its own window)."""
+    if shutil.which("info") and sys.stdin.isatty() and sys.stdout.isatty():
+        return subprocess.run(["info", "guix"], check=False).returncode
+    print("The Guix manual, offline: info guix  (or rassvet-handbook)")
+    print("The Guix Cookbook: info guix-cookbook  (or rassvet-handbook cookbook)")
+    print("Online: " + MANUAL_WEB)
+    return 0
+
+
+def sources():
+    print("RASSVET REFERENCE LIBRARY\n")
+    for name, address in SOURCES:
+        print(f"{name}\n  {address}")
+    return 0
+
+
+def manual(name):
+    if not MAN_NAME.fullmatch(name):
+        print("Invalid manual name.", file=sys.stderr)
+        return 2
+    if not shutil.which("man"):
+        print("Manual viewer unavailable; read " + MANUAL_WEB, file=sys.stderr)
+        return 2
+    return subprocess.run(["man", "--", name], check=False).returncode
+
+
+def main(argv=None):
+    p = argparse.ArgumentParser(prog="rassvet-learn",
+                                description="Read-only lessons and inspection for Rassvet")
+    sub = p.add_subparsers(dest="action")
+    ln = sub.add_parser("learn", help="list or read an offline chapter")
+    ln.add_argument("topic", nargs="?")
+    ex = sub.add_parser("explain", help="explain without executing")
+    ex.add_argument("command", nargs=argparse.REMAINDER)
+    sub.add_parser("browse", help="browse offline chapters interactively")
+    wk = sub.add_parser("wiki", help="the Rassvet wiki: Guix System explained, page by page")
+    wk.add_argument("page", nargs="?")
+    se = sub.add_parser("search", help="search the lessons and the wiki")
+    se.add_argument("words", nargs="+")
+    sub.add_parser("doctor", help="show read-only system state")
+    sub.add_parser("handbook", help="open the Guix manual (info guix), offline")
+    sub.add_parser("sources", help="show authoritative reference links")
+    ma = sub.add_parser("manual", help="open installed man page")
+    ma.add_argument("name")
+    args = p.parse_args(argv)
+    if args.action in (None, "learn"):
+        return learn(getattr(args, "topic", None))
+    if args.action == "browse":
+        return browse()
+    if args.action == "wiki":
+        return wiki(args.page)
+    if args.action == "search":
+        return search(args.words)
+    if args.action == "doctor":
+        return doctor()
+    if args.action == "explain":
+        return explain(args.command)
+    if args.action == "handbook":
+        return handbook()
+    if args.action == "sources":
+        return sources()
+    if args.action == "manual":
+        return manual(args.name)
+    return 2
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except BrokenPipeError:                   # piped into head, or a pager that quit early
+        os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+        sys.exit(0)

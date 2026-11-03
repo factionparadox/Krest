@@ -1,72 +1,41 @@
-# Building Pustota
+# Building Rassvet
 
     bash build/build-iso.sh
 
-| Step | Script | What happens |
-| --- | --- | --- |
-| 1 | `build/build-iso.sh` | On Arch: installs `curl minisign xz tar`; downloads `void-x86_64-ROOTFS-20250202.tar.xz`, checks `sha256sum.txt` with Void's release key (`build/keys/`) and the tarball against a pinned SHA-256; unpacks it to `~/.cache/pustota/void-glibc-rootfs`; updates XBPS, then the whole root; installs `bash make git curl python3 xz zstd`; mounts this folder at `/work` and runs step 2 inside. On Void it runs step 2 directly. |
-| 2 | `build/make-iso.sh` | Runs steps 3 to 5, then clones void-mklive at `3aa194b` (September 2026), patches it (`patch-void-mklive.py`: `chroot` instead of `xbps-uchroot` for `grub-mkstandalone` under WSL2, only the x86_64 glibc repository, and zstd at **level 3** for the squashfs and the live initramfs), and runs `mkiso.sh -b base -- -v linux-mainline -i zstd -s zstd …` with the installer, the live network setup and Pustota's packages as an overlay. |
-| 3 | `build/build-srcpkgs.sh` | void-packages at `7be8766` (31 October 2026) with `srcpkgs/` copied in; `xbps-src pkg` for each. In the disposable build root it uses xbps-src's **ethereal** style, as Void's documentation gives for containers (the root is the masterdir; `/.pustota-build-root` marks it); on a real Void system, xbps-src's normal isolated style as your user. |
-| 4 | `build/build-packages.sh` | `xbps-create` makes `pustota-desktop` (from `desktop/root`, depending on every name in `packages.txt`), `pustota-learn` and `pustota-russian` (with Piper 2023.11.14-2, SHA-256 checked); the packages from step 3 join them; `xbps-rindex` indexes them all in `build/work/repo`. |
-| 5 | `build/sign-repo.sh` | `xbps-rindex --sign` and `--sign-pkg` with `~/.config/pustota/repo-key.pem` (RSA 4096, made on the first build, copied into the build root only while it runs). XBPS then imports the public key from the repository, served on 127.0.0.1 for a moment, which writes it in XBPS's own format; the live image carries it in `/var/db/xbps/keys`, and the installer copies it to the new system. |
+On any x86_64 Linux with sudo (Arch on WSL2 is fine), with about 30 GB free. The first build downloads about 4 GB of prebuilt packages; later builds reuse them.
 
-Output: `out/pustota-x86_64.iso` and `out/pustota-x86_64.iso.sha256`. Work files stay in `build/work/` (packages, the void-mklive clone, downloads) and `~/.cache/pustota/` (the Void root). Delete either to start fresh.
-
-The live ISO contains Void's base live image, plus:
-- `linux-mainline`, `linux-firmware-intel`, `linux-firmware-network`, `sof-firmware` and `intel-ucode`; (`intel-ucode` comes from Void's **nonfree** repository, which the ISO build, the installer and the installed system (`void-repo-nonfree`) all enable);
-- NetworkManager, with dhcpcd, wpa_supplicant and sshd switched off;
-- `dialog gptfdisk xfsprogs dosfstools parted xtools`;
-- `/usr/lib/pustota/` (the installer and the package repository).
-
-The installed system gets base-system and the three Pustota packages; everything else follows from their dependencies.
-
-## Packages Void does not have: `srcpkgs/`
-
-Ordinary xbps-src templates, as in void-packages:
-
-| Template | What it is |
+| Step | What happens |
 | --- | --- |
-| `x-terminal` | X-терминал: st 0.9.3 via st-flexipatch, fetched with git at a pinned commit (checked after checkout); `files/patches.h` and `files/config.h` are Pustota's |
-| `intel-lpmd` | Intel's Energy Optimizer 0.1.0 (adds Panther Lake), fetched with git at the tag's commit; built against elogind's sd-bus, run as a runit service in cgroup-v2 isolate mode (no systemd); Pustota's Panther Lake config in `files/` |
-| `webcord` | WebCord 4.14.0 (Discord with its tracking blocked), the upstream x86_64 RPM repacked; SHA-256 as GitHub publishes it for the asset |
-| `freetube` | FreeTube 0.25.3 (private YouTube), the upstream portable x86_64 build repacked; SHA-256 as GitHub publishes it |
-| Proton VPN app | `proton-vpn-gtk-app` and `python3-proton-core`, `-keyring-linux`, `-vpn-api-core`, `python3-sentry-sdk`: adopted from ProtonVPN-Void (commit d4d093d, MIT, Tommy Alderson); Proton's tagged sources with pinned checksums; ProTun built in Rust (needs network for crates); no kill switch (systemd-only) |
-| `ani-cli` | v5.1, pinned to commit `c99221d`; its three files are checked against git's bytes |
-| `ollama-bin` | Ollama's official v0.40.13 release, SHA-256 pinned, without CUDA/ROCm. It has a `_ollama` user and a runit service, which stays off until the Russian tutor is installed |
+| 1. Guix | If the computer has no Guix: Guix 1.5.0's binary release from ftp.gnu.org, checked against a pinned SHA-256, unpacked into `/gnu` and `/var/guix`; the `guixbuild` group and ten build users; the daemon, with three substitute servers (bordeaux.guix.gnu.org, ci.guix.gnu.org, substitutes.nonguix.org) and their keys. It also makes this computer's archive-signing key (`/etc/guix/signing-key.*`) if there is none. It installs `xorriso` and `zstd` with pacman, apt or dnf. |
+| 2. Pinned channels | Every Guix command runs as `guix time-machine -C channels.scm --`: Guix and Nonguix at fixed commits, both authenticated by their channel introductions. |
+| 3. The system | `guix system build build/template-config.scm` (a placeholder laptop). Then `build/variant-config.scm`, answered differently (another user, timezone, UUIDs, no autologin): whatever that second build had to build is what a real laptop builds for itself at install, and `build/offline-items.py` lists those derivations' inputs from the build log. Both build with `--no-grafts` (see below). |
+| 4. The archive | `guix gc -R` of the template system and those inputs (about 1,100 store items, 10–11 GB), `sudo guix archive --export`, compressed with `zstd -12`: `build/work/system.nar.zst`, about 3.5 GB, signed with this computer's key. |
+| 5. The ISO | `guix system image -t iso9660 guix/rassvet/installer.scm`: Guix's own installation system with Nonguix's kernel and firmware, Rassvet's installer on tty1 in place of Guix's, and this computer's key authorised so the stick accepts the archive. xorriso then adds the archive at `/rassvet/system.nar.zst` (and your music at `/rassvet/music`, if any), recompressing the store files as Guix does (zisofs, leaving the kernel and initrd for GRUB) and keeping the volume date, which is how GRUB and the initrd find the stick. |
 
-To add one, write `srcpkgs/NAME/template` (see Void's [Manual.md](https://github.com/void-linux/void-packages/blob/master/Manual.md)), add NAME to `packages.txt` or to a package's dependencies, and rebuild.
+Output: `out/rassvet-x86_64.iso` (about 6.5 GB) and its `.sha256`. Work files: `build/work/`. The signing key never leaves `/etc/guix`; only its public half goes on the ISO.
 
-## The online repository
+## Grafts
 
-`bash build/publish-repo.sh` uploads `build/work/repo` (the packages, their `.sig2` signatures and the signed index) to the GitHub release `repo-x86_64`. Installed systems list it in `/usr/share/xbps.d/20-pustota-repository.conf`, so `xbps-install -Su` updates Pustota's packages too. Keep the signing key: a new key means installed systems refuse the repository until they trust the new key.
+Guix applies urgent security fixes as *grafts*: the fixed library is swapped into already-built packages. Working grafts out needs the ungrafted packages too, which would double the archive, so the ISO's system is installed without grafts. The first `rassvet-update` (guix pull, then `sudo guix system reconfigure /etc/config.scm`) applies them, online.
 
-## Branding
+## The install, offline
 
-`branding/pustota-original.png` is the roundel. `python3 build/make-branding.py` (needs Pillow) makes the cropped logo and icon sizes, the wallpaper, and fastfetch's logo: the roundel in true colour, two pixels per character (`desktop/root/usr/share/pustota/fastfetch-logo.txt`, 44×22).
+`installer/rassvet-install.py` asks five questions and one Yes/No, then:
 
-## Tests
+1. GPT on the chosen disk: 1 GiB EFI, swap the size of the RAM (hibernation), XFS root; mkfs; mounts at `/mnt`.
+2. `herd start cow-store /mnt`: from here, store writes go to the new disk, not to the stick's RAM.
+3. `zstd -dc /rassvet/system.nar.zst | guix archive --import` (percentage on screen).
+4. `/etc/config.scm`: a few lines calling `rassvet-operating-system` with the disk's UUIDs and the answers; `/etc/shadow` with the hashed password for root and the user.
+5. `guix system init --no-substitutes --no-grafts /mnt/etc/config.scm /mnt`, loading Rassvet's and Nonguix's modules from the stick (the same commits the archive was built from). It builds only the personal files and installs GRUB.
 
-    python3 -m unittest discover tests
+Every command and its output is on screen and in `/var/log/rassvet-install.log`.
 
-They run on any Linux with Python 3.9 or later, `bash` and `curl`; `zstd` enables one more.
+## Rassvet's own packages
 
-## Changing what is installed
+`guix/rassvet/packages.scm`: `x-terminal` (st-flexipatch at a pinned commit, with `extras/x-terminal/`'s config), `ly` 1.4.1 (Zig 0.16, with its pinned Zig dependencies), `rassvet-desktop` (`desktop/root`), `rassvet-learn` (`learn/`), `rassvet-russian` (`russian/`) and `piper-tts` (Piper's own release, its loader and library paths pointed into the store). The system is `guix/rassvet/system.scm`.
 
-Edit `packages.txt`; each name must be a Void package (search: `xbps-query -Rs NAME`, or <https://github.com/void-linux/void-packages/tree/master/srcpkgs>). The desktop's files are the folder tree under `desktop/root`. Bump `VERSION` when anything changes, so XBPS sees the new packages as an update.
+This repository is also a Guix channel (`.guix-channel`), so installed laptops update from it with `guix pull`. Test a change without an ISO:
 
-## The Russian content mirror
-
-`build/publish-content.sh` (from Constellation) packs downloaded material into release assets and writes `russian/mirror.json`. The mirror is currently the `content-v1` release on factionparadox/Kirin.
-
-## A personal ISO (your music)
-
-Files of your own, such as music you have bought, go in `local/music` (git ignores everything
-under `local/`, so they are never committed or pushed). If that folder exists and is not empty,
-`build/build-iso.sh` puts it on the ISO, names it `out/pustota-personal-x86_64.iso`, and the
-installer copies it into `~/Music` (owned by you). A personal ISO is for your own machines only:
-do not share or publish it. `--no-music` builds the ordinary ISO even when `local/music` exists;
-`--music DIR` takes the music from another folder. `local/music` may be a link: the same albums
-can serve Constellation and Pustota, for example
-
-    mkdir -p local && ln -sfn ~/Constellation/local/music local/music
-
+    guix time-machine -C channels.scm -- build -L guix x-terminal
+    guix time-machine -C channels.scm -- system build -L guix --no-grafts build/template-config.scm
+    guix time-machine -C channels.scm -- system vm -L guix build/template-config.scm

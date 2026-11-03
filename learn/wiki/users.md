@@ -1,48 +1,49 @@
 # Users, groups and sudo
 
-## Accounts
-  sudo useradd -m -G wheel,audio,video NAME     a new user with a home folder
-  sudo passwd NAME                              set the password
-  sudo usermod -aG GROUP NAME                   add to a group (log out and in to take effect)
-  sudo userdel -r NAME                          remove, with the home folder
-  id ; groups                                   who you are, your groups
-Accounts are lines in /etc/passwd, passwords (hashed) in /etc/shadow, groups in /etc/group.
+## Accounts are declared
+The operating system's users field lists every account; Guix creates them at activation and
+writes /etc/passwd and /etc/group from it. Rassvet declares one user, the #:user from
+/etc/config.scm, plus Guix's base accounts (root, nobody, the guixbuild users). Passwords are
+the stateful part: Guix keeps the hashes already in /etc/shadow (the installer put yours there),
+and you change them with passwd as usual.
+  passwd ; sudo passwd root         change a password
+  id ; groups                       who you are, your groups
+Accounts made with useradd do not survive the next reconfigure. To add one, in /etc/config.scm
+(see: system):
+  (users (cons (user-account (name "anna") (group "users") (home-directory "/home/anna")
+                             (supplementary-groups '("audio" "video")))
+               (operating-system-users base)))
+then reconfigure and give it a password with sudo passwd anna.
 
 ## What the groups are for
-  wheel       may use sudo (Pustota's rule: /etc/sudoers.d/10-pustota-wheel)
+  wheel       may use sudo
+  netdev      network devices (Guix's group for NetworkManager and Wi-Fi control)
   audio       access to sound devices (PipeWire works through your session anyway)
-  video       access to video devices (the GPU)
+  video       access to video devices (the GPU, the webcam)
   input       input devices: /dev/input/event* (some tools read keyboards directly)
-  network     change NetworkManager connections without a password (Void's polkit rule)
-  bluetooth   use Bluetooth without root
-  storage     access to removable storage devices
-  disk        raw access to whole disks: powerful, so not given by default
-  socklog     read the system logs in /var/log/socklog (see: logging)
+  lp          printers
   kvm         run virtual machines with KVM
   users       the ordinary users' group
-The installer gives your account wheel, audio, video, input, network, bluetooth, storage,
-socklog and users (those that exist). The Void Handbook's "Users and Groups" page has the full
-table of Void's groups.
+The installer's account has all of these (system.scm's supplementary-groups).
 
 ## sudo
-  sudo COMMAND                 run as root (asks your password, then remembers it 5 minutes)
+  sudo COMMAND                 run as root (asks your password, then remembers it a while)
   sudo -i                      a root shell (exit to leave)
-  sudo visudo -f /etc/sudoers.d/NAME     add rules safely (visudo checks the syntax)
-Never edit /etc/sudoers itself: an update to sudo may replace it; files in /etc/sudoers.d
-are yours. Pustota also sets the root password to yours, for recovery from a console.
-
-doas (package opendoas) is a smaller alternative from OpenBSD, configured in /etc/doas.conf.
+/etc/sudoers is generated (the sudoers-file field; Guix's default lets wheel run anything), so
+visudo and /etc/sudoers.d are not the way: change the field in the declaration. The root
+password is yours, for recovery from a console.
 
 ## PAM
-PAM (Pluggable Authentication Modules) decides how a program checks who you are. Each program
-has a file in /etc/pam.d. Pustota's installer adds one line to /etc/pam.d/sudo:
+PAM (Pluggable Authentication Modules) decides how a program checks who you are. On Guix,
+/etc/pam.d is generated too: each service type adds its entries. Rassvet adds:
+  ly and ly-autologin          the login screen (autologin: pam_permit, no password asked;
+                               the rest as a normal login)
+  screen-locker-service-type   slock: a PAM entry and a setuid slock, so it can check your
+                               password
+  gnome-keyring-service-type   unlocks the keyring at login
+fprintd-service-type runs the fingerprint service (fprintd-enroll adds a finger, fprintd-verify
+tests it), but system.scm adds no fingerprint line to sudo's PAM entry, so sudo asks for the
+password.
 
-  auth      sufficient pam_fprintd.so
-
-which tries the fingerprint reader first: with a finger enrolled (fprintd-enroll, or the menu:
-System -> Fingerprint) touching the sensor is enough; otherwise, or after 30 seconds, sudo asks
-for the password as usual. Lines are read top to bottom; "sufficient" means success here is
-enough, failure moves on to the next line.
-
-See also: elogind (polkit), logging ; man useradd ; man usermod ; man sudoers ; man pam.d ;
-https://docs.voidlinux.org/config/users-and-groups.html
+See also: elogind (polkit), system ; info "(guix) User Accounts" ; info "(guix) operating-system Reference" ;
+man sudo ; man pam.d

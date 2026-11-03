@@ -1,3 +1,0 @@
-#!/bin/sh
-# Super+? : the keys, in a terminal (q closes).
-exec pustota-term Keys less /usr/share/pustota/keys.txt

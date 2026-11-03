@@ -27,7 +27,7 @@ import sys
 import time
 from urllib import parse, request
 
-USER_AGENT = 'pustota/1 (+https://github.com/factionparadox/Pustota)'
+USER_AGENT = 'rassvet/1 (+https://github.com/factionparadox/Pustota)'
 CHUNK = 1 << 20
 FORMAT = '64Kbps MP3'
 LEVELS = ('A1', 'A2', 'B1', 'B2', 'C1', 'C2')
