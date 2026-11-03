@@ -139,7 +139,7 @@ chroot_run "$root" "
   set -e
   mkdir -p /var/tmp
   for f in /etc/ports/*.inactive; do [ -e \"\$f\" ] && mv \"\$f\" \"\${f%.inactive}\"; done
-  ports -u core opt xorg contrib
+  ports -u core opt xorg contrib compat-32
   sh /usr/src/krest/build/krest-ports sync /usr/src/krest /usr/ports/krest
   sh /usr/src/krest/build/krest-ports verify /usr/ports/krest linux
   sh /usr/src/krest/installer/iso-binaries /media/crux \$(prt-get quickdep $LIVE_PORTS)
