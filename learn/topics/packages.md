@@ -1,37 +1,45 @@
-# Guix: installing, updating and asking questions
+# Software: ports, prt-get and pkgutils
 
-Guix keeps every package in /gnu/store, each in its own read-only folder whose name begins with
-a hash of everything that went into it. Nothing is installed "over" anything else, so two
-versions can sit side by side, and an update never breaks what is running. A profile is a set
-of packages linked together; each change makes a new generation of it, and the old one stays
-until you delete it.
-
-There are two kinds of profile:
-- the system's (/run/current-system/profile): what system.scm lists, Rassvet's own packages
-  included. It changes only through  sudo guix system reconfigure /etc/config.scm.
-- yours (~/.guix-profile): what you install with guix install. No sudo needed; each user has
-  their own.
+On CRUX every program is built from a port on this laptop, then installed as a package. Three
+layers do the work:
+- ports (sudo ports -u) brings the collections in /usr/ports up to date: only the recipes.
+- pkgutils: pkgmk builds a port into a package file (in /usr/ports/packages), pkgadd installs
+  it, pkgrm removes it, pkginfo answers questions. /var/lib/pkg/db lists every installed
+  package and its files.
+- prt-get works out dependencies (the "Depends on:" line of each Pkgfile), runs pkgmk and
+  pkgadd in the right order, and compares what is installed with the ports.
+There is one set of packages, the system's: installing needs sudo, and everything you install
+is there for every user.
 
 ## Ask (read-only)
-    guix search mpv                 names and descriptions
-    guix show mpv                   details: version, dependencies, licence, home page
-    guix package -I                 what you installed yourself
-    guix package -l                 your profile's generations
-    guix size mpv                   how much disk it takes, with everything it needs
-    ls /run/current-system/profile/bin    the system's commands
+    prt-get search mpv              port names containing the word
+    prt-get dsearch player          names and descriptions
+    prt-get info mpv                version, description, dependencies, collection
+    prt-get deptree mpv             what it needs, as a tree
+    prt-get diff                    installed packages with a newer port
+    pkginfo -i                      everything installed, with versions
+    pkginfo -l mpv                  the files of a package
+    pkginfo -o usr/bin/mpv          which package owns a file
 
 ## Change
-    rassvet-update                  update the whole system (guix pull, then reconfigure)
-    guix install gimp               install for you, with its dependencies
-    guix remove gimp                remove it from your profile
-    guix upgrade                    update what you installed
-    guix package --roll-back        undo your last install, remove or upgrade
-    guix shell gimp -- gimp         try a program without installing it
-    guix gc                         free the disk: delete store items no generation uses
-Shortcuts in your shell: gs (search), gi (install), gr (remove), gu (rassvet-update).
+    rassvet-update                  update everything (the ports, then prt-get sysup)
+    sudo prt-get depinst gimp       build and install gimp with whatever it needs
+    sudo prt-get install gimp       just gimp (its dependencies must be there already)
+    sudo prt-get update gimp        rebuild and reinstall one
+    sudo prt-get remove gimp        remove it (pkgrm); its dependencies stay
+    sudo prt-get lock gimp          keep sysup from updating it
+Shortcuts in your shell (~/.bashrc): pk (search), pi (depinst), pr (remove), pu (rassvet-update).
 
-There are no partial upgrades to avoid: every package is built against exact versions of its
-dependencies. Prebuilt packages (substitutes) come from Guix's servers and Nonguix's; anything
-not prebuilt yet is built on this laptop, which is slower but gives the same result.
+Builds use /etc/pkgmk.conf: -O2 -march=native, every core, sources kept in
+/usr/ports/distfiles, finished packages in /usr/ports/packages, the work in /var/tmp/pkgmk.
+Each build's output goes to /var/log/pkgbuild/NAME.log. Packages built with -march=native run
+on this processor; they are not meant for another computer.
 
-References: info "(guix) Package Management" ; rassvet-learn wiki guix-packages
+## No partial upgrades, no rollback
+Libraries are shared, so after a library update the programs linked against it are rebuilt
+when their ports change; prt-get sysup updates everything at once, which is the safe way.
+There are no generations: an update replaces the package. The previous package file usually
+stays in /usr/ports/packages (until the next build of that port overwrites a file of the same
+name), and  sudo pkgadd -u -f FILE  puts it back.
+
+References: man prt-get ; man pkgmk ; man pkgadd ; rassvet-handbook ; rassvet-learn wiki prt-get

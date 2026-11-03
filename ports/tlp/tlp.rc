@@ -1,0 +1,14 @@
+#!/bin/sh
+#
+# /etc/rc.d/tlp: apply TLP's power settings at boot
+#
+
+case $1 in
+start) /usr/sbin/tlp init start ;;
+stop) /usr/sbin/tlp init stop ;;
+restart) $0 stop; $0 start ;;
+status) /usr/bin/tlp-stat -s ;;
+*) echo "usage: $0 [start|stop|restart|status]" ;;
+esac
+
+# End of file

@@ -1,0 +1,8 @@
+# The Rassvet installer starts on the first console; the other consoles (Alt+F2 ...) are
+# ordinary root shells for looking around.
+if [ "$(tty)" = /dev/tty1 ] && [ ! -e /tmp/.rassvet-install-started ]; then
+	touch /tmp/.rassvet-install-started
+	/usr/bin/rassvet-install
+	echo
+	echo "The installer has finished. This is a root shell; 'rassvet-install' starts it again."
+fi

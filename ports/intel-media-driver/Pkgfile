@@ -1,0 +1,17 @@
+# Description: Intel's video decoding driver (VA-API, iHD): video plays on the GPU, saving battery
+# URL: https://github.com/intel/media-driver
+# Maintainer: Rassvet
+# Depends on: intel-gmmlib libva
+
+name=intel-media-driver
+version=26.4.1
+release=1
+source=(https://github.com/intel/media-driver/archive/intel-media-$version/media-driver-$version.tar.gz)
+
+build() {
+	cmake -S media-driver-intel-media-$version -B build -G Ninja \
+		-DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib -DCMAKE_BUILD_TYPE=Release \
+		-DINSTALL_DRIVER_SYSCONF=OFF -DMEDIA_BUILD_FATAL_WARNINGS=OFF
+	cmake --build build
+	DESTDIR=$PKG cmake --install build
+}

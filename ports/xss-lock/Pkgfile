@@ -1,0 +1,17 @@
+# Description: Locks the screen (slock) on sleep and when the screen saver starts
+# URL: https://github.com/xdbob/xss-lock
+# Maintainer: Rassvet
+# Depends on: glib xorg-xcb-util
+
+name=xss-lock
+version=0.3.0
+release=1
+source=(https://github.com/xdbob/$name/archive/v$version/$name-$version.tar.gz)
+
+build() {
+	cmake -S $name-$version -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr \
+		-DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+	cmake --build build
+	DESTDIR=$PKG cmake --install build
+	rm -rf $PKG/usr/share/doc $PKG/usr/share/zsh
+}

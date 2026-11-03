@@ -1,0 +1,18 @@
+# Description: Battery life: CPU energy hints, Wi-Fi and USB power saving on battery
+# URL: https://linrunner.de/tlp/
+# Maintainer: Rassvet
+# Depends on: pciutils usbutils
+
+name=tlp
+version=1.10.2
+release=1
+source=(https://github.com/linrunner/TLP/archive/$version/TLP-$version.tar.gz tlp.rc)
+
+build() {
+	cd TLP-$version
+	make TLP_NO_INIT=1 TLP_WITH_SYSTEMD=0 TLP_WITH_ELOGIND=0
+	make DESTDIR=$PKG TLP_NO_INIT=1 TLP_WITH_SYSTEMD=0 TLP_WITH_ELOGIND=0 \
+		TLP_NO_BASHCOMP=1 TLP_NO_ZSHCOMP=1 TLP_NO_FISHCOMP=1 install-tlp install-man-tlp
+	install -Dm755 $SRC/tlp.rc $PKG/etc/rc.d/tlp
+	rm -rf $PKG/usr/share/doc $PKG/usr/share/metainfo
+}

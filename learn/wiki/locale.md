@@ -1,40 +1,43 @@
 # Locale, keyboard, console and time zone
 
 ## Locales (language and formats)
-glibc locales are built from the operating system's locale-definitions. Rassvet's system.scm
-defines three: en_GB.utf8, en_US.utf8 and ru_RU.utf8. The system's own, LANG for everyone, is
-the locale field: #:locale in /etc/config.scm, en_GB.utf8 unless you change it (English,
-British spelling, dates, paper size).
+glibc's locales are generated with localedef; the installer made three: en_GB.UTF-8,
+en_US.UTF-8 and ru_RU.UTF-8. Another one is one command:
+  sudo localedef -i de_DE -f UTF-8 de_DE.UTF-8
+The language itself is the LANG variable: en_GB.UTF-8 is meant (English, British spelling,
+dates and paper size). The installer sets it only through a LANG line in /etc/rc.conf, if
+CRUX's file has one; if  locale  shows POSIX or C, put  export LANG=en_GB.UTF-8  in a file of
+your own in /etc/profile.d/.
 
   locale                                        what this shell uses
   locale -a                                     what is available
 
 One part can differ, for just your account, in ~/.bash_profile:
-  export LC_TIME=ru_RU.utf8                     Russian dates, English everything else
-  export LANG=ru_RU.utf8                        Russian throughout, where programs have it
-For the whole system:  #:locale "ru_RU.utf8"  in /etc/config.scm, then reconfigure. A locale
-not among the three needs a locale-definition of its own (info "(guix) Locales").
-
-Programs from your profile find the system's locales through GUIX_LOCPATH, which Guix System
-sets; nothing to install.
+  export LC_TIME=ru_RU.UTF-8                    Russian dates, English everything else
+  export LANG=ru_RU.UTF-8                       Russian throughout, where programs have it
+For every user, the same lines in a file of your own in /etc/profile.d/.
 
 ## The keyboard
-One keyboard-layout in system.scm serves GRUB, the text console and X:
-  (keyboard-layout "gb,ru" ",phonetic" #:options '("grp:alt_shift_toggle"))
+X: /etc/X11/xorg.conf.d/30-rassvet.conf
+  Option "XkbLayout" "gb,ru"   Option "XkbVariant" ",phonetic"
+  Option "XkbOptions" "grp:alt_shift_toggle"
 English (UK) and Russian phonetic, Alt+Shift to switch. setxkbmap -query shows what X uses;
 try another layout for this session with
   setxkbmap -layout gb,ru -variant ,phonetic -option grp:alt_shift_toggle
-A permanent change is a keyboard-layout of your own in the declaration (in X it is part of
-rassvet-xorg-configuration; info "(guix) Keyboard Layout").
+and make it permanent in that file (it belongs to rassvet-desktop: an update keeps your
+version and offers the new one through rejmerge).
+The text console: KEYMAP=uk in /etc/rc.conf (loadkeys; the maps are in /usr/share/keymaps).
+GRUB uses the firmware's US layout.
 
 ## The console
-The text consoles (Ctrl+Alt+F2 ...) use Guix's console-font-service with its default font,
-which has Cyrillic. setfont tries another for the moment.
+FONT in /etc/rc.conf; setfont tries another for the moment, from
+/usr/share/kbd/consolefonts (Cyrillic ones included).
 
 ## Time zone
-The timezone field: #:timezone in /etc/config.scm ("Europe/London" unless you chose another),
-then reconfigure. /etc/localtime follows it. For one shell:  TZ=Europe/Moscow date
+TIMEZONE in /etc/rc.conf ("Europe/London" unless you chose another), applied at boot by
+linking /etc/localtime to /usr/share/zoneinfo/ZONE. For now as well:
+  sudo ln -sf /usr/share/zoneinfo/Europe/Moscow /etc/localtime
+For one shell:  TZ=Europe/Moscow date
 The night light (rassvet-nightlight) works out sunset from this zone.
 
-See also: time, system ; info "(guix) Locales" ; info "(guix) Keyboard Layout" ;
-man setxkbmap ; man locale
+See also: time, rc-conf ; man localedef ; man setxkbmap ; man loadkeys ; man locale

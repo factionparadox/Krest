@@ -1,0 +1,23 @@
+# Description: The Linux kernel for the Framework 13 Pro (7.3; Arch Linux's laptop configuration, built here)
+# URL: https://www.kernel.org
+# Maintainer: Rassvet
+# Depends on: bc cpio dracut elfutils intel-ucode kmod linux-firmware openssl
+
+name=linux
+version=7.3.1
+release=1
+source=(https://cdn.kernel.org/pub/linux/kernel/v7.x/linux-$version.tar.xz
+	base.config rassvet.config)
+
+build() {
+	cd linux-$version
+	cp $SRC/base.config .config
+	scripts/kconfig/merge_config.sh -m .config $SRC/rassvet.config
+	make olddefconfig
+	make -j$(nproc) bzImage modules
+	make INSTALL_MOD_PATH=$PKG INSTALL_MOD_STRIP=1 modules_install
+	rm -f $PKG/lib/modules/$version-rassvet/build
+	install -Dm644 arch/x86/boot/bzImage $PKG/boot/vmlinuz-$version-rassvet
+	install -Dm644 System.map $PKG/boot/System.map-$version-rassvet
+	install -Dm644 .config $PKG/boot/config-$version-rassvet
+}

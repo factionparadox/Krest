@@ -1,0 +1,6 @@
+#!/bin/sh
+# after the kernel is installed: its initramfs (with the CPU microcode first) and the boot menu
+v=7.3.1-rassvet
+dracut --force --early-microcode --kver $v /boot/initramfs-$v.img
+[ -d /boot/grub ] && grub-mkconfig -o /boot/grub/grub.cfg
+exit 0

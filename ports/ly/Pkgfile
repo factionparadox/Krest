@@ -1,0 +1,38 @@
+# Description: Ly: the login screen on tty1, in the terminal
+# URL: https://codeberg.org/fairyglade/ly
+# Maintainer: Rassvet
+# Depends on: linux-pam xorg-libxcb xorg-xauth
+
+name=ly
+version=1.4.1
+_commit=afb1dc62a0568743c9a7952623ec179128c73340
+_zig=0.16.0
+# ly's Zig libraries, at the commits its build.zig.zon files name
+_clap=fc1e5cc3f6d9d3001112385ee6256d694e959d2f
+_zigini=a665d081dda42664a96da2840ea09c5ccf9d0692
+_ini=3b733e10adc6c4c48050709b97a22258bc2e6156
+_termbox2=c7f241e8888ce243e1748b05c26a42fcfaaad936
+_translatec=7a1a9fdc4ab00835748a6657ecbb835e3d5d45f7
+release=1
+source=(https://codeberg.org/fairyglade/ly/archive/$_commit.tar.gz
+	https://ziglang.org/download/$_zig/zig-x86_64-linux-$_zig.tar.xz
+	https://github.com/Hejsil/zig-clap/archive/$_clap/zig-clap-$_clap.tar.gz
+	https://github.com/AshAmetrine/zigini/archive/$_zigini/zigini-$_zigini.tar.gz
+	https://github.com/AshAmetrine/ziglibs-ini/archive/$_ini/ziglibs-ini-$_ini.tar.gz
+	https://github.com/AnErrupTion/termbox2/archive/$_termbox2/termbox2-$_termbox2.tar.gz
+	https://codeberg.org/ziglang/translate-c/archive/$_translatec.tar.gz)
+
+build() {
+	# Zig itself is only the compiler for this build; it is not installed
+	export PATH=$SRC/zig-x86_64-linux-$_zig:$PATH
+	export ZIG_GLOBAL_CACHE_DIR=$SRC/zig-cache ZIG_LOCAL_CACHE_DIR=$SRC/zig-local
+	# put each dependency in Zig's cache, so the build finds them offline by their hashes
+	for dep in zig-clap-$_clap zigini-$_zigini ziglibs-ini-$_ini termbox2-$_termbox2 translate-c; do
+		zig fetch $SRC/$dep
+	done
+	cd ly
+	zig build -Doptimize=ReleaseSafe -Dinit_system=sysvinit -Ddefault_tty=1 \
+		-Denable_x11_support=true -Ddest_directory=$PKG installexe
+	# Rassvet starts ly from /etc/inittab, not from an init script
+	rm -rf $PKG/etc/init.d
+}

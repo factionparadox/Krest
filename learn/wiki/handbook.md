@@ -1,42 +1,40 @@
-# The Guix manual and Cookbook, offline
+# The CRUX handbook, offline
 
-The GNU Guix Reference Manual is Guix's official documentation, written by its developers and
-kept in step with the code: installation, package management, channels, the system
-declaration, every service type and its fields, the store, packaging. The GNU Guix Cookbook is
-its companion of worked examples and tutorials (packaging, custom kernels, system
-configurations). Both come with Guix itself, as info manuals: the system's, and a newer copy
-with every guix pull (~/.config/guix/current/share/info).
+The CRUX handbook is CRUX's official documentation, written by its developers for each
+release: installing, configuring the system (rc.conf, the rc scripts, networking), the
+package system (pkgutils, ports, prt-get), building a kernel, and writing ports. It is short
+enough to read in an evening, and the rest of CRUX assumes you have. The installer copied the
+3.8 handbook from the stick to /usr/share/doc/crux/handbook.txt.
 
 ## Reading it
-  rassvet-handbook            the Guix manual in info (menu -> Learn -> Guix manual)
-  rassvet-handbook cookbook   the Cookbook
-  rassvet-handbook mc         Midnight Commander with this wiki on one side and the info files
-                              on the other
-  info guix                   the same, in any terminal
-  info "(guix) Invoking guix system"      straight to one node
-  info shepherd               Shepherd's manual (herd, writing services)
+  rassvet-handbook            the handbook in less (menu -> Learn -> CRUX handbook)
+  rassvet-handbook mc         Midnight Commander with this wiki on one side and the
+                              handbook's folder on the other
+  less /usr/share/doc/crux/handbook.txt     the same, in any terminal
 
-info's keys:
-  arrows, Enter               move to a link and follow it
-  n / p / u                   next, previous and up node
-  l                           back to where you were
-  s                           search the whole manual; s again (or }) for the next match
-  i                           the index: type a word (a command, a service type, a field)
+less's keys:
+  Space / b                   next and previous page
+  /word, then n / N           search, next and previous match
+  g / G                       the start / the end
   q                           quit
 
-The index is the quickest way in: i, then nftables-service-type, guix gc, kernel-arguments ...
-For any command, guix NAME --help prints its options.
+Searching is the quickest way in: /prt-get, /rc.conf, /footprint, /SERVICES ...
+
+## The manual pages
+The handbook explains; the manual pages give every option:
+  man prt-get ; man prt-get.conf ; man ports ; man pkgmk ; man pkgmk.conf
+  man pkgadd ; man pkgrm ; man pkginfo ; man rejmerge
+  man init ; man inittab ; man start-stop-daemon
 
 ## Online
-  https://guix.gnu.org/manual/            the manual, also in other languages
-  https://guix.gnu.org/cookbook/          the Cookbook
-  https://packages.guix.gnu.org/          every package, with its versions
-Nonguix's README covers its kernel, firmware and substitutes:
-https://gitlab.com/nonguix/nonguix
+  https://crux.nu/                         the handbook, the FAQ, the wiki and the mailing lists
+  https://crux.nu/portdb/                  every port in every collection, searchable
+The CRUX wiki has pages on more than the handbook covers (hibernation, Wi-Fi, specific
+hardware), written by its users.
 
 ## Where it fits
-The manual says how Guix is meant to be used; this wiki explains the same system at shorter
+The handbook says how CRUX is meant to be used; this wiki explains the same system at shorter
 length, with Rassvet's own choices; the lessons (rassvet-learn learn) are the short tour. When
-they disagree, the manual and the manual pages are right.
+they disagree, the handbook and the manual pages are right.
 
-See also: index ; info info ; https://guix.gnu.org/en/help/
+See also: index ; man less

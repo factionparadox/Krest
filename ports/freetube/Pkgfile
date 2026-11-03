@@ -1,0 +1,20 @@
+# Description: FreeTube: YouTube without an account, adverts or tracking
+# URL: https://freetubeapp.io
+# Maintainer: Rassvet
+# Depends on: alsa-lib at-spi2-core cups gtk3 libdrm libnotify libsecret libxkbcommon mesa nss xdg-utils xorg-libxscrnsaver xorg-libxtst
+
+name=freetube
+version=0.25.3
+release=1
+source=(https://github.com/FreeTubeApp/FreeTube/releases/download/v$version-beta/freetube-$version-beta-linux-x64-portable.zip)
+PKGMK_NO_STRIP="yes"
+
+build() {
+	# the zip holds the app at its top or in one folder: find the executable
+	dir=$(dirname "$(find . -maxdepth 3 -type f -name freetube | head -n 1)")
+	install -d $PKG/usr/lib/freetube $PKG/usr/bin $PKG/usr/share/applications
+	cp -a "$dir"/. $PKG/usr/lib/freetube/
+	chmod 755 $PKG/usr/lib/freetube/freetube
+	ln -s /usr/lib/freetube/freetube $PKG/usr/bin/freetube
+	printf '[Desktop Entry]\nName=FreeTube\nComment=Private YouTube client\nExec=freetube %%U\nTerminal=false\nType=Application\nCategories=AudioVideo;Video;Network;\n' 		> $PKG/usr/share/applications/freetube.desktop
+}

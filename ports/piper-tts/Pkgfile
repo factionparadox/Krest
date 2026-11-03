@@ -1,0 +1,15 @@
+# Description: Piper: neural Russian voices for rassvet-russian say (Irina, Denis, Dmitri, Ruslan)
+# URL: https://github.com/rhasspy/piper
+# Maintainer: Rassvet
+
+name=piper-tts
+version=2023.11.14.2
+release=1
+# Piper's own Linux build, with its onnxruntime and espeak-ng
+source=(https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_linux_x86_64.tar.gz)
+PKGMK_NO_STRIP="yes"
+
+build() {
+	install -d $PKG/usr/lib/rassvet
+	cp -a piper $PKG/usr/lib/rassvet/piper
+}

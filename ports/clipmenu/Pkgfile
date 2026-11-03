@@ -1,0 +1,16 @@
+# Description: Clipboard history in dmenu (Super+v)
+# URL: https://github.com/cdown/clipmenu
+# Maintainer: Rassvet
+# Depends on: clipnotify dmenu xsel
+
+name=clipmenu
+version=6.2.0
+release=1
+source=(https://github.com/cdown/$name/archive/$version/$name-$version.tar.gz)
+
+build() {
+	cd $name-$version
+	for f in clipmenu clipmenud clipdel clipctl; do
+		install -Dm755 $f $PKG/usr/bin/$f
+	done
+}

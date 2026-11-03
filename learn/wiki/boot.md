@@ -3,47 +3,49 @@
 From power button to desktop, in order:
 
   1. UEFI firmware      finds the EFI system partition (FAT32, 1 GiB, mounted at /boot/efi)
-                        and runs the boot loader named in its boot list
-  2. GRUB               shows the menu: the current generation, and every older one under
-                        "GNU system, old configurations...". Loads that generation's kernel
-                        and initrd straight from /gnu/store and passes its command line
-  3. kernel + initrd    Guix's initrd, with Intel's microcode in front: loads the drivers
-                        needed to reach the root, resumes from hibernation if there is an
-                        image, mounts / (XFS) and starts the system named by gnu.system=
-  4. Shepherd           process 1: activates the system (/etc, accounts, setuid programs)
-                        and starts the services (see: shepherd)
-  5. ly on tty1         agetty hands tty1 to ly, the login screen (it logs you in by itself,
+                        and runs the boot loader named in its boot list ("Rassvet"), or the
+                        fallback EFI/BOOT/BOOTX64.EFI
+  2. GRUB               shows the menu and loads /boot/vmlinuz-7.3.1-rassvet and
+                        /boot/initramfs-7.3.1-rassvet.img, with the kernel command line
+  3. kernel + initramfs dracut's initramfs, Intel's microcode first: loads what is needed to
+                        reach the root, resumes from hibernation if there is an image,
+                        mounts / (XFS) and runs /sbin/init
+  4. init               reads /etc/inittab: /etc/rc (filesystems, udev, hostname, keymap,
+                        the system log), then /etc/rc.multi starts SERVICES (see: rc)
+  5. ly on tty1         inittab runs ly instead of a text login (it logs you in by itself,
                         if you chose that); ly starts X and rassvet-session
 
 ## GRUB
-system.scm's bootloader-configuration: grub-efi-bootloader installed to /boot/efi, a 3-second
-timeout, Rassvet's keyboard layout, white on red for the highlighted entry. Guix writes
-/boot/grub/grub.cfg on every reconfigure (and installs GRUB when needed); do not edit it, it
-is overwritten. guix system delete-generations also takes them out of the menu.
-
+grub-install put it in /boot/efi twice (--bootloader-id=Rassvet, and --removable for the
+fallback path). Its settings are /etc/default/grub (GRUB_CMDLINE_LINUX_DEFAULT, GRUB_TIMEOUT
+and the rest); /boot/grub/grub.cfg is generated from them and from the kernels in
+/boot. After a change:
+  sudo grub-mkconfig -o /boot/grub/grub.cfg
+The linux port's post-install script runs that after every kernel build.
 At the menu, e edits an entry for this boot only (remove quiet to see messages, or add an
 argument), and Ctrl+x boots it.
   efibootmgr -v                        the firmware's boot list
 
-## The initrd
-Nonguix's microcode-initrd: Guix's base initrd (a small Guile program with the modules for
-NVMe, XFS and the rest) with Intel's (and AMD's) CPU microcode prepended, so it is loaded before
-anything else. It is built with each generation; nothing to rebuild by hand. Its modules are the
-initrd-modules field of the operating system (Guix's defaults on Rassvet).
+## The initramfs
+dracut builds it: /boot/initramfs-VERSION.img, with --early-microcode, so the intel-ucode
+package's microcode is loaded before anything else. The kernel has NVMe and XFS built in
+(rassvet.config), so it can even boot without it, but resuming from hibernation needs it.
+  sudo dracut --force --early-microcode --kver 7.3.1-rassvet /boot/initramfs-7.3.1-rassvet.img
+  lsinitrd /boot/initramfs-7.3.1-rassvet.img | less     what is inside
   dmesg | grep -i microcode            "microcode updated early to revision ..."
 
 ## The kernel command line
   cat /proc/cmdline                    what this boot used
-Guix adds --root=, gnu.system= and gnu.load= itself; Rassvet adds nvme.noacpi=1 (lower SSD
-power use), resume=UUID=... (when there is a swap partition) and Guix's default, quiet.
-To add more, use kernel-arguments in /etc/config.scm (see: system). Useful at the GRUB prompt:
-  --repl                               stop in the initrd with a Guile REPL, before / is mounted
+The installer set quiet, nvme.noacpi=1 (lower SSD power use) and resume=UUID=... (when there
+is a swap partition). Useful at the GRUB prompt:
+  rd.break                             stop in the initramfs, before / is switched to
   modprobe.blacklist=NAME              keep a module from loading this once
+  init=/bin/sh                         a root shell instead of init (mount -o remount,rw /)
 
 ## When it does not boot
-Pick an older generation in GRUB's "old configurations" menu; once it is up,
-sudo guix system roll-back makes it the default. rassvet-learn learn recovery has the rest
-(the install stick, chroot, reinstalling GRUB).
+There is no older system to pick in GRUB. Boot the Rassvet stick and chroot in
+(rassvet-learn learn recovery): put the previous kernel package back, remake the initramfs or
+reinstall GRUB.
 
-See also: kernel, elogind (hibernation), system ; info "(guix) Bootloader Configuration" ;
-info "(guix) Initial RAM Disk" ; man efibootmgr
+See also: kernel, sleep (hibernation), rc ; man grub-mkconfig ; man dracut ; man efibootmgr ;
+rassvet-handbook

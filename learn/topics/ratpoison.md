@@ -26,7 +26,7 @@ Ctrl+t ? lists them all. Ctrl+t : lets you type any ratpoison command, for examp
 
 ## Settings
 ~/.ratpoisonrc sources /etc/rassvet/ratpoisonrc, then your lines. Lines are ratpoison commands:
-    definekey top C-s-i exec gimp    Ctrl+Super+i starts GIMP (once: guix install gimp)
+    definekey top C-s-i exec gimp    Ctrl+Super+i starts GIMP (once: sudo prt-get depinst gimp)
     set border 0
 Reload: Super+Shift+r. The command line tool talks to the running ratpoison:
     ratpoison -c windows ; ratpoison -c "echo hello"

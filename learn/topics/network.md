@@ -1,35 +1,38 @@
 # Network and Bluetooth
 
 NetworkManager manages Wi-Fi, Ethernet (USB-C dongles, docks) and VPNs; it drives
-wpa_supplicant itself (both are services in system.scm), so nothing fights over the card. The
-Framework's Wi-Fi 7 card needs Nonguix's kernel and linux-firmware, which are installed.
+wpa_supplicant itself, so nothing fights over the card. It is a service in /etc/rc.conf
+(networkmanager, after dbus); CRUX's own net script is not in SERVICES, since NetworkManager
+does its job. The Framework's Wi-Fi 7 card needs the new kernel and linux-firmware, which the
+stick installed before anything else.
 
 ## Use
-    Ctrl+Super+n                      nmtui: pick a network in a terminal (networkmanager_dmenu,
-                                      the dmenu picker, is not packaged for Guix)
+    Ctrl+Super+n                      networkmanager_dmenu: networks and VPNs in a dmenu list
+    nmtui                             the same in a terminal (the menu's "Wi-Fi (full screen)")
     nmcli device wifi list ; nmcli device wifi connect NAME --ask
     nmcli connection show             saved networks
 
-## VPN (Proton VPN or any WireGuard service)
-NetworkManager runs WireGuard itself (it is in the kernel), so no VPN app is needed; the Proton
-VPN app is not packaged for Guix. Once: in your Proton account, Downloads -> WireGuard
-configuration, pick a server and download the file. Give it a short name (NetworkManager uses
-it for the interface: 15 characters at most):
+## VPN
+Ctrl+Super+p opens the Proton VPN app (the proton-vpn-gtk-app port); sign in once, and it
+keeps the login in gnome-keyring. It sets up its connections through NetworkManager
+(WireGuard or OpenVPN).
+Without the app, any WireGuard file works: NetworkManager runs WireGuard itself (it is in the
+kernel). Give the file a short name (it becomes the interface: 15 characters at most):
     nmcli connection import type wireguard file ~/Downloads/proton-uk.conf
-Then Ctrl+Super+p or the menu's "VPN on/off" (rassvet-vpn) switches it, or:
+Then the menu's "VPN on/off (WireGuard files)" (rassvet-vpn) switches it, or:
     nmcli connection up id proton-uk ; nmcli connection down id proton-uk
 It stays off at boot unless you ask:  nmcli connection modify proton-uk autoconnect yes
 
 ## Look
-    ip -br addr ; ip route ; ping -c 3 guix.gnu.org
+    ip -br addr ; ip route ; ping -c 3 crux.nu
     iw dev                            the Wi-Fi card
-    sudo herd status NetworkManager
+    sudo /etc/rc.d/networkmanager status
     sudo nft list ruleset             the firewall (rassvet-learn learn security)
 
 ## Bluetooth
-bluetoothd is the service (bluetooth-service-type). Ctrl+Super+b opens bluetoothctl in a
-terminal (bluetuith, the friendlier menu, is not packaged for Guix):
+bluetoothd is the service (bluetoothd in SERVICES, from the bluez port). Ctrl+Super+b opens
+bluetuith, a menu in the terminal: pair, connect, trust, with the arrow keys. bluetoothctl is
+there too (the menu's "Bluetooth (bluetoothctl)"):
     power on ; scan on ; pair XX:XX:... ; connect XX:XX:... ; trust XX:XX:...
 
-References: man nmcli ; man nmtui ; rassvet-learn wiki network ;
-info "(guix) Networking Setup"
+References: man nmcli ; man nmtui ; rassvet-learn wiki network

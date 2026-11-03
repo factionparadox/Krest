@@ -1,40 +1,42 @@
 # How Rassvet fits together
 
-Rassvet is GNU Guix System (x86_64) with the Nonguix channel: GNU Shepherd as init, Guix as
-package manager, an XFS root, and a small X11 desktop: ratpoison, polybar, dmenu and Plan 9's
-acme. There is no systemd anywhere. The whole system is one declaration in Scheme,
-guix/rassvet/system.scm in Rassvet's channel; /etc/config.scm on this laptop is a few lines
-that call it with your disk's UUIDs, your name and your choices.
+Rassvet is CRUX 3.8 (x86_64): BSD-style rc scripts as init, ports and prt-get for software,
+glibc, an XFS root, and a small X11 desktop: ratpoison, polybar, dmenu and Plan 9's acme. There
+is no systemd and no elogind. Almost everything is compiled on this laptop, for this processor
+(-march=native), from ports: CRUX's own collections plus Rassvet's, which comes from the
+Rassvet repository kept in /usr/src/rassvet. The `rassvet` port has no files of its own; its
+dependency list is the whole system, so installing it installs everything.
 
 ## From power button to desktop
 1. UEFI firmware starts GRUB from the EFI partition (/boot/efi).
-2. GRUB lists the current system and every older generation; it loads Linux (Nonguix's full
-   kernel) and its initrd straight from /gnu/store.
-3. The initrd (Guix's, with Intel's microcode in front) finds the XFS root, or resumes from
-   hibernation (resume= on the kernel line), and hands over to Shepherd, process 1.
-4. Shepherd starts the services system.scm declares: udev, dbus, elogind, NetworkManager,
-   bluetooth, ntpd, nftables, tlp, thermald, zram, earlyoom, guix-daemon ...
-5. agetty on tty1 hands the console to ly, the login screen (it logs you in by itself if you
-   chose that).
-6. ly starts X and the session in /run/current-system/profile/share/xsessions/rassvet.desktop:
-   rassvet-session.
-7. rassvet-session starts the bar, notifications, the screen lock, then ratpoison.
+2. GRUB loads the kernel (/boot/vmlinuz-7.3.1-rassvet, built from the `linux` port) and its
+   initramfs, which dracut made with Intel's microcode at the front.
+3. The initramfs finds the XFS root, or resumes from hibernation (resume= on the kernel line),
+   and starts init, process 1.
+4. init reads /etc/inittab: /etc/rc prepares the system (filesystems, hostname, keymap, the
+   system log), then /etc/rc.multi starts every service named in SERVICES in /etc/rc.conf:
+   dbus, networkmanager, acpid, tlp, thermald, bluetoothd, chronyd, the firewall, the tutor ...
+5. inittab runs ly on tty1 instead of a text login (it logs you in by itself if you chose that).
+6. ly starts X and the session in /usr/share/xsessions/rassvet.desktop: rassvet-session.
+7. rassvet-session starts sound, the bar, notifications, the screen lock, then ratpoison.
 
 ## Where things live
-/gnu/store/                   every package, each in its own folder; read-only
-/run/current-system           the running system generation (a link into the store)
-/run/current-system/profile   the system's programs: bin/, share/ (there is no /usr)
-/etc/config.scm               this laptop's system: the one file of it that is yours to edit
-/etc/rassvet/                 ratpoisonrc, polybar.ini, Xresources (links into the store)
+/usr/src/rassvet              the Rassvet repository (rassvet-update pulls it)
+/usr/ports/                   the ports: core, opt, xorg, contrib, compat-32 and rassvet
+/usr/ports/distfiles, packages    downloaded sources; every package built here
+/var/lib/pkg/db               the list of installed packages and their files
+/etc/rc.conf                  hostname, timezone, keymap and the services started at boot
+/etc/rc.d/                    one script per service (start, stop, restart, status)
+/etc/pkgmk.conf /etc/prt-get.conf   how ports are built, and in which order collections count
+/etc/rassvet/                 ratpoisonrc, polybar.ini, Xresources
 ~/.ratpoisonrc ~/.config/polybar/config.ini   your settings (they include the defaults)
-~/.guix-profile               the packages you installed yourself (guix install)
 /var/lib/rassvet/russian      the Russian material, once downloaded
 
 ## Look for yourself (nothing here changes anything)
     rassvet-learn doctor
-    cat /etc/config.scm
-    guix system describe              this generation: its channels, kernel, config file
-    sudo herd status                  every service
+    cat /etc/rc.conf
+    pkginfo -i | wc -l                how many packages are installed
+    prt-get diff                      which ports are newer than what is installed
     less "$(command -v rassvet-session)"
 
 Next: rassvet-learn learn install (what the installer did, step by step).

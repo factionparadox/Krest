@@ -1,0 +1,322 @@
+#!/bin/bash
+# Рассвет / Rassvet installer: CRUX 3.8 with Rassvet's desktop, on one whole disk, built on
+# this laptop.
+#
+# It gets you online (nmtui), asks for the disk, a computer name, your username and password,
+# the timezone and whether to log in automatically, then after ONE Yes/No does the CRUX
+# install from the handbook by itself:
+#
+#   1. GPT: 1 GiB EFI, swap the size of the RAM (hibernation), XFS root.  mkfs, mount /mnt.
+#   2. CRUX's core from this stick (pkgadd), and the stick's ready-built kernel and
+#      NetworkManager, so the laptop can boot and get online even before anything is compiled.
+#   3. Your settings: /etc/fstab, rc.conf, users and passwords, ly, GRUB (the laptop boots now).
+#   4. The ports (ports -u, Rassvet's own checked), then the whole desktop compiled here with
+#      prt-get: every build shows on screen. This is the long step: hours.
+#
+# Everything it runs, with its output, shows as it happens and is kept in
+# /tmp/rassvet-install.log (copied to /var/log on the new system). If the compiling stops,
+# the laptop still boots: log in and run  sudo rassvet-install --continue
+set -u
+TITLE="Рассвет / Rassvet installer"
+T=/mnt
+LOG=/tmp/rassvet-install.log
+MEDIA=/media
+GiB=$((1024 * 1024 * 1024))
+EFI_GIB=1
+MIN_ROOT_GIB=40
+STEPS=4
+# booting needs these from the ISO, whatever their version: the bootloader and its tools
+BOOT_PKGS="grub2 grub2-efi efibootmgr xfsprogs dosfstools dracut"
+# ...and these, for the services Rassvet starts (built for real by prt-get afterwards)
+SERVICES="lo crond dbus networkmanager acpid tlp thermald bluetoothd chronyd rassvet-firewall rassvet-tutor"
+
+say() { printf '%s\n' "$*" | tee -a "$LOG"; }
+run() {   # run CMD...: show it, run it, its output on screen and in the log
+	printf '$ %s\n' "$*" | tee -a "$LOG"
+	"$@" 2>&1 | tee -a "$LOG"
+	return "${PIPESTATUS[0]}"
+}
+in_target() { run chroot "$T" /usr/bin/env -i HOME=/root TERM=linux PATH=/usr/sbin:/usr/bin:/sbin:/bin /bin/sh -c "$*"; }
+stage() {
+	clear
+	printf '%s\n Installing Rassvet: step %s of %s\n%s\n%s\n\n' "============================================================" \
+		"$1" "$STEPS" "============================================================" "$2"
+	printf 'Each command and its output appear below as they happen; all of it is kept\nin %s (Alt+F2 opens a shell).\n\n' "$LOG"
+	printf '\n== step %s: %s\n' "$1" "$2" >> "$LOG"
+}
+dlg() { dialog --backtitle "$TITLE" --title "Rassvet" "$@" 3>&1 1>&2 2>&3; }
+notice() { dlg --msgbox "$1" 14 76; }
+fail() {
+	dlg --msgbox "The installation stopped: $1
+
+The last lines of the log:
+$(tail -n 8 "$LOG" | cut -c1-70)
+
+The whole log is $LOG (Alt+F2 opens a shell)." 22 78
+	exit 1
+}
+
+part() { case $1 in *[0-9]) echo "${1}p$2" ;; *) echo "$1$2" ;; esac; }   # nvme0n1 -> nvme0n1p1
+uuid() { blkid -s UUID -o value "$1"; }
+
+# ---------------------------------------------------------------- the network
+online() { curl -fsS -m 10 -o /dev/null https://crux.nu/ 2>/dev/null; }
+network() {
+	if ! pgrep -x NetworkManager >/dev/null; then
+		mkdir -p /run/dbus /var/run/dbus
+		dbus-uuidgen --ensure 2>/dev/null
+		[ -x /etc/rc.d/dbus ] && /etc/rc.d/dbus start >/dev/null 2>&1
+		[ -x /etc/rc.d/networkmanager ] && /etc/rc.d/networkmanager start >/dev/null 2>&1
+		sleep 4
+	fi
+	while ! online; do
+		dlg --yes-label "Connect (nmtui)" --no-label "Try again" --yesno \
+"Rassvet compiles itself on this laptop from the internet, so it needs a connection.
+
+A cable (or a USB Ethernet adapter) connects by itself. For Wi-Fi, choose Connect: nmtui
+opens; pick \"Activate a connection\", then your network." 13 76
+		[ $? -eq 0 ] && nmtui
+		sleep 2
+	done
+}
+
+# ---------------------------------------------------------------- questions
+choose_disk() {
+	local items=()
+	while read -r name size model; do
+		[ "$size" -ge $(((EFI_GIB + MIN_ROOT_GIB) * GiB)) ] || continue
+		# not the stick itself, and nothing mounted
+		lsblk -nro MOUNTPOINT "/dev/$name" | grep -q . && continue
+		items+=("/dev/$name" "$((size / GiB)) GiB  ${model:-disk}")
+	done < <(lsblk -dnbo NAME,SIZE,MODEL -e 7,11 | grep -v '^zram')
+	[ ${#items[@]} -gt 0 ] || { notice "No unmounted disk of at least $((EFI_GIB + MIN_ROOT_GIB)) GiB was found."; exit 2; }
+	DISK=$(dlg --menu "Install Rassvet on which disk?" 15 70 6 "${items[@]}") || exit 1
+}
+ask() {
+	notice "Рассвет / Rassvet
+
+CRUX 3.8 (BSD-style rc scripts, ports, no systemd), ratpoison and Plan 9's tools, all compiled
+for this laptop.
+
+A connection, five questions, then one Yes/No. Choosing Yes erases the whole disk you pick."
+	network
+	choose_disk
+	HOST=$(dlg --inputbox "Computer name:" 9 60 rassvet) || exit 1
+	[[ $HOST =~ ^[A-Za-z0-9][A-Za-z0-9-]{0,62}$ ]] || { notice "Use letters, digits and hyphens for the computer name."; exit 2; }
+	USERNAME=$(dlg --inputbox "Your username (lower case):" 9 60) || exit 1
+	[[ $USERNAME =~ ^[a-z_][a-z0-9_-]{0,30}$ && $USERNAME != root ]] || { notice "Use lower-case letters, digits, _ or - for the username."; exit 2; }
+	PASS=$(dlg --insecure --passwordbox "Password (also the root password, for recovery):" 9 60) || exit 1
+	PASS2=$(dlg --insecure --passwordbox "The same password again:" 9 60) || exit 1
+	[ -n "$PASS" ] && [ "$PASS" = "$PASS2" ] || { notice "The passwords were empty or different. Nothing has been changed."; exit 2; }
+	TZONE=$(dlg --default-item Europe/London --menu "Timezone:" 15 60 6 \
+		Europe/London "United Kingdom" Europe/Moscow Moscow Europe/Dublin Ireland \
+		Europe/Berlin "Central Europe" America/New_York "Eastern United States" UTC UTC) || exit 1
+	if dlg --yes-label "Log in automatically" --no-label "Ask for my password" --yesno \
+		"Start straight into the desktop when the laptop boots?
+
+The screen still locks with your password when the lid closes or it sleeps." 10 76; then
+		AUTOLOGIN=yes; else AUTOLOGIN=no; fi
+	DISK_BYTES=$(lsblk -dnbo SIZE "$DISK")
+	RAM_GIB=$(( ( $(awk '/MemTotal/ {print $2}' /proc/meminfo) * 1024 + GiB - 1) / GiB ))
+	SWAP_GIB=$RAM_GIB
+	ROOT_GIB=$(( DISK_BYTES / GiB - EFI_GIB - SWAP_GIB ))
+	if [ $ROOT_GIB -lt $MIN_ROOT_GIB ]; then SWAP_GIB=0; ROOT_GIB=$(( DISK_BYTES / GiB - EFI_GIB )); fi
+	dlg --defaultno --yes-label "Erase and install" --no-label Cancel --yesno \
+"Erase EVERYTHING on this disk?
+
+  $DISK  $(lsblk -dno MODEL "$DISK")  $((DISK_BYTES / GiB)) GiB
+
+  $EFI_GIB GiB EFI   $SWAP_GIB GiB swap (hibernation)   $ROOT_GIB GiB XFS
+  computer: $HOST   user: $USERNAME   $TZONE
+  $( [ $AUTOLOGIN = yes ] && echo 'automatic login' || echo 'password at login')
+
+Then the desktop compiles here: expect most of a day. The laptop can boot
+(and you can use the console) from step 3 on." 19 78 || { notice "Cancelled. Nothing has been changed."; exit 1; }
+}
+
+# ---------------------------------------------------------------- 1. disk
+disk() {
+	stage 1 "Partitioning $DISK: $EFI_GIB GiB EFI, $SWAP_GIB GiB swap, $ROOT_GIB GiB XFS"
+	EFI=$(part "$DISK" 1)
+	if [ $SWAP_GIB -gt 0 ]; then SWAP=$(part "$DISK" 2); ROOT=$(part "$DISK" 3); else SWAP=; ROOT=$(part "$DISK" 2); fi
+	run wipefs -a "$DISK" || fail "wipefs $DISK"
+	{
+		echo "label: gpt"
+		echo "size=${EFI_GIB}GiB, type=uefi, name=EFI"
+		[ -n "$SWAP" ] && echo "size=${SWAP_GIB}GiB, type=swap, name=swap"
+		echo "type=linux, name=Rassvet"
+	} | run sfdisk --wipe always "$DISK" || fail "sfdisk $DISK"
+	run partprobe "$DISK" 2>/dev/null; sleep 2
+	run mkfs.fat -F 32 -n EFI "$EFI" || fail "mkfs.fat $EFI"
+	run mkfs.xfs -f -L Rassvet "$ROOT" || fail "mkfs.xfs $ROOT"
+	if [ -n "$SWAP" ]; then run mkswap -L swap "$SWAP" || fail "mkswap"; run swapon "$SWAP"; fi
+	run mount "$ROOT" "$T" || fail "mount $ROOT"
+	mkdir -p "$T/boot/efi"
+	run mount "$EFI" "$T/boot/efi" || fail "mount $EFI"
+}
+
+# ---------------------------------------------------------------- 2. base
+base() {
+	stage 2 "CRUX's core from the stick (pkgadd), then the stick's kernel and NetworkManager"
+	mkdir -p "$T/var/lib/pkg"; touch "$T/var/lib/pkg/db"
+	local n=0 total
+	total=$(ls "$MEDIA"/crux/core/*.pkg.tar.* | wc -l)
+	for p in "$MEDIA"/crux/core/*.pkg.tar.*; do
+		n=$((n + 1))
+		printf '  [%3d of %d] %s\n' "$n" "$total" "$(basename "${p%%#*}")" | tee -a "$LOG"
+		pkgadd -r "$T" "$p" >>"$LOG" 2>&1 || fail "pkgadd $(basename "$p")"
+	done
+	for name in $BOOT_PKGS; do
+		p=$(ls "$MEDIA"/crux/opt/"$name"#*.pkg.tar.* 2>/dev/null | head -n 1)
+		[ -n "$p" ] && { say "  $name (bootloader tools)"; pkgadd -r "$T" "$p" >>"$LOG" 2>&1 || fail "pkgadd $name"; }
+	done
+	for name in $(cat "$MEDIA"/rassvet/packages/LIVE); do
+		p=$(ls "$MEDIA"/rassvet/packages/"$name"#*.pkg.tar.* 2>/dev/null | head -n 1)
+		[ -n "$p" ] || continue
+		say "  $name (built for the stick)"
+		if grep -qx "$name" <(awk 'BEGIN{RS=""} {print $1}' "$T/var/lib/pkg/db"); then
+			pkgadd -r "$T" -u -f "$p" >>"$LOG" 2>&1 || fail "pkgadd $name"
+		else
+			pkgadd -r "$T" -f "$p" >>"$LOG" 2>&1 || fail "pkgadd $name"
+		fi
+	done
+}
+
+# ---------------------------------------------------------------- 3. settings and boot
+mount_pseudo() {
+	for d in dev dev/pts proc sys run sys/firmware/efi/efivars; do
+		[ -d "/$d" ] || continue
+		mkdir -p "$T/$d"
+		mountpoint -q "$T/$d" || mount --bind "/$d" "$T/$d"
+	done
+	cp -L /etc/resolv.conf "$T/etc/resolv.conf"
+}
+settings() {
+	stage 3 "Your settings: fstab, rc.conf, users and passwords, ly, GRUB (the laptop boots after this)"
+	mount_pseudo
+	{
+		echo "# /etc/fstab: written by the Rassvet installer"
+		echo "UUID=$(uuid "$ROOT")  /          xfs   defaults,noatime  0 1"
+		echo "UUID=$(uuid "$EFI")   /boot/efi  vfat  umask=0077        0 2"
+		[ -n "$SWAP" ] && echo "UUID=$(uuid "$SWAP")  swap  swap  defaults  0 0"
+		echo "devpts  /dev/pts  devpts  noexec,nosuid,gid=tty,mode=0620  0 0"
+		echo "shm     /dev/shm  tmpfs   defaults                         0 0"
+	} > "$T/etc/fstab"
+	cat "$T/etc/fstab" | tee -a "$LOG"
+	sed -i -e "s|^HOSTNAME=.*|HOSTNAME=$HOST|" -e "s|^TIMEZONE=.*|TIMEZONE=$TZONE|" \
+		-e "s|^KEYMAP=.*|KEYMAP=uk|" -e "s|^LANG=.*|LANG=en_GB.UTF-8|" \
+		-e "s|^SERVICES=.*|SERVICES=($SERVICES)|" "$T/etc/rc.conf"
+	grep -v '^#' "$T/etc/rc.conf" | grep . | tee -a "$LOG"
+	printf '127.0.0.1 localhost %s\n::1 localhost %s\n' "$HOST" "$HOST" > "$T/etc/hosts"
+	in_target "localedef -i en_GB -f UTF-8 en_GB.UTF-8 && localedef -i ru_RU -f UTF-8 ru_RU.UTF-8 && localedef -i en_US -f UTF-8 en_US.UTF-8" || fail "locales"
+	in_target "useradd -m -U -G wheel,audio,video,input,users -s /bin/bash $USERNAME" || fail "useradd"
+	printf 'root:%s\n%s:%s\n' "$PASS" "$USERNAME" "$PASS" | chroot "$T" chpasswd -c SHA512 || fail "chpasswd"
+	PASS=; PASS2=
+	say "passwords: root and $USERNAME set (hashed, in /etc/shadow)"
+	# the repository and the CRUX handbook, for rassvet-update and rassvet-handbook
+	mkdir -p "$T/usr/src" "$T/usr/share/doc/crux"
+	run cp -a "$MEDIA/rassvet/repo" "$T/usr/src/rassvet" || fail "copying the repository"
+	chown -R root:root "$T/usr/src/rassvet"
+	chroot "$T" git -C /usr/src/rassvet remote set-url origin https://github.com/factionparadox/Pustota.git 2>/dev/null
+	cp "$MEDIA/crux/handbook.txt" "$T/usr/share/doc/crux/handbook.txt"
+	install -m644 "$T/usr/src/rassvet/build/crux/pkgmk.conf" "$T/etc/pkgmk.conf"
+	install -m644 "$T/usr/src/rassvet/build/crux/prt-get.conf" "$T/etc/prt-get.conf"
+	for f in "$T"/etc/ports/*.inactive; do [ -e "$f" ] && mv "$f" "${f%.inactive}"; done
+	mkdir -p "$T/usr/ports/distfiles" "$T/usr/ports/packages" "$T/var/log/pkgbuild"
+	# ly on the first console instead of a text login
+	sed -i 's|^c1:.*|c1:2:respawn:/usr/bin/ly|' "$T/etc/inittab"
+	# GRUB, with hibernation's resume partition
+	local cmdline="quiet nvme.noacpi=1"
+	[ -n "$SWAP" ] && cmdline="$cmdline resume=UUID=$(uuid "$SWAP")"
+	if [ -f "$T/etc/default/grub" ]; then
+		sed -i "s|^GRUB_CMDLINE_LINUX_DEFAULT=.*|GRUB_CMDLINE_LINUX_DEFAULT=\"$cmdline\"|" "$T/etc/default/grub"
+	else
+		mkdir -p "$T/etc/default"; printf 'GRUB_CMDLINE_LINUX_DEFAULT="%s"\nGRUB_TIMEOUT=3\nGRUB_DISTRIBUTOR=Rassvet\n' "$cmdline" > "$T/etc/default/grub"
+	fi
+	in_target "dracut --force --early-microcode --kver $(ls "$T/lib/modules" | head -n 1) /boot/initramfs-$(ls "$T/lib/modules" | head -n 1).img" || fail "dracut"
+	in_target "grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=Rassvet && grub-install --target=x86_64-efi --efi-directory=/boot/efi --removable && grub-mkconfig -o /boot/grub/grub.cfg" || fail "GRUB"
+	cat > "$T/etc/rassvet-install.conf" <<EOF
+# what the installer was told; rassvet-install --continue reads it
+USERNAME=$USERNAME
+AUTOLOGIN=$AUTOLOGIN
+EOF
+	install -m755 /usr/bin/rassvet-install "$T/usr/bin/rassvet-install"
+	install -m755 /usr/bin/iso-binaries "$T/usr/bin/iso-binaries"
+}
+
+# ---------------------------------------------------------------- 4. compile (also --continue)
+compile() {   # runs on the new system (in the chroot, or after booting it)
+	stage 4 "Compiling Rassvet on this laptop (prt-get): the long step"
+	in_target "ports -u" || fail "ports -u (is the network up?)"
+	in_target "sh /usr/src/rassvet/build/rassvet-ports sync /usr/src/rassvet && sh /usr/src/rassvet/build/rassvet-ports verify" || fail "Rassvet's ports did not verify"
+	# the build order, so the screen can count builds
+	in_target "prt-get quickdep rassvet > /tmp/rassvet-order" || fail "prt-get quickdep"
+	local total n=0
+	total=$(wc -w < "$T/tmp/rassvet-order")
+	say "  $total ports in the order prt-get builds them; the ones already installed are skipped"
+	for name in $(cat "$T/tmp/rassvet-order"); do
+		n=$((n + 1))
+		if chroot "$T" pkginfo -i | grep -q "^$name "; then continue; fi
+		printf '\n==== [%d of %d] %s\n' "$n" "$total" "$name" | tee -a "$LOG"
+		in_target "prt-get install $name" || fail "building $name (its log: /var/log/pkgbuild/$name.log)"
+	done
+	finish
+}
+finish() {
+	. "$T/etc/rassvet-install.conf"
+	# the home folder from Rassvet's skeleton, and ly's settings
+	in_target "cp -rn /usr/share/rassvet/skel/. /home/$USERNAME/ && chown -R $USERNAME:$USERNAME /home/$USERNAME"
+	local ly=$T/etc/ly/config.ini
+	if [ -f "$ly" ]; then
+		set_ly() { if grep -q "^$1 *=" "$ly"; then sed -i "s|^$1 *=.*|$1 = $2|" "$ly"; else echo "$1 = $2" >> "$ly"; fi; }
+		set_ly animation none; set_ly bg 0x00000000; set_ly fg 0x00FFFFFF; set_ly border_fg 0x00CC0000
+		set_ly box_title РАССВЕТ; set_ly hide_version_string true; set_ly default_input password
+		set_ly xsessions /usr/share/xsessions; set_ly waylandsessions null
+		set_ly brightness_down_cmd "/usr/bin/brightnessctl -q -n s 10%-"
+		set_ly brightness_up_cmd "/usr/bin/brightnessctl -q -n s +10%"
+		if [ "$AUTOLOGIN" = yes ]; then set_ly auto_login_user "$USERNAME"; set_ly auto_login_session rassvet; fi
+	fi
+	cp "$LOG" "$T/var/log/rassvet-install.log" 2>/dev/null
+	say ""
+	say "Rassvet is installed."
+}
+
+cleanup() {
+	sync
+	for d in sys/firmware/efi/efivars sys run proc dev/pts dev boot/efi; do umount -l "$T/$d" 2>/dev/null; done
+	umount -l "$T" 2>/dev/null
+	swapoff -a 2>/dev/null
+}
+
+# ---------------------------------------------------------------- main
+if [ "${1:-}" = --continue ]; then
+	# on the installed system: carry on compiling where it stopped
+	[ "$(id -u)" = 0 ] || exec sudo "$0" "$@"
+	T=/; LOG=/var/log/rassvet-install.log
+	in_target() { run /bin/sh -c "$*"; }
+	compile
+	echo "Done. Restart (sudo reboot) to start the desktop."
+	exit 0
+fi
+[ "$(id -u)" = 0 ] || { echo "run it as root"; exit 1; }
+[ -d /sys/firmware/efi ] || { notice "This computer started the stick in legacy BIOS mode. Rassvet installs for UEFI only: restart and pick the stick's UEFI entry."; exit 2; }
+# the stick: CRUX's live system unmounts it after starting, and leaves it in /etc/fstab
+mountpoint -q "$MEDIA" || mount "$MEDIA" 2>/dev/null
+[ -f "$MEDIA/rassvet/packages/LIVE" ] || {
+	for dev in $(lsblk -nrpo NAME); do mount -r "$dev" "$MEDIA" 2>/dev/null || continue
+		[ -f "$MEDIA/rassvet/packages/LIVE" ] && break; umount "$MEDIA"; done; }
+[ -f "$MEDIA/rassvet/packages/LIVE" ] || { notice "The Rassvet stick's files were not found (rassvet/packages). Build the ISO again with build/build-iso.sh."; exit 2; }
+mountpoint -q "$T" && { notice "/mnt is already in use: restart and run the installer again."; exit 2; }
+: > "$LOG"
+ask
+trap cleanup EXIT
+disk
+base
+settings
+compile
+cleanup
+trap - EXIT
+dlg --msgbox "Rassvet is installed.
+
+Remove the USB stick and restart (reboot). Super+? shows the keys; rassvet-learn
+explains the system." 11 70

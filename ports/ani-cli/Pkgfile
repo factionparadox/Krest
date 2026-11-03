@@ -1,0 +1,16 @@
+# Description: Browse and watch anime from the command line (Ctrl+Super+a)
+# URL: https://github.com/pystardust/ani-cli
+# Maintainer: Rassvet
+# Depends on: aria2 ffmpeg fzf mpv yt-dlp
+
+name=ani-cli
+version=5.1
+_commit=c99221dcecb35c66815a7a77e5ebebde16c8d06a
+release=1
+source=(https://raw.githubusercontent.com/pystardust/ani-cli/$_commit/ani-cli
+	https://raw.githubusercontent.com/pystardust/ani-cli/$_commit/ani-cli.1)
+
+build() {
+	install -Dm755 ani-cli $PKG/usr/bin/ani-cli
+	install -Dm644 ani-cli.1 $PKG/usr/share/man/man1/ani-cli.1
+}

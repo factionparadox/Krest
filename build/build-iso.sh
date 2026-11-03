@@ -1,160 +1,214 @@
 #!/usr/bin/env bash
-# Рассвет / Rassvet: build the installer ISO, on any x86_64 Linux with sudo (Arch on WSL2 is
-# fine).
+# Рассвет / Rassvet: build the installer ISO from CRUX 3.8's, on any x86_64 Linux with sudo
+# (Arch on WSL2 is fine).
 #
-#   bash build/build-iso.sh               -> out/rassvet-x86_64.iso
-#   bash build/build-iso.sh --music DIR   your music on it too (default: local/music, if any)
-#   bash build/build-iso.sh --no-music    the ordinary ISO even when local/music exists
+#   bash build/build-iso.sh        -> out/rassvet-x86_64.iso and its .sha256
 #
-# What it does:
-#  1. Guix itself, if this computer has none: Guix 1.5.0's release (SHA-256 checked) in /gnu
-#     and /var/guix, its daemon, and the substitute keys of Guix and Nonguix.
-#  2. guix time-machine -C channels.scm: the exact Guix and Nonguix Rassvet is pinned to.
-#  3. The system (build/template-config.scm); what installing it builds besides (GRUB, its
-#     menu), from a dry run of guix system init; and a dry run for a second, differently
-#     answered config (build/variant-config.scm): what that one would still build is what each
-#     laptop builds for itself, offline, so its inputs go on the stick (build/offline-items.py).
-#  4. All of it, exported and compressed: build/work/system.nar.zst.
-#  5. The installer image (guix/rassvet/installer.scm), with the archive added: out/.
+# The ISO is CRUX's own, with:
+#   - the 7.3 kernel (ports/linux) for the installer itself, so the Framework 13 Pro's Wi-Fi,
+#     graphics and keyboard work from the first second, and newer Intel firmware;
+#   - NetworkManager (nmtui) in the installer, for Wi-Fi;
+#   - Rassvet's installer (installer/rassvet-install), which starts on tty1;
+#   - those packages ready-built in /rassvet/packages, and this repository in /rassvet/repo.
+# Everything else is compiled on the laptop during the install, from the ports.
+#
+# What it does, in order (each step shows its commands; nothing is hidden):
+#   1. xorriso, cpio, rsync, curl, xz on this computer
+#   2. CRUX 3.8's ISO, checked against its published SHA-256
+#   3. a CRUX build root: CRUX's own live system, with every core package from the ISO
+#      installed into it (in ~/.cache/rassvet; made once, reused)
+#   4. in the build root: the ports (ports -u), then the kernel and NetworkManager built
+#      (prt-get), packages into build/work/packages
+#   5. the installer's live system and its initramfs, with those added
+#   6. the ISO
 set -Eeuo pipefail
 project=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+work=$project/build/work
+cache=${XDG_CACHE_HOME:-$HOME/.cache}/rassvet
 say() { printf '\n==> %s\n' "$*"; }
 die() { printf '\nRassvet: %s\n' "$*" >&2; exit 2; }
 trap 'echo "Rassvet: stopped at line $LINENO (exit $?)" >&2' ERR
 
-music=$project/local/music
-while [[ $# -gt 0 ]]; do
-  case $1 in
-    --music) [[ $# -ge 2 ]] || die "--music needs a folder"; music=$(realpath -m "$2"); shift 2 ;;
-    --no-music) music=; shift ;;
-    *) die "unknown option: $1 (use --music DIR or --no-music)" ;;
-  esac
-done
-if [[ -n $music ]]; then
-  if [[ -d $music && -n $(ls -A "$music" 2>/dev/null) ]]; then
-    say "Your music: $music ($(du -shL "$music" | cut -f1))"
-  else
-    [[ $music == "$project/local/music" ]] || die "no music in $music"
-    music=
-  fi
-fi
+CRUX_ISO=crux-3.8.iso
+CRUX_ISO_SHA256=8eebf2a58114def46b78fe4fb2afb3175d9becd583699ed2b5e9e2660521e31f
+CRUX_MIRRORS="https://ftp.spline.inf.fu-berlin.de/pub/crux/crux-3.8/iso
+https://mirrors.dotsrc.org/crux/crux-3.8/iso"
+KVER=7.3.1-rassvet
+# packages built here for the installer (and installed first on the laptop, so it has its
+# network and its kernel before anything else is compiled)
+LIVE_PORTS="linux linux-firmware networkmanager"
+
 [[ $(uname -m) == x86_64 ]] || die "an x86_64 builder is needed"
-[[ $EUID -ne 0 || -n ${RASSVET_BUILD_AS_ROOT:-} ]] || die "run as yourself; it asks for sudo when needed"
+[[ $EUID -ne 0 ]] || die "run as yourself; it asks for sudo when needed"
 sudo -v
-work=$project/build/work
-mkdir -p "$work" "$project/out"
+mkdir -p "$work" "$project/out" "$cache"
 
-say "Tools: xorriso and zstd"
-for tool in xorriso zstd; do
-  command -v $tool >/dev/null && continue
-  if command -v pacman >/dev/null; then sudo pacman -S --needed --noconfirm libisoburn zstd
-  elif command -v apt-get >/dev/null; then sudo apt-get install -y xorriso zstd
-  elif command -v dnf >/dev/null; then sudo dnf install -y xorriso zstd
-  else die "install $tool first"; fi
-done
+# --------------------------------------------------------------------- 1. tools
+say "Tools: xorriso, cpio, rsync, curl, xz"
+need=()
+for t in xorriso cpio rsync curl xz zstd depmod; do command -v $t >/dev/null || need+=("$t"); done
+if [[ ${#need[@]} -gt 0 ]]; then
+  if command -v pacman >/dev/null; then sudo pacman -S --needed --noconfirm libisoburn cpio rsync curl xz zstd kmod
+  elif command -v apt-get >/dev/null; then sudo apt-get install -y xorriso cpio rsync curl xz-utils zstd kmod
+  elif command -v dnf >/dev/null; then sudo dnf install -y xorriso cpio rsync curl xz zstd kmod
+  else die "install: ${need[*]}"; fi
+fi
 
-# --------------------------------------------------------------------- 1. Guix
-guix=/var/guix/profiles/per-user/root/current-guix/bin/guix
-if ! command -v guix >/dev/null && [[ ! -x $guix ]]; then
-  say "Guix 1.5.0 (binary release, SHA-256 checked) into /gnu and /var/guix"
-  tarball=$work/guix-binary-1.5.0.x86_64-linux.tar.xz
-  [[ -s $tarball ]] || curl -fL --retry 3 -o "$tarball" \
-    https://ftp.gnu.org/gnu/guix/guix-binary-1.5.0.x86_64-linux.tar.xz
-  echo "aa41025489c5061543e9c48873eaa829b900b2da75d40f9648913622f5f47817  $tarball" | sha256sum -c - ||
-    { rm -f "$tarball"; die "the Guix download failed its checksum (deleted; run again)"; }
-  tmp=$(mktemp -d)
-  tar --warning=no-timestamp -xf "$tarball" -C "$tmp"
-  sudo mv "$tmp/var/guix" /var/ && sudo mv "$tmp/gnu" /
-  rm -rf "$tmp"
-  sudo groupadd --system guixbuild 2>/dev/null || true
-  for i in $(seq -w 1 10); do
-    sudo useradd -g guixbuild -G guixbuild -d /var/empty -s "$(command -v nologin || echo /usr/bin/false)" \
-      -c "Guix build user $i" --system "guixbuilder$i" 2>/dev/null || true
+# --------------------------------------------------------------------- 2. CRUX's ISO
+iso_in=$cache/$CRUX_ISO
+if ! echo "$CRUX_ISO_SHA256  $iso_in" | sha256sum -c --status 2>/dev/null; then
+  say "CRUX 3.8's ISO (1.7 GB, SHA-256 checked)"
+  for m in $CRUX_MIRRORS; do
+    curl -fL --retry 3 -C - -o "$iso_in" "$m/$CRUX_ISO" && break || true
   done
-  sudo mkdir -p /root/.config/guix
-  sudo ln -sfn /var/guix/profiles/per-user/root/current-guix /root/.config/guix/current
+  echo "$CRUX_ISO_SHA256  $iso_in" | sha256sum -c - ||
+    { rm -f "$iso_in"; die "the CRUX ISO failed its checksum (deleted; run again)"; }
 fi
-command -v guix >/dev/null || guix_cmd=$guix
-guix_cmd=${guix_cmd:-guix}
-daemon=$(dirname "$(readlink -f "$(command -v "$guix_cmd" || echo "$guix")")")/guix-daemon
-[[ -x $daemon ]] || daemon=/var/guix/profiles/per-user/root/current-guix/bin/guix-daemon
-for key in /var/guix/profiles/per-user/root/current-guix/share/guix/{bordeaux,ci}.guix.gnu.org.pub \
-           "$project/guix/rassvet/files/nonguix-signing-key.pub"; do
-  [[ -f $key ]] && sudo "$guix_cmd" archive --authorize < "$key"
-done
-if ! pgrep -x guix-daemon >/dev/null; then
-  say "Starting the Guix daemon (for this build)"
-  sudo sh -c "nohup $daemon --build-users-group=guixbuild \
-    --substitute-urls='https://bordeaux.guix.gnu.org https://ci.guix.gnu.org https://substitutes.nonguix.org' \
-    >/var/log/guix-daemon-rassvet.log 2>&1 &"
-  sleep 3
+media=$cache/media
+if [[ ! -f $media/crux-media ]]; then
+  say "Unpacking the ISO's files to $media"
+  safe_rm "$media"; mkdir -p "$media"
+  xorriso -osirrox on -indev "$iso_in" -extract / "$media" 2>&1 | grep -v '^xorriso : UPDATE' || true
+  chmod -R u+w "$media"
 fi
-# the archive of the system is signed with this computer's key; the ISO trusts it
-[[ -s /etc/guix/signing-key.pub ]] || sudo "$guix_cmd" archive --generate-key
-subs="--substitute-urls=https://bordeaux.guix.gnu.org https://ci.guix.gnu.org https://substitutes.nonguix.org"
-# (RASSVET_CHANNELS_FILE: another channels file, for testing a mirror)
-tm() { "$guix_cmd" time-machine -C "${RASSVET_CHANNELS_FILE:-$project/channels.scm}" -- "$@"; }
 
-# --------------------------------------------------------------------- 2-3. the system
-cd "$project"
-say "The system (downloads about 3 GB of prebuilt packages the first time)"
-system=$(tm system build -L guix --no-grafts "$subs" build/template-config.scm | tail -n 1)
-[[ -d $system ]] || die "the system did not build"
-echo "    $system"
-# guix system init also needs GRUB and what it makes GRUB's menu with, which system build does
-# not touch: ask init itself (a dry run, into an empty folder) and build what it lists
-target=$work/init-target
-mkdir -p "$target"
-init_dry() {   # (it prints nothing when everything is already built)
-  tm system init -n -v 2 --skip-checks -L guix --no-grafts "$subs" "$1" "$target" 2>&1 |
-    tr '\r' '\n' | { grep -v '^substitute:' || true; }
+# --------------------------------------------------------------------- 3. the build root
+root=$cache/buildroot
+mounts=()
+bind() { sudo mkdir -p "$2"; mountpoint -q "$2" || { sudo mount --bind "$1" "$2"; mounts+=("$2"); }; }
+cleanup() {
+  for ((i=${#mounts[@]}-1; i>=0; i--)); do sudo umount -R "${mounts[i]}" 2>/dev/null || sudo umount -l "${mounts[i]}" 2>/dev/null || true; done
+  mounts=()
 }
-say "What installing it needs besides the system (GRUB, its menu, the initrd)"
-init_dry build/template-config.scm > "$work/template-init.log"
-mapfile -t needed < <(python3 build/offline-items.py drvs "$work/template-init.log")
-echo "    ${#needed[@]} derivations"
-[[ ${#needed[@]} -eq 0 ]] || tm build --no-grafts "$subs" "${needed[@]}" >/dev/null
-say "A second, differently answered install: what each laptop must build for itself"
-init_dry build/variant-config.scm > "$work/variant-init.log"
-grep -A40 'would be built' "$work/variant-init.log" | sed 's/^/    /' || true
-python3 build/offline-items.py items "$system" "$work/template-init.log" "$work/variant-init.log" \
-  > "$work/offline-items.txt"
-# what installing GRUB runs (the dry run lists these only while they are not yet in the store)
-tm build --no-grafts "$subs" grub-efi efibootmgr mtools efivar >> "$work/offline-items.txt"
-echo "    $(wc -l < "$work/offline-items.txt") items to carry"
+# rm -rf, but only once nothing at all is mounted inside the folder: a chroot's /dev or /sys
+# left mounted would otherwise be deleted with it
+safe_rm() {
+  local d
+  for d in "$@"; do
+    [[ -e $d ]] || continue
+    d=$(realpath "$d")
+    if awk -v p="$d/" '{ if (index($2 "/", p) == 1) found = 1 } END { exit !found }' /proc/self/mounts; then
+      awk -v p="$d/" 'index($2 "/", p) == 1 { print $2 }' /proc/self/mounts | sort -r |
+        while read -r m; do sudo umount -R "$m" 2>/dev/null || sudo umount -l "$m"; done
+    fi
+    if awk -v p="$d/" '{ if (index($2 "/", p) == 1) found = 1 } END { exit !found }' /proc/self/mounts; then
+      die "something is still mounted inside $d; not deleting it (see: findmnt -R $d)"
+    fi
+    sudo rm -rf --one-file-system "$d"
+  done
+}
+trap cleanup EXIT
+chroot_run() {   # chroot_run ROOT COMMAND: with /proc, /sys, /dev and the network inside
+  local r=$1; shift
+  bind /proc "$r/proc"; bind /sys "$r/sys"; bind /dev "$r/dev"; bind /dev/pts "$r/dev/pts"
+  sudo cp -L /etc/resolv.conf "$r/etc/resolv.conf"
+  sudo chroot "$r" /usr/bin/env -i HOME=/root TERM="${TERM:-linux}" \
+    PATH=/usr/sbin:/usr/bin:/sbin:/bin MAKEFLAGS="-j$(nproc)" /bin/sh -c "$*"
+}
+if [[ ! -f $root/.rassvet-ready ]]; then
+  say "A CRUX build root in $root: the ISO's live system, then every core package"
+  safe_rm "$root"; sudo mkdir -p "$root"
+  sudo tar -xJf "$media/rootfs.tar.xz" -C "$root"
+  bind "$media" "$root/media"
+  # the live system is only a tool here: CRUX's core goes into /target inside it
+  chroot_run "$root" 'mkdir -p /target/var/lib/pkg && touch /target/var/lib/pkg/db &&
+    for p in /media/crux/core/*.pkg.tar.xz; do pkgadd -r /target "$p" || exit 1; done'
+  cleanup
+  # the build root proper is that /target
+  safe_rm "$cache/buildroot.new"
+  sudo mv "$root/target" "$cache/buildroot.new"
+  safe_rm "$root"; sudo mv "$cache/buildroot.new" "$root"
+  sudo touch "$root/.rassvet-ready"
+fi
 
-# --------------------------------------------------------------------- 4. the archive
-say "The system archive (every store item the install needs, zstd)"
-mapfile -t closure < <("$guix_cmd" gc -R $(cat "$work/offline-items.txt") | sort -u)
-echo "    ${#closure[@]} store items, $("$guix_cmd" size "$system" 2>/dev/null | tail -n 1 | awk '{print $2, $3}')"
-sudo "$guix_cmd" archive --export "${closure[@]}" | zstd -T0 -12 -q > "$work/system.nar.zst.part"
-mv "$work/system.nar.zst.part" "$work/system.nar.zst"
-echo "    $(du -h "$work/system.nar.zst" | cut -f1)"
+# --------------------------------------------------------------------- 4. packages for the stick
+say "Building in the CRUX root: ${LIVE_PORTS} (prt-get; the kernel takes a while)"
+mkdir -p "$work/packages" "$cache/distfiles"
+bind "$media" "$root/media"
+bind "$project" "$root/usr/src/rassvet"
+bind "$work/packages" "$root/packages"
+bind "$cache/distfiles" "$root/distfiles"
+sudo install -m644 "$project/build/crux/pkgmk.conf" "$root/etc/pkgmk.conf"
+sudo install -m644 "$project/build/crux/prt-get.conf" "$root/etc/prt-get.conf"
+sudo sed -i -e 's|^PKGMK_SOURCE_DIR=.*|PKGMK_SOURCE_DIR="/distfiles"|' \
+  -e 's|^PKGMK_PACKAGE_DIR=.*|PKGMK_PACKAGE_DIR="/packages"|' \
+  -e 's|^export CFLAGS=.*|export CFLAGS="-O2 -march=x86-64-v3 -pipe"|' "$root/etc/pkgmk.conf"
+chroot_run "$root" "
+  set -e
+  for f in /etc/ports/*.inactive; do [ -e \"\$f\" ] && mv \"\$f\" \"\${f%.inactive}\"; done
+  ports -u core opt xorg contrib
+  sh /usr/src/rassvet/build/rassvet-ports sync /usr/src/rassvet /usr/ports/rassvet
+  sh /usr/src/rassvet/build/rassvet-ports verify /usr/ports/rassvet linux
+  sh /usr/src/rassvet/installer/iso-binaries /media/crux \$(prt-get quickdep $LIVE_PORTS)
+  prt-get depinst $LIVE_PORTS
+  prt-get quickdep $LIVE_PORTS > /packages/LIVE
+"
+built=$(cat "$work/packages/LIVE")
+echo "    $(echo $built | wc -w) packages for the stick"
 
-# --------------------------------------------------------------------- 5. the ISO
-say "The installer image"
-image=$(RASSVET_SIGNING_KEY=/etc/guix/signing-key.pub \
-  tm system image -t iso9660 -L guix "$subs" guix/rassvet/installer.scm | tail -n 1)
-[[ -s $image ]] || die "the installer image did not build"
+# --------------------------------------------------------------------- 5. the live system
+say "The installer's live system: CRUX's, plus the kernel, NetworkManager and the installer"
+live=$cache/live
+safe_rm "$live"; sudo mkdir -p "$live"
+sudo tar -xJf "$media/rootfs.tar.xz" -C "$live"
+bind "$work/packages" "$live/packages"
+chroot_run "$live" '
+  set -e
+  for name in $(cat /packages/LIVE); do
+    pkg=$(ls /packages/$name#*.pkg.tar.* 2>/dev/null | head -n 1)
+    [ -n "$pkg" ] || continue
+    if pkginfo -i | grep -q "^$name "; then pkgadd -u -f "$pkg"; else pkgadd -f "$pkg"; fi
+  done
+  rm -rf /lib/modules/6.*
+  depmod '"$KVER"'
+'
+cleanup
+sudo install -m755 "$project/installer/rassvet-install" "$live/usr/bin/rassvet-install"
+sudo install -m755 "$project/installer/iso-binaries" "$live/usr/bin/iso-binaries"
+sudo install -m644 "$project/installer/live-bash_profile" "$live/root/.bash_profile"
+sudo tar -C "$live" --one-file-system -cf - . | xz -T0 -6 > "$work/rootfs.tar.xz"
+safe_rm "$live"
+
+say "The initramfs: CRUX's, with the 7.3 kernel's storage and filesystem modules"
+ird=$work/initramfs.d
+safe_rm "$ird"; mkdir -p "$ird"
+(cd "$ird" && sudo cpio -idm --quiet < "$media/boot/initramfs")
+sudo rm -rf "$ird"/lib/modules/*
+modsrc=$root/lib/modules/$KVER
+for d in kernel/fs kernel/lib kernel/crypto kernel/drivers/usb kernel/drivers/scsi kernel/drivers/ata \
+         kernel/drivers/cdrom kernel/drivers/mmc kernel/drivers/block kernel/drivers/nvme \
+         kernel/drivers/hid kernel/drivers/input; do
+  [[ -d $modsrc/$d ]] && sudo mkdir -p "$ird/lib/modules/$KVER/$d" &&
+    sudo cp -a "$modsrc/$d/." "$ird/lib/modules/$KVER/$d/"
+done
+sudo cp -a "$modsrc"/modules.order "$modsrc"/modules.builtin* "$ird/lib/modules/$KVER/"
+# the initramfs's busybox modprobe reads plain modules only
+sudo find "$ird/lib/modules" -name '*.ko.zst' -exec zstd -q -d --rm {} \;
+sudo depmod -b "$ird" "$KVER"
+# the live system is bigger now: give its RAM disk room
+sudo sed -i 's/-o size=1650m/-o size=75%/' "$ird/init"
+(cd "$ird" && sudo find . | sudo cpio -o -H newc --quiet) > "$work/initramfs"
+safe_rm "$ird"
+
+# --------------------------------------------------------------------- 6. the ISO
+say "The ISO"
+rm -rf "$work/repo"
+rsync -a --exclude=/build/work --exclude=/out --exclude=/local --exclude=__pycache__ \
+  "$project/" "$work/repo/"
+cp "$media/boot/grub/grub.cfg" "$work/grub.cfg"
+sed -i -e 's/Install\/Upgrade CRUX 3.8 (UEFI mode)/Рассвет \/ Rassvet installer/' \
+  -e 's/set timeout=99/set timeout=5/' "$work/grub.cfg"
 iso=$project/out/rassvet-x86_64.iso
-[[ -z $music ]] || iso=$project/out/rassvet-personal-x86_64.iso
-extra=(-map "$work/system.nar.zst" /rassvet/system.nar.zst)
-[[ -z $music ]] || extra+=(-map "$music" /rassvet/music)
 rm -f "$iso"
-# Guix compresses the store files on the ISO (zisofs); xorriso unpacks them when it rewrites the
-# image, so they are compressed again here (a few minutes), leaving out what GRUB reads (the
-# kernel, the initrd), exactly as Guix does. The volume date is GRUB's and the initrd's way of
-# finding the stick (search --fs-uuid), so it is kept.
-uuid=$(xorriso -indev "$image" -pvd_info 2>/dev/null | sed -n 's/^Modif\. Time *: *//p')
-[[ $uuid =~ ^[0-9]{16}$ ]] || die "could not read the image's volume date (got '$uuid')"
-say "Writing $iso: the installer image, plus the offline system (recompressing the store)"
-xorriso -indev "$image" -outdev "$iso" -boot_image any replay \
-  -zisofs level=9:block_size=128k \
-  -find /gnu -type f -not -wholename '/boot/*' -not -name bzImage -not -name '*.gz' \
-    -not -name 'initrd*' -not -name '*.zst' -not -name '*.png' -not -name unicode.pf2 \
-    -exec set_filter --zisofs -- \
-  "${extra[@]}" -volume_date uuid "$uuid" -commit 2>&1 |
-  grep -v '^xorriso : UPDATE' || true
+xorriso -indev "$iso_in" -outdev "$iso" -boot_image any replay \
+  -map "$root/boot/vmlinuz-$KVER" /boot/vmlinuz \
+  -map "$work/initramfs" /boot/initramfs \
+  -map "$work/rootfs.tar.xz" /rootfs.tar.xz \
+  -map "$work/grub.cfg" /boot/grub/grub.cfg \
+  -map "$work/packages" /rassvet/packages \
+  -map "$work/repo" /rassvet/repo \
+  -commit 2>&1 | grep -v '^xorriso : UPDATE' || true
 [[ -s $iso ]] || die "xorriso wrote no ISO"
 (cd "$project/out" && sha256sum "$(basename "$iso")" > "$(basename "$iso").sha256")
 say "Done: $iso ($(du -h "$iso" | cut -f1))"
+echo "    Write it to a USB stick (dd, Ventoy or Rufus), Secure Boot off, boot it in UEFI mode."

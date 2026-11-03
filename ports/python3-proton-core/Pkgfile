@@ -1,0 +1,15 @@
+# Description: Proton's API core library (for the Proton VPN app)
+# URL: https://github.com/ProtonVPN/python-proton-core
+# Maintainer: Rassvet
+# Depends on: python3-aiohttp python3-bcrypt python3-build python3-gnupg python3-installer python3-pyopenssl python3-requests python3-setuptools
+
+name=python3-proton-core
+version=0.7.4
+release=1
+source=(https://github.com/ProtonVPN/python-proton-core/archive/v$version/python-proton-core-$version.tar.gz)
+
+build() {
+	cd python-proton-core-$version
+	/usr/bin/python3 -m build --wheel --skip-dependency-check --no-isolation
+	/usr/bin/python3 -m installer --compile-bytecode 2 --destdir=$PKG dist/*.whl
+}

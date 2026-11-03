@@ -23,7 +23,7 @@ From Constellation (and Kirin before it). `rassvet-russian path` lays out the ro
 | `ru-reading` | ~6 GB | Kiwix | Kiwix's SHA-256 |
 | `ru-audiobooks` | ~5 GB | content mirror, else the Internet Archive | mirror checksums, else the Archive's MD5 and SHA-1 |
 
-Downloads go to `/var/lib/rassvet/russian`, the model to `/var/lib/rassvet/russian/tutor`. llama.cpp's server runs it as the Shepherd service `rassvet-tutor` (as `nobody`, listening on 127.0.0.1 only, log in `/var/log/rassvet-tutor.log`); it starts once the model is downloaded and at every boot after, and `sudo rassvet-content remove ai-tutor` stops it and deletes the model. Interrupted downloads resume.
+Downloads go to `/var/lib/rassvet/russian`, the model to `/var/lib/rassvet/russian/tutor`. llama.cpp's server runs it as the service `/etc/rc.d/rassvet-tutor` (as `nobody`, listening on 127.0.0.1 only, log in `/var/log/rassvet-tutor.log`); it starts once the model is downloaded and at every boot after (it is in `SERVICES` in `/etc/rc.conf`), and `sudo rassvet-content remove ai-tutor` stops it and deletes the model. Interrupted downloads resume.
 
 *Между нами* (University of Kansas) is CC BY-NC-ND: it is copied for your personal use on your own computer and never mirrored. The course library is US government work (public domain), the audiobooks are LibriVox (public domain), the voices are MIT, and the word list is CC BY-SA 4.0 (`VOCAB-SOURCES.md`).
 

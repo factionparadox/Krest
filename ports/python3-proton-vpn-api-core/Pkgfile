@@ -1,0 +1,28 @@
+# Description: Proton VPN's core API, with its Rust platform library and WireGuard helper
+# URL: https://github.com/ProtonVPN/python-proton-vpn-api-core
+# Maintainer: Rassvet
+# Depends on: networkmanager networkmanager-openvpn python3-build python3-cairo python3-cryptography python3-dbus-fast python3-distro python3-fido2 python3-gobject python3-installer python3-jinja2 python3-packaging python3-proton-core python3-pynacl python3-sentry-sdk python3-setuptools rust
+
+name=python3-proton-vpn-api-core
+version=5.8.3
+_protun=2.2.1
+release=1
+source=(https://github.com/ProtonVPN/python-proton-vpn-api-core/archive/v$version/python-proton-vpn-api-core-$version.tar.gz
+	https://github.com/ProtonVPN/protun/archive/v$_protun/protun-$_protun.tar.gz)
+
+build() {
+	cd python-proton-vpn-api-core-$version
+	rm -rf dependencies/protun
+	mv $SRC/protun-$_protun dependencies/protun
+	# cargo fetches the crates Cargo.lock pins (--locked), then builds offline from them
+	cargo build --release --locked --no-default-features \
+		--features "python,core,local_agent,protun,telemetry" --bin nm-protun-service --lib
+	install -Dm755 target/release/libproton_vpn_platform.so proton/vpn/platform.abi3.so
+	/usr/bin/python3 -m build --wheel --skip-dependency-check --no-isolation
+	/usr/bin/python3 -m installer --compile-bytecode 2 --destdir=$PKG dist/*.whl
+	install -Dm755 target/release/nm-protun-service $PKG/usr/lib/networkmanager/nm-protun-service
+	sed -e 's|^program=.*|program=/usr/lib/networkmanager/nm-protun-service|' -e '/^SystemdService=/d' \
+		resources/nm-protun.name > nm-protun.name
+	install -Dm644 nm-protun.name $PKG/usr/lib/NetworkManager/VPN/nm-protun.name
+	install -Dm644 resources/nm-protun-service.conf $PKG/usr/share/dbus-1/system.d/nm-protun-service.conf
+}

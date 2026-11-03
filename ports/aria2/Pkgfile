@@ -1,0 +1,18 @@
+# Description: Fast downloads over HTTP, BitTorrent and more (ani-cli uses it)
+# URL: https://aria2.github.io/
+# Maintainer: Rassvet
+# Depends on: c-ares libxml2 openssl sqlite3 zlib
+
+name=aria2
+version=1.37.0
+release=1
+source=(https://github.com/aria2/aria2/releases/download/release-$version/$name-$version.tar.xz)
+
+build() {
+	cd $name-$version
+	./configure --prefix=/usr --with-openssl --without-gnutls --with-ca-bundle=/etc/ssl/cert.pem \
+		--disable-nls
+	make
+	make DESTDIR=$PKG install
+	rm -rf $PKG/usr/share/doc $PKG/usr/share/locale
+}

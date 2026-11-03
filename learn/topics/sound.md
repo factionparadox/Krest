@@ -1,22 +1,23 @@
 # Sound: PipeWire
 
-PipeWire carries all audio. It runs as YOUR program, not as a system service: system.scm
-installs pipewire, wireplumber (which picks devices and remembers volumes) and pipewire-pulse
-(for programs that expect PulseAudio, Firefox among them), and they run inside your session,
-using the session's D-Bus and the XDG_RUNTIME_DIR elogind makes.
-
-Nothing in system.scm starts them. If  pgrep -a pipewire  shows nothing after logging in, start
-all three from ~/.config/rassvet/autostart (an executable script the session runs):
-    #!/bin/sh
-    pipewire & sleep 1 ; wireplumber & pipewire-pulse &
+PipeWire carries all audio. It runs as YOUR program, not as a system service: rassvet-session
+starts the three pieces when you log in, and they stop when the session ends:
+    pipewire          the server
+    wireplumber       picks devices and remembers volumes
+    pipewire-pulse    for programs that expect PulseAudio, Firefox among them
+They use the session's D-Bus (dbus-run-session) and your XDG_RUNTIME_DIR, /run/user/UID, which
+the dumb_runtime_dir PAM module makes at login (there is no elogind to do it). The PulseAudio
+daemon itself is installed for its libraries but never starts (autospawn = no in
+/etc/pulse/client.conf.d/50-rassvet.conf).
 
 The Framework's speakers and microphones sit behind Intel's audio DSP, run by the kernel's SOF
 and SoundWire drivers with firmware from linux-firmware.
 
 ## Use
-    the volume and mute keys          (pamixer, bound in ratpoison)
+    the volume and mute keys          (wpctl, bound in ratpoison)
     Ctrl+Super+m                      pulsemixer: per-program volumes, inputs, outputs
-    pamixer --get-volume ; pamixer --list-sinks
+    wpctl set-volume @DEFAULT_AUDIO_SINK@ 50%
+The volume keys run wpctl, WirePlumber's own tool: it changes the default output (or input).
 
 ## Look
     pgrep -a pipewire ; pgrep -a wireplumber

@@ -1,0 +1,15 @@
+# Description: Waits for clipboard changes (used by clipmenu)
+# URL: https://github.com/cdown/clipnotify
+# Maintainer: Rassvet
+# Depends on: xorg-libxfixes
+
+name=clipnotify
+version=1.0.2
+release=1
+source=(https://github.com/cdown/$name/archive/$version/$name-$version.tar.gz)
+
+build() {
+	cd $name-$version
+	make
+	install -Dm755 clipnotify $PKG/usr/bin/clipnotify
+}

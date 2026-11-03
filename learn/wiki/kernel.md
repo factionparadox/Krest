@@ -1,49 +1,55 @@
 # Kernel
 
 ## Which kernel
-Guix's own kernel is linux-libre: Linux with every driver that needs non-free firmware taken
-out, and that includes this laptop's Wi-Fi. Rassvet's system.scm uses Nonguix instead:
-  (kernel linux)               Nonguix's linux: the newest stable series, unmodified
-  (firmware (list linux-firmware))
-  (initrd microcode-initrd)    Guix's initrd with Intel's microcode in front
-Nonguix also packages long-term series (linux-lts and versioned ones such as linux-6.12); a
-different kernel is one field in /etc/config.scm (see: system).
+CRUX expects you to build your own kernel. Rassvet's is a port, so prt-get builds and updates
+it like any other: ports/linux in the repository.
+  source       kernel.org's linux-7.3.1.tar.xz, base.config and rassvet.config
+  base.config  Arch Linux's configuration for the same series: every driver a laptop may
+               need, mostly as modules
+  rassvet.config  Rassvet's changes, merged on top (scripts/kconfig/merge_config.sh, then
+               make olddefconfig): LOCALVERSION -rassvet; no debug information, no BTF, no
+               Rust; modules not signed; NVMe, VMD, XFS and VFAT built in; SELinux off,
+               LSMs landlock, lockdown, yama, integrity
+  build        make bzImage modules, with every core
+  installs     /boot/vmlinuz-7.3.1-rassvet, System.map-7.3.1-rassvet, config-7.3.1-rassvet,
+               /lib/modules/7.3.1-rassvet
+  post-install dracut --early-microcode for /boot/initramfs-7.3.1-rassvet.img, then
+               grub-mkconfig
+The ISO's installer runs the same kernel, built ahead on the build machine.
 
   uname -r                              the running kernel
-  guix show linux                       the version your guix would install now
-  ls -l /run/current-system/kernel      the running generation's kernel, in the store
+  prt-get info linux                    the version the port offers now
+  less /boot/config-$(uname -r)         its full configuration
 
 ## Updates and old kernels
-A kernel update arrives with rassvet-update like everything else: the new generation has the
-new kernel, and runs it after a reboot. Every older generation keeps the kernel it was built
-with, so GRUB's "old configurations" menu is also the list of older kernels. They stay on the
-disk as long as a generation uses them:
-  guix system list-generations           each generation (and its kernel)
-  sudo guix system delete-generations 1m  drop the old ones once the new kernel has done well
-  sudo guix gc                            free their space
-Kernel builds are large: Nonguix's substitute server provides them, so a kernel update is a
-download, not an hour of compiling.
+A new version of the port arrives with rassvet-update; prt-get sysup builds it, pkgadd -u
+replaces the old kernel's files with the new one's, and post-install remakes the initramfs and
+menu. Restart to run it. The previous kernel is gone from /boot and /lib/modules (its old
+initramfs file stays until you delete it); its package file is still in /usr/ports/packages:
+  sudo pkgadd -u -f /usr/ports/packages/linux#7.3.1-1.pkg.tar.zst
+then the dracut and grub-mkconfig lines from post-install by hand (see: boot), and
+sudo prt-get lock linux until the problem is solved. There is no "old kernels" menu in GRUB.
+
+## Your own configuration
+Copy the port to a collection of your own (see: pkgfiles), change rassvet.config there (one
+CONFIG_ line per change; make menuconfig in an unpacked tree helps you find the names), run
+sudo pkgmk -um in it and sudo prt-get update linux. Keep LOCALVERSION, or change the -rassvet
+in post-install and the Pkgfile's install lines to match.
 
 ## Modules
   lsmod                           loaded modules
   modinfo iwlwifi                 what a module is, its options
   sudo modprobe NAME              load one now
-udev loads drivers for the hardware it finds. In the declaration:
-  kernel-loadable-modules         extra (out-of-tree) modules, built for this kernel
-  kernel-module-loader-service-type   modules to load at every boot
-  kernel-arguments                options at boot: "snd_hda_intel.power_save=1",
-                                  "modprobe.blacklist=pcspkr"
-  initrd-modules                  what the initrd loads to reach the root
-Rassvet blacklists cros_usbpd_charger in /etc/modprobe.d/rassvet-framework.conf, a file
-system.scm writes (see: framework).
+udev loads drivers for the hardware it finds. Options and blacklists go in /etc/modprobe.d
+(Rassvet blacklists cros_usbpd_charger in rassvet-framework.conf: see: framework); modules
+to load at every boot go in /etc/rc.modules.
 
 ## Out-of-tree modules
-Guix has no DKMS: a module from outside the kernel is a package built against the kernel
-package, listed in kernel-loadable-modules; reconfigure builds it for each new kernel. Guix
-and Nonguix package some (v4l2loopback-linux-module, for example); guix search module finds them.
+There is no DKMS: a module from outside the kernel is a port that builds against
+/lib/modules/$(uname -r)/build. Rassvet's linux port removes that link to save space, so such a
+port needs your own kernel port that keeps the build tree.
 
 ## Kernel messages
   sudo dmesg ; sudo dmesg -w ; sudo dmesg --level=err,warn
 
-See also: boot, firmware ; info "(guix) operating-system Reference" ;
-info "(guix) Linux Services" ; https://gitlab.com/nonguix/nonguix ; https://docs.kernel.org/
+See also: boot, firmware ; rassvet-handbook (the kernel chapter) ; https://docs.kernel.org/

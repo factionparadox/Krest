@@ -1,0 +1,17 @@
+# Description: D-Bus bindings for Python (dbus-python; for the Proton VPN app)
+# URL: https://dbus.freedesktop.org/doc/dbus-python/
+# Maintainer: Rassvet
+# Depends on: dbus glib python3
+
+name=python3-dbus
+version=1.5.1
+release=1
+source=(https://files.pythonhosted.org/packages/source/d/dbus-python/dbus_python-$version.tar.gz)
+
+build() {
+	meson setup dbus_python-$version build --prefix=/usr --buildtype=plain \
+		-D python=/usr/bin/python3 -D tests=false
+	meson compile -C build
+	DESTDIR=$PKG meson install -C build
+	rm -rf $PKG/usr/share/doc
+}

@@ -1,0 +1,15 @@
+# Description: Mounts USB sticks and drives when they are plugged in, with a notification
+# URL: https://github.com/coldfix/udiskie
+# Maintainer: Rassvet
+# Depends on: libnotify python3-build python3-docopt python3-gobject python3-installer python3-pyyaml python3-setuptools udisks2
+
+name=udiskie
+version=2.7.0
+release=1
+source=(https://files.pythonhosted.org/packages/source/u/udiskie/udiskie-$version.tar.gz)
+
+build() {
+	cd udiskie-$version
+	/usr/bin/python3 -m build --wheel --skip-dependency-check --no-isolation
+	/usr/bin/python3 -m installer --compile-bytecode 2 --destdir=$PKG dist/*.whl
+}

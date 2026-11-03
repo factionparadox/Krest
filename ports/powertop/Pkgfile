@@ -1,0 +1,18 @@
+# Description: What uses the battery, and power-saving tunables (System menu: Battery report)
+# URL: https://github.com/fenrus75/powertop
+# Maintainer: Rassvet
+# Depends on: autoconf-archive libnl ncurses pciutils
+
+name=powertop
+version=2.15
+release=1
+source=(https://github.com/fenrus75/powertop/archive/v$version/powertop-$version.tar.gz)
+
+build() {
+	cd powertop-$version
+	./autogen.sh
+	./configure --prefix=/usr --sbindir=/usr/sbin --disable-nls
+	make
+	make DESTDIR=$PKG install
+	rm -rf $PKG/usr/share/bash-completion
+}

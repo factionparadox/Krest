@@ -1,0 +1,17 @@
+# Description: Rassvet's desktop: the ratpoison session, menus, keys, bar, scripts and settings
+# URL: https://github.com/factionparadox/Pustota
+# Maintainer: Rassvet
+# Depends on: brightnessctl dmenu dunst feh fontconfig libnotify maim nftables polybar ratpoison redshift slock sudo x-terminal xbanish xclip xorg-xrdb xorg-xset xorg-xsetroot xss-lock clipmenu
+
+name=rassvet-desktop
+version=@VERSION@
+release=@RELEASE@
+# made from this repository's desktop/root by build/rassvet-ports
+source=(rassvet-desktop-$version.tar.gz)
+
+build() {
+	cp -a root/. $PKG/
+	sed -i "s/@VERSION@/$version/" $PKG/etc/xdg/fastfetch/config.jsonc.in
+	mv $PKG/etc/xdg/fastfetch/config.jsonc.in $PKG/etc/xdg/fastfetch/config.jsonc
+	chmod 440 $PKG/etc/sudoers.d/rassvet
+}

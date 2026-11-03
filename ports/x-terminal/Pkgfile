@@ -1,0 +1,27 @@
+# Description: X-терминал: Rassvet's terminal (st with scrollback, Plan 9 look)
+# URL: https://github.com/bakkeby/st-flexipatch
+# Maintainer: Rassvet
+# Depends on: fontconfig freetype xorg-libxft font-go
+
+name=x-terminal
+version=0.9.3
+_commit=9c733c4b78bf3a145f25a737beac38c52ad63b76
+release=1
+source=(https://github.com/bakkeby/st-flexipatch/archive/$_commit/st-flexipatch-$_commit.tar.gz
+	config.h patches.h)
+
+build() {
+	cd st-flexipatch-$_commit
+	# patches.h picks the patches; config.h is the look and the keys
+	cp $SRC/config.h $SRC/patches.h .
+	# the window's name and class: X-терминал, not st
+	sed -i -e 's/(opt_line || !opt_cmd) ? "st" : opt_cmd\[0\]/(opt_line || !opt_cmd) ? "X-терминал" : opt_cmd[0]/' \
+		-e 's/opt_name ? opt_name : "st"/opt_name ? opt_name : "x-terminal"/' x.c
+	sed -i "/^CFLAGS/s/-Os/$CFLAGS/" config.mk
+	make PREFIX=/usr TERMINFO=$PKG/usr/share/terminfo
+	install -d $PKG/usr/share/terminfo
+	make DESTDIR=$PKG PREFIX=/usr TERMINFO=$PKG/usr/share/terminfo install
+	# installed as x-terminal, so it never clashes with any other st
+	mv $PKG/usr/bin/st $PKG/usr/bin/x-terminal
+	mv $PKG/usr/share/man/man1/st.1 $PKG/usr/share/man/man1/x-terminal.1
+}

@@ -1,0 +1,96 @@
+#!/bin/sh
+# rassvet-ports: Rassvet's own port collection, from this repository to /usr/ports/rassvet,
+# with every source checked before prt-get may build it.
+#
+#   rassvet-ports sync REPO [DEST]   copy REPO/ports to DEST (default /usr/ports/rassvet),
+#                                    make Rassvet's own source tarballs from REPO, and stamp
+#                                    each port's version
+#   rassvet-ports verify [DEST [PORT...]]  download every source (of every port, or of the
+#                                    PORTs named) and check it against the port's sha256
+#                                    file, then write the .md5sum pkgmk checks
+#
+# Each port's sha256 file lists "HASH  FILE" for every source. Most hashes are pinned in the
+# repository. A "-" means the source is a GitHub archive that could not be pinned when the port
+# was written: its hash is recorded the first time it is downloaded (in /var/lib/rassvet/
+# sources.sha256) and every later download must match it.
+set -eu
+DEST_DEFAULT=/usr/ports/rassvet
+LOCK=${RASSVET_SOURCES_LOCK:-/var/lib/rassvet/sources.sha256}
+die() { echo "rassvet-ports: $*" >&2; exit 1; }
+
+# the release number of a port made from REPO: how many commits changed those folders
+release_of() { git -c safe.directory="*" -C "$1" rev-list --count HEAD -- $2 2>/dev/null || echo 1; }
+
+pack() {   # pack REPO DEST PORT VERSION DIR... : DIRs of REPO into DEST/PORT/PORT-VERSION.tar.gz
+	p_from=$1 p_to=$2 p_port=$3 p_ver=$4; shift 4
+	tar -C "$p_from" --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner \
+		--exclude=__pycache__ --exclude='*.pyc' -cf - "$@" | gzip -n > "$p_to/$p_port/$p_port-$p_ver.tar.gz"
+	(cd "$p_to/$p_port" && sha256sum "$p_port-$p_ver.tar.gz" > sha256)
+}
+
+sync() {
+	repo=$(cd "${1:?usage: rassvet-ports sync REPO [DEST]}" && pwd) dest=${2:-$DEST_DEFAULT}
+	[ -d "$repo/ports" ] || die "$repo has no ports folder"
+	version=$(cat "$repo/VERSION")
+	mkdir -p "$dest"
+	# keep what pkgmk writes in each port (footprints, checksums) across syncs
+	rsync -a --delete --filter='P .footprint' --filter='P .md5sum' "$repo/ports/" "$dest/"
+	# the desktop's root folder goes into its tarball as root/
+	tmp=$(mktemp -d)
+	cp -a "$repo/desktop/root" "$tmp/root"
+	pack "$tmp" "$dest" rassvet-desktop "$version" root
+	rm -rf "$tmp"
+	pack "$repo" "$dest" rassvet-learn "$version" learn
+	pack "$repo" "$dest" rassvet-russian "$version" russian
+	for port in rassvet-desktop:desktop rassvet-learn:learn rassvet-russian:russian rassvet:ports; do
+		name=${port%%:*}
+		sed -i -e "s/@VERSION@/$version/" -e "s/@RELEASE@/$(release_of "$repo" "${port#*:} VERSION")/" \
+			"$dest/$name/Pkgfile"
+	done
+	echo "rassvet-ports: $(ls "$dest" | wc -l) ports in $dest (Rassvet $version)"
+}
+
+verify() {
+	dest=${1:-$DEST_DEFAULT}
+	[ $# -gt 0 ] && shift
+	only=" $* "
+	# where pkgmk puts downloads (its config refers to $name, and runs nproc)
+	PKGMK_SOURCE_DIR=$(name=x; PKGMK_ARCH=64; [ -r /etc/pkgmk.conf ] && . /etc/pkgmk.conf; echo "${PKGMK_SOURCE_DIR:-}")
+	mkdir -p "$(dirname "$LOCK")"
+	touch "$LOCK"
+	failed=
+	for dir in "$dest"/*/; do
+		port=$(basename "$dir")
+		[ "$only" = "  " ] || case "$only" in *" $port "*) ;; *) continue ;; esac
+		[ -f "$dir/sha256" ] || continue
+		(cd "$dir" && pkgmk -do >/dev/null) || { echo "  $port: download failed" >&2; failed="$failed $port"; continue; }
+		while read -r want file; do
+			[ -n "$file" ] || continue
+			path=$dir/$file
+			[ -f "$path" ] || path=${PKGMK_SOURCE_DIR:-$dir}/$file
+			[ -f "$path" ] || { echo "  $port: $file missing" >&2; failed="$failed $port"; continue; }
+			got=$(sha256sum "$path" | cut -d' ' -f1)
+			if [ "$want" = - ]; then
+				want=$(awk -v k="$port/$file" '$2 == k { print $1 }' "$LOCK")
+				if [ -z "$want" ]; then
+					echo "$got  $port/$file" >> "$LOCK"
+					echo "  $port: $file recorded (first download): $got"
+					continue
+				fi
+			fi
+			if [ "$got" != "$want" ]; then
+				echo "  $port: $file DOES NOT MATCH its checksum (expected $want, got $got)" >&2
+				failed="$failed $port"
+			fi
+		done < "$dir/sha256"
+		case " $failed " in *" $port "*) ;; *) (cd "$dir" && pkgmk -um >/dev/null) ;; esac
+	done
+	[ -z "$failed" ] || die "not verified:$failed"
+	echo "rassvet-ports: every source checked"
+}
+
+case "${1:-}" in
+	sync) shift; sync "$@" ;;
+	verify) shift; verify "$@" ;;
+	*) sed -n '2,16s/^# \{0,1\}//p' "$0"; exit 2 ;;
+esac

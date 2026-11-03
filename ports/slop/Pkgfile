@@ -1,0 +1,16 @@
+# Description: Select a screen area with the mouse (for maim)
+# URL: https://github.com/naelstrof/slop
+# Maintainer: Rassvet
+# Depends on: glm icu xorg-libxext xorg-libxrender
+
+name=slop
+version=7.7
+release=1
+source=(https://github.com/naelstrof/slop/archive/v$version/slop-$version.tar.gz)
+
+build() {
+	cmake -S slop-$version -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr \
+		-DCMAKE_BUILD_TYPE=Release -DSLOP_OPENGL=OFF
+	cmake --build build
+	DESTDIR=$PKG cmake --install build
+}

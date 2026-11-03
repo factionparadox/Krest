@@ -1,0 +1,16 @@
+# Description: Intel graphics memory management library (for the video driver)
+# URL: https://github.com/intel/gmmlib
+# Maintainer: Rassvet
+
+name=intel-gmmlib
+version=22.10.2
+release=1
+source=(https://github.com/intel/gmmlib/archive/intel-gmmlib-$version/gmmlib-$version.tar.gz)
+
+build() {
+	cmake -S gmmlib-intel-gmmlib-$version -B build -G Ninja \
+		-DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib -DCMAKE_BUILD_TYPE=Release \
+		-DRUN_TEST_SUITE=OFF
+	cmake --build build
+	DESTDIR=$PKG cmake --install build
+}

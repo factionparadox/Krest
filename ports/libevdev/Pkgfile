@@ -1,0 +1,15 @@
+# Description: Wrapper library for evdev devices (needed by thermald)
+# URL: https://www.freedesktop.org/wiki/Software/libevdev/
+# Maintainer: Rassvet
+
+name=libevdev
+version=1.14.0
+release=1
+source=(https://www.freedesktop.org/software/$name/$name-$version.tar.xz)
+
+build() {
+	meson setup $name-$version build --prefix=/usr --buildtype=plain \
+		-D tests=disabled -D documentation=disabled
+	meson compile -C build
+	DESTDIR=$PKG meson install -C build
+}

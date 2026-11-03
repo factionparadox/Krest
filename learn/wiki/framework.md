@@ -14,42 +14,40 @@ Series 3 ("Panther Lake") processors.
   Touchpad    haptic (no moving parts; the click is a vibration)
 Check yours: lscpu ; lspci -nn
 
-## What it needs, and what Rassvet sets (system.scm)
-  a new kernel      Panther Lake needs a recent one (Framework recommends the newest), with
-                    the drivers linux-libre removes: Nonguix's linux (see: kernel)
-  firmware          linux-firmware, and the CPU microcode through microcode-initrd
-                    (see: firmware)
-  fwupd             BIOS and embedded-controller updates (fwupdtool); Framework publishes them
-                    on the LVFS
-  fprintd           the fingerprint reader (fprintd-service-type)
+## What it needs, and what Rassvet sets
+  a new kernel      Panther Lake needs a recent one (Framework recommends the newest): the
+                    linux port, 7.3.1, built here (see: kernel)
+  firmware          linux-firmware, and the CPU microcode (intel-ucode) through dracut's
+                    --early-microcode (see: firmware)
+  framework_tool    the embedded controller: charge limit, keyboard light, touchscreen,
+                    the haptic click force, firmware versions (see: firmware)
+  -march=native     everything is compiled for this processor (/etc/pkgmk.conf)
 
 From nixos-hardware's module for this board (framework/13-inch/intel-core-ultra-series3,
 which includes the common Framework 13 and Intel settings), Rassvet also sets:
   nvme.noacpi=1     kernel argument: lower SSD power use, also while suspended
                     (check: cat /proc/cmdline)
-  weekly TRIM       fstrim-service-type, an mcron job (see: time)
   blacklist cros_usbpd_charger   its USB-C charger driver would wake the laptop
-                    (/etc/modprobe.d/rassvet-framework.conf, written by system.scm)
-  Ethernet card     the Expansion Card (Realtek 0bda:8156) suspends when idle (a udev rule,
-                    50-rassvet-framework.rules, declared with udev-rules-service)
+                    (/etc/modprobe.d/rassvet-framework.conf, from rassvet-desktop)
   TLP               battery tuning (nixos-hardware uses TLP too unless another tuner is on)
 
 Tools for this laptop (menu: System):
   rassvet-sleepcheck    does sleep reach S0ix? (suspends for a minute)
-  powertop              where the watts go
 Rassvet's own battery settings for this panel and chip (rassvet-learn learn power): 60 Hz on
 battery (120 on the charger), earlier screen blanking, GPU video decoding in mpv and Firefox,
 Wi-Fi power saving kept on.
 
 ## Not on Rassvet
-  framework_tool    Framework's EC tool (touchscreen off, keyboard light, haptic click force,
-                    charge limit): not packaged for Guix; the menu hides its entries
-  intel_lpmd        Intel's low-power daemon for these hybrid chips: not packaged for Guix
+  fprintd           the fingerprint reader: not included, so there is no fingerprint login
+                    or sudo (the menu's fingerprint entry stays hidden)
+  fwupd             firmware updates from the LVFS (see: firmware)
+  intel_lpmd        Intel's low-power daemon for these hybrid chips: not included
   iio-sensor-proxy  the ambient light sensor; only GNOME and KDE use it for automatic
                     brightness, and ratpoison has nothing to read it
-  framework-laptop-kmod   a community kernel module exposing the EC in /sys; not packaged
+  framework-laptop-kmod   a community kernel module exposing the EC in /sys; not included
   speaker tuning    nixos-hardware's equaliser preset is for the classic 13's speakers; it says
                     the 13 Pro needs different tuning, and none is published yet
+  weekly TRIM       not scheduled (see: filesystems)
   Secure Boot       must stay off: the kernel and GRUB are not signed, and hibernation needs it off
 
 ## Known issues (community reports, autumn 2026)
@@ -63,11 +61,11 @@ Wi-Fi power saving kept on.
   for larger text set  Xft.dpi: 192  in ~/.Xresources and log in again (see: graphics).
 
 ## Updating the firmware
-    sudo fwupdtool refresh ; sudo fwupdtool get-updates ; sudo fwupdtool update
-On the charger, with Secure Boot off as usual. Framework's release notes for this board are on
-the LVFS and in their knowledge base.
+sudo fwupdtool refresh ; sudo fwupdtool get-updates  (the System menu's "Firmware updates")
+lists what the LVFS has for this laptop. Framework also publishes BIOS updates with their own
+instructions in their knowledge base; check the result with  sudo framework_tool --versions.
 
-See also: firmware, kernel, graphics, filesystems, elogind (hibernation) ;
+See also: firmware, kernel, graphics, filesystems, sleep (hibernation) ;
 https://github.com/NixOS/nixos-hardware/tree/master/framework/13-inch/intel-core-ultra-series3 ;
 https://github.com/FrameworkComputer/linux-docs ; https://frame.work/laptop13pro ;
 https://community.frame.work/

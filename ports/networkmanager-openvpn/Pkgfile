@@ -1,0 +1,18 @@
+# Description: NetworkManager's OpenVPN plugin (for the Proton VPN app)
+# URL: https://gitlab.gnome.org/GNOME/NetworkManager-openvpn
+# Maintainer: Rassvet
+# Depends on: networkmanager openvpn
+
+name=networkmanager-openvpn
+version=1.12.5
+release=1
+source=(https://download.gnome.org/sources/NetworkManager-openvpn/${version%.*}/NetworkManager-openvpn-$version.tar.xz)
+
+build() {
+	cd NetworkManager-openvpn-$version
+	./configure --prefix=/usr --sysconfdir=/etc --libexecdir=/usr/lib/networkmanager \
+		--without-gnome --without-gtk4 --disable-nls
+	make
+	make DESTDIR=$PKG install
+	rm -rf $PKG/usr/share/doc
+}

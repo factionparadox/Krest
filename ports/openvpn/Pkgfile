@@ -1,0 +1,18 @@
+# Description: OpenVPN (the Proton VPN app's OpenVPN connections)
+# URL: https://openvpn.net/
+# Maintainer: Rassvet
+# Depends on: libcap-ng libnl linux-pam lz4 lzo openssl
+
+name=openvpn
+version=2.7.8
+release=1
+source=(https://github.com/OpenVPN/openvpn/releases/download/v$version/$name-$version.tar.gz)
+
+build() {
+	cd $name-$version
+	./configure --prefix=/usr --sbindir=/usr/sbin --sysconfdir=/etc --disable-systemd \
+		--enable-x509-alt-username
+	make
+	make DESTDIR=$PKG install
+	rm -rf $PKG/usr/share/doc
+}

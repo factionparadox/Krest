@@ -1,29 +1,32 @@
-# Shepherd: services
+# Services: BSD-style rc scripts
 
-GNU Shepherd is Guix System's init (process 1) and service manager, written in Guile Scheme like
-Guix. You do not enable or disable services by hand: each one is declared in the operating
-system (system.scm, plus anything you add in /etc/config.scm), and guix system reconfigure
-works out what Shepherd should run. Removing a service from the declaration removes it from the
-next generation; rolling back brings it back.
+CRUX's init is SysVinit's init, process 1, run in the BSD style: there are no runlevel
+folders of links, only a few shell scripts. /etc/inittab says what init runs: /etc/rc at boot
+(filesystems, hostname, keymap, the system log), then /etc/rc.multi, which starts every
+service named in SERVICES in /etc/rc.conf, in that order, then /etc/rc.local. At shutdown
+/etc/rc.shutdown stops them in reverse order.
 
-    sudo herd status                  every service: started, stopped, failing
-    sudo herd status NetworkManager   one, with its process and recent messages
-    sudo herd restart NetworkManager  also: start, stop
-    sudo herd doc rassvet-tutor       what a service is for
+A service is a script in /etc/rc.d that takes start, stop, restart and (usually) status.
+Packages install their own; you do not enable anything except by listing it in SERVICES.
 
-herd talks to the running Shepherd; changes made with it last until the next boot or
-reconfigure. Reconfigure starts new services, but does not restart running ones that changed:
-sudo herd restart NAME, or a reboot, picks up their new version.
+    cat /etc/rc.conf                       SERVICES=(...) is what starts at boot
+    ls /etc/rc.d                           every service script installed
+    sudo /etc/rc.d/networkmanager status   one service (the scripts are short: read them)
+    sudo /etc/rc.d/networkmanager restart  also: start, stop
+To start one at every boot, add its name to SERVICES (after anything it needs, such as dbus);
+to stop that, take it out. Changes made with the script itself last until the next boot.
 
-## Rassvet's services
-dbus (messages between programs) · elogind (sessions, suspend, lid) · NetworkManager and
-wpa-supplicant (Wi-Fi) · bluetooth · ntpd (clock) · nftables (firewall) · tlp (battery
-tuning) · thermald (heat) · zram (compressed swap in RAM) · earlyoom (stops a runaway program
-before memory runs out) · mcron (scheduled jobs: the weekly TRIM) · guix-daemon (builds and
-downloads for guix) · udev · the system log · the text consoles, tty1 being ly ·
-rassvet-tutor (once the model is downloaded).
-Some pieces are not Shepherd services: polkit, upower, udisks and fprintd start when D-Bus asks
-for them; slock is a setuid program; gnome-keyring is a PAM module and a program the session
-starts.
+## Rassvet's services (SERVICES in /etc/rc.conf)
+lo (the loopback interface) · crond (scheduled jobs) · dbus (messages between programs) ·
+networkmanager (Wi-Fi, Ethernet, VPNs) · acpid (the lid and the power button: rassvet-sleep) ·
+tlp (battery tuning) · thermald (heat) · bluetoothd · chronyd (the clock) · rassvet-firewall
+(nftables) · rassvet-tutor (the Russian tutor, once its model is downloaded).
+/etc/rc itself starts udev and the system log; inittab starts ly on tty1 and text logins on
+the other consoles. Some pieces are not services at all: polkit, upower and udisks start when
+D-Bus asks for them; slock is a setuid program; gnome-keyring and PipeWire run inside your
+session.
 
-References: info shepherd ; info "(guix) Services" ; man herd ; rassvet-learn wiki shepherd
+## Shutting down
+    sudo poweroff ; sudo reboot            no password needed (/etc/sudoers.d/rassvet)
+
+References: man init ; man inittab ; rassvet-handbook ; rassvet-learn wiki rc

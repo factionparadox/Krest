@@ -1,0 +1,15 @@
+# Description: Python wrapper for GnuPG (for the Proton VPN app)
+# URL: https://pypi.org/project/python_gnupg/
+# Maintainer: Rassvet
+# Depends on: gnupg python3-build python3-installer python3-setuptools
+
+name=python3-gnupg
+version=0.5.7
+release=1
+source=(https://files.pythonhosted.org/packages/source/p/python-gnupg/python_gnupg-$version.tar.gz)
+
+build() {
+	cd python_gnupg-$version
+	/usr/bin/python3 -m build --wheel --skip-dependency-check --no-isolation
+	/usr/bin/python3 -m installer --compile-bytecode 2 --destdir=$PKG dist/*.whl
+}

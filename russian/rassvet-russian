@@ -135,7 +135,7 @@ def chat(model, messages, stream_to=None):
     except (error.URLError, TimeoutError) as exc:
         raise RuntimeError(f'The tutor is not running ({exc}). Not downloaded yet: '
                            f'sudo rassvet-content install ai-tutor ; downloaded: '
-                           f'sudo herd start rassvet-tutor') from exc
+                           f'sudo /etc/rc.d/rassvet-tutor start') from exc
     if not isinstance(answer, str) or not answer:
         raise RuntimeError('The tutor returned no text')
     return answer

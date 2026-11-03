@@ -1,0 +1,15 @@
+# Description: Screenshots (Super+Shift+s takes an area)
+# URL: https://github.com/naelstrof/maim
+# Maintainer: Rassvet
+# Depends on: glm icu libjpeg-turbo libpng slop xorg-libxcomposite xorg-libxfixes xorg-libxrandr
+
+name=maim
+version=5.8.2
+release=1
+source=(https://github.com/naelstrof/maim/archive/v$version/maim-$version.tar.gz)
+
+build() {
+	cmake -S maim-$version -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release
+	cmake --build build
+	DESTDIR=$PKG cmake --install build
+}

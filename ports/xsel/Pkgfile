@@ -1,0 +1,17 @@
+# Description: Command-line access to the X selections (used by clipmenu)
+# URL: https://github.com/kfish/xsel
+# Maintainer: Rassvet
+# Depends on: xorg-libxt
+
+name=xsel
+version=1.2.1
+release=1
+source=(https://github.com/kfish/$name/archive/$version/$name-$version.tar.gz)
+
+build() {
+	cd $name-$version
+	./autogen.sh || autoreconf -fi
+	./configure --prefix=/usr --mandir=/usr/share/man
+	make
+	make DESTDIR=$PKG install
+}

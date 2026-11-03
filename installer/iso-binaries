@@ -1,0 +1,18 @@
+#!/bin/sh
+# iso-binaries MEDIA NAME...: install the CRUX ISO's ready-built package for each NAME that is
+# not installed yet, when it is exactly the version the ports have now. Anything newer in the
+# ports, or not on the ISO, is left for prt-get to build. (MEDIA: the ISO's crux folder.)
+media=$1; shift
+for name in "$@"; do
+	pkginfo -i | grep -q "^$name " && continue
+	want=$(prt-get printf '%v-%r\n' --filter="$name" 2>/dev/null | head -n 1)
+	[ -n "$want" ] || continue
+	for pkg in "$media"/core/"$name#$want".pkg.tar.* "$media"/opt/"$name#$want".pkg.tar.* \
+	           "$media"/xorg/"$name#$want".pkg.tar.*; do
+		[ -f "$pkg" ] || continue
+		echo "  $name $want: from the ISO"
+		pkgadd "$pkg"
+		break
+	done
+done
+exit 0

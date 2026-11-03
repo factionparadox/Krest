@@ -1,10 +1,11 @@
 # Plan 9 tools: acme, sam, rc and the plumber
 
 Plan 9 was Bell Labs' successor to Unix, by the same people. plan9port brings its tools to
-Linux; Guix installs it in /run/current-system/profile/plan9. rassvet-acme and rassvet-plumb set
-PLAN9 and PATH for themselves; in a shell of your own:
-    export PLAN9=/run/current-system/profile/plan9 PATH=$PATH:$PLAN9/bin
-Then run them with the "9" wrapper so the Plan 9 versions win:  9 acme,  9 man rc.
+Linux; Rassvet's plan9port port builds it on this laptop and installs it in /usr/lib/plan9.
+/etc/profile.d/plan9.sh sets PLAN9=/usr/lib/plan9 and adds $PLAN9/bin to the end of PATH
+for every login shell, so the Linux commands of the same name (rc, man, sam) still come first.
+Run Plan 9's with the "9" wrapper:  9 acme,  9 man rc.  rassvet-acme and rassvet-plumb set
+PLAN9 and PATH for themselves.
 
 ## acme (Ctrl+Super+c): text as the interface
 acme is an editor in which any text is a command. The mouse buttons do the work:

@@ -1,0 +1,38 @@
+#!/bin/sh
+# Sleep, hibernation and the lid, without a session manager (run as root: acpid runs it for
+# the lid and the power button; the menu and Super+z through sudo, see /etc/sudoers.d/rassvet).
+#   rassvet-sleep suspend     sleep now (RAM)
+#   rassvet-sleep hibernate   save everything to the swap partition and power off
+#   rassvet-sleep lid         the lid closed: sleep, and after two hours asleep on battery,
+#                             hibernate (so the battery cannot run flat in a bag)
+#   rassvet-sleep power       the power button: sleep
+[ "$(id -u)" = 0 ] || exec sudo "$0" "$@"
+HOURS=2
+on_battery() { for s in /sys/class/power_supply/A*/online; do [ "$(cat "$s" 2>/dev/null)" = 1 ] && return 1; done; return 0; }
+can_hibernate() { grep -q 'resume=' /proc/cmdline && [ -n "$(awk 'NR>1 && $2=="partition"' /proc/swaps)" ]; }
+lock() {   # lock every X screen before sleeping (xss-lock does it too; this covers the lid)
+	for d in /tmp/.X11-unix/X*; do
+		[ -e "$d" ] || continue
+		n=":${d##*/X}"; u=$(stat -c %U "$d")
+		su "$u" -c "DISPLAY=$n xset s activate" 2>/dev/null &
+	done
+	sleep 1
+}
+case "${1:-suspend}" in
+	suspend|power) lock; sync; echo mem > /sys/power/state ;;
+	hibernate) can_hibernate || { echo "no swap partition to hibernate to" >&2; exit 1; }
+		lock; sync; echo disk > /sys/power/state ;;
+	lid)
+		# an open lid again (the event can arrive late): nothing to do
+		grep -q closed /proc/acpi/button/lid/*/state 2>/dev/null || exit 0
+		lock; sync
+		if on_battery && can_hibernate; then
+			start=$(date +%s)
+			rtcwake -m mem -s $((HOURS * 3600)) >/dev/null
+			# woken by the alarm, not by you: hibernate
+			[ $(( $(date +%s) - start )) -ge $((HOURS * 3600 - 60)) ] && echo disk > /sys/power/state
+		else
+			echo mem > /sys/power/state
+		fi ;;
+	*) echo "usage: rassvet-sleep suspend|hibernate|lid|power" >&2; exit 2 ;;
+esac

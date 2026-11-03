@@ -1,0 +1,15 @@
+# Description: Sentry's Python SDK (the Proton VPN app's crash reports, off by default)
+# URL: https://pypi.org/project/sentry_sdk/
+# Maintainer: Rassvet
+# Depends on: python3-build python3-certifi python3-installer python3-setuptools python3-urllib3
+
+name=python3-sentry-sdk
+version=2.73.0
+release=1
+source=(https://files.pythonhosted.org/packages/source/s/sentry-sdk/sentry_sdk-$version.tar.gz)
+
+build() {
+	cd sentry_sdk-$version
+	/usr/bin/python3 -m build --wheel --skip-dependency-check --no-isolation
+	/usr/bin/python3 -m installer --compile-bytecode 2 --destdir=$PKG dist/*.whl
+}

@@ -1,0 +1,18 @@
+# Description: Simple X screen locker (the screen lock on sleep, lid and Super+x)
+# URL: https://tools.suckless.org/slock/
+# Maintainer: Rassvet
+# Depends on: xorg-libxext xorg-libxrandr
+
+name=slock
+version=1.5
+release=1
+source=(https://dl.suckless.org/tools/$name-$version.tar.gz)
+
+build() {
+	cd $name-$version
+	# CRUX has no "nogroup"; slock drops its privileges to nobody
+	sed -i 's/"nogroup"/"nobody"/' config.def.h
+	sed -i "/^CFLAGS/s/-Os/$CFLAGS/" config.mk
+	make PREFIX=/usr
+	make DESTDIR=$PKG PREFIX=/usr install
+}

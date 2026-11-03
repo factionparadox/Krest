@@ -1,0 +1,21 @@
+# Description: WebCord: Discord's web app in Electron, with its tracking blocked
+# URL: https://github.com/SpacingBat3/WebCord
+# Maintainer: Rassvet
+# Depends on: alsa-lib at-spi2-core cups gtk3 libdrm libnotify libsecret libxkbcommon mesa nss xdg-utils xorg-libxscrnsaver xorg-libxtst
+
+name=webcord
+version=4.14.0
+release=1
+source=(https://github.com/SpacingBat3/WebCord/releases/download/v$version/webcord-$version-1.x86_64.rpm)
+# Electron's own binaries: stripping them breaks them
+PKGMK_NO_STRIP="yes"
+
+build() {
+	# pkgmk has unpacked the RPM into $SRC: usr/lib/webcord and usr/bin
+	cp -a usr $PKG/
+	rm -rf $PKG/usr/lib/.build-id $PKG/usr/share/doc
+	exe=$(cd $PKG && find usr/lib -maxdepth 2 -type f -name webcord | head -n 1)
+	[ -n "$exe" ]
+	chmod 755 $PKG/$exe
+	[ -e $PKG/usr/bin/webcord ] || { install -d $PKG/usr/bin; ln -s /$exe $PKG/usr/bin/webcord; }
+}

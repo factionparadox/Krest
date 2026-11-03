@@ -1,0 +1,14 @@
+# Description: Bluetooth in the terminal (Ctrl+Super+b)
+# URL: https://github.com/bluetuith-org/bluetuith
+# Maintainer: Rassvet
+# Depends on: bluez
+
+name=bluetuith
+version=0.2.5
+release=1
+# the project's own build: one static Go program
+source=(https://github.com/bluetuith-org/bluetuith/releases/download/v$version/bluetuith_${version}_Linux_x86_64.tar.gz)
+
+build() {
+	install -Dm755 bluetuith $PKG/usr/bin/bluetuith
+}

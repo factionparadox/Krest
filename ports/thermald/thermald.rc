@@ -1,0 +1,33 @@
+#!/bin/sh
+#
+# /etc/rc.d/thermald: start/stop thermald
+#
+
+SSD=/sbin/start-stop-daemon
+PROG=/usr/sbin/thermald
+PID=/run/thermald.pid
+
+case $1 in
+start)
+	$SSD --start --background --make-pidfile --pidfile $PID --exec $PROG -- --no-daemon --adaptive
+	;;
+stop)
+	$SSD --stop --retry 10 --pidfile $PID --remove-pidfile
+	;;
+restart)
+	$0 stop
+	$0 start
+	;;
+status)
+	$SSD --status --pidfile $PID
+	case $? in
+	0) echo "$PROG is running with pid $(cat $PID)" ;;
+	*) echo "$PROG is not running" ;;
+	esac
+	;;
+*)
+	echo "usage: $0 [start|stop|restart|status]"
+	;;
+esac
+
+# End of file

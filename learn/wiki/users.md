@@ -1,49 +1,44 @@
 # Users, groups and sudo
 
-## Accounts are declared
-The operating system's users field lists every account; Guix creates them at activation and
-writes /etc/passwd and /etc/group from it. Rassvet declares one user, the #:user from
-/etc/config.scm, plus Guix's base accounts (root, nobody, the guixbuild users). Passwords are
-the stateful part: Guix keeps the hashes already in /etc/shadow (the installer put yours there),
-and you change them with passwd as usual.
+## Accounts
+Accounts are the ordinary files: /etc/passwd, /etc/group and /etc/shadow, changed with the
+ordinary tools. The installer made yours with
+  useradd -m -U -G wheel,audio,video,input,users -s /bin/bash YOU
+and set your password and root's to the one you gave (hashed with SHA-512).
   passwd ; sudo passwd root         change a password
   id ; groups                       who you are, your groups
-Accounts made with useradd do not survive the next reconfigure. To add one, in /etc/config.scm
-(see: system):
-  (users (cons (user-account (name "anna") (group "users") (home-directory "/home/anna")
-                             (supplementary-groups '("audio" "video")))
-               (operating-system-users base)))
-then reconfigure and give it a password with sudo passwd anna.
+  sudo useradd -m -U -G audio,video,input,users -s /bin/bash anna ; sudo passwd anna
+                                    another account (add wheel for sudo)
+  sudo usermod -aG GROUP YOU        join a group (log in again for it to count)
+New accounts get their home from /etc/skel; Rassvet's desktop files are in
+/usr/share/rassvet/skel:  sudo cp -rn /usr/share/rassvet/skel/. /home/anna/ ; then chown -R.
 
 ## What the groups are for
   wheel       may use sudo
-  netdev      network devices (Guix's group for NetworkManager and Wi-Fi control)
-  audio       access to sound devices (PipeWire works through your session anyway)
-  video       access to video devices (the GPU, the webcam)
+  audio       access to sound devices
+  video       access to video devices (the GPU, the webcam, the backlight)
   input       input devices: /dev/input/event* (some tools read keyboards directly)
-  lp          printers
-  kvm         run virtual machines with KVM
   users       the ordinary users' group
-The installer's account has all of these (system.scm's supplementary-groups).
+With no logind handing devices to the person at the keyboard, these groups are how you reach
+the hardware.
 
 ## sudo
   sudo COMMAND                 run as root (asks your password, then remembers it a while)
   sudo -i                      a root shell (exit to leave)
-/etc/sudoers is generated (the sudoers-file field; Guix's default lets wheel run anything), so
-visudo and /etc/sudoers.d are not the way: change the field in the declaration. The root
-password is yours, for recovery from a console.
+  sudo visudo -f /etc/sudoers.d/NAME     a rule of your own, checked before it is saved
+/etc/sudoers.d/rassvet:
+  %wheel ALL=(ALL:ALL) ALL
+  %wheel ALL=(root) NOPASSWD: /usr/bin/rassvet-sleep, /sbin/reboot, /sbin/poweroff
+so sleeping, restarting and powering off need no password (the menu, Super+z and acpid's
+rassvet-sleep rely on it). The root password is yours, for recovery from a console.
 
 ## PAM
-PAM (Pluggable Authentication Modules) decides how a program checks who you are. On Guix,
-/etc/pam.d is generated too: each service type adds its entries. Rassvet adds:
-  ly and ly-autologin          the login screen (autologin: pam_permit, no password asked;
-                               the rest as a normal login)
-  screen-locker-service-type   slock: a PAM entry and a setuid slock, so it can check your
-                               password
-  gnome-keyring-service-type   unlocks the keyring at login
-fprintd-service-type runs the fingerprint service (fprintd-enroll adds a finger, fprintd-verify
-tests it), but system.scm adds no fingerprint line to sudo's PAM entry, so sudo asks for the
-password.
+PAM (Pluggable Authentication Modules) decides how a program checks who you are; its files
+are /etc/pam.d/NAME, one per program. The ones that matter here:
+  ly                the login screen (with automatic login, ly logs you in without asking)
+  login, su, sudo   CRUX's own
+  slock             is setuid root and checks your password itself, through /etc/shadow
+dumb_runtime_dir in the session entries makes /run/user/UID at login (see: sound).
+There is no fingerprint login: fprintd is not included.
 
-See also: elogind (polkit), system ; info "(guix) User Accounts" ; info "(guix) operating-system Reference" ;
-man sudo ; man pam.d
+See also: sleep, rc-conf ; man useradd ; man usermod ; man sudo ; man sudoers ; man pam.d

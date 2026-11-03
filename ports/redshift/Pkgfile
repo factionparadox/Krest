@@ -1,0 +1,19 @@
+# Description: Warmer screen colour after sunset (night light)
+# URL: http://jonls.dk/redshift/
+# Maintainer: Rassvet
+# Depends on: xorg-libxcb xorg-libxxf86vm
+
+name=redshift
+version=1.12
+release=1
+source=(https://github.com/jonls/$name/releases/download/v$version/$name-$version.tar.xz)
+
+build() {
+	cd $name-$version
+	./configure --prefix=/usr --disable-gui --disable-geoclue2 --disable-wayland \
+		--disable-nls --enable-randr --enable-vidmode --disable-ubuntu \
+		--with-systemduserunitdir=no
+	make
+	make DESTDIR=$PKG install
+	rm -rf $PKG/usr/share/doc
+}

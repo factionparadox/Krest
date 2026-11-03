@@ -2,32 +2,38 @@
 
 The installer split the disk (GPT) into three partitions, which lsblk -f shows:
   1. EFI system partition, 1 GiB, FAT32, mounted at /boot/efi: GRUB lives here.
-  2. swap, the size of the RAM: hibernation writes memory here. (Day-to-day swapping happens
-     first in zram, compressed RAM, which is faster; the partition is mostly for hibernation.)
-  3. the root filesystem, XFS, at /: everything else, the store (/gnu/store) included.
+  2. swap, the size of the RAM: hibernation writes memory here, and it is the overflow when
+     memory runs short (there is no zram).
+  3. the root filesystem, XFS, at /: everything else, /usr/ports and its builds included.
 NVMe partitions are named with a p: /dev/nvme0n1p1, p2, p3.
 
-There is no /etc/fstab to edit: the file systems and swap are fields of the operating system
-(by UUID, from /etc/config.scm), and Guix mounts them. /gnu/store is mounted a second time,
-read-only, over itself: only guix-daemon writes there.
+They are in /etc/fstab, by UUID, which the installer wrote; edit it like any file
+(man 5 fstab), then sudo mount -a to try a new line before restarting.
 
 ## Why XFS
 XFS is fast with large files and many files at once, and very mature. It can grow
-(xfs_growfs) but never shrink, and it has no snapshots; on Guix that matters less, because
-system generations are the undo (rassvet-learn learn recovery). Check it from the install
-stick, unmounted, with xfs_repair; while mounted, xfs_scrub checks online.
+(xfs_growfs) but never shrink, and it has no snapshots: on CRUX there is no system rollback
+either, so your undo for the system is the old package files in /usr/ports/packages, and for
+your files, a backup. Check it from the install stick, unmounted, with xfs_repair; while
+mounted, xfs_scrub checks online.
 
 ## Look
     lsblk -f ; findmnt / ; df -h
-    findmnt /gnu/store                the read-only bind mount
-    swapon --show ; zramctl
+    cat /etc/fstab
+    swapon --show
     xfs_info /                        XFS geometry
-    du -sh /gnu/store ; guix gc -F 20G   the store's size; free space until 20 GB are free
+    du -sh /usr/ports/distfiles /usr/ports/packages /var/tmp/pkgmk   what building keeps
+Old sources and packages pile up in /usr/ports/distfiles and packages; delete the ones you no
+longer need (keep the last package of anything you may want to go back to).
+
+## TRIM
+Nothing trims the SSD on a schedule. Now and then:
+    sudo fstrim -av
+or once a week through crond: sudo crontab -e, and the line  30 12 * * 0 /sbin/fstrim -a
 
 ## Danger
-wipefs, sgdisk, mkfs.* and dd destroy data in a moment. Back up before touching partitions.
-USB sticks and drives mount by themselves (udiskie, through udisks); its notification and
-findmnt show where.
+wipefs, sfdisk, mkfs.* and dd destroy data in a moment. Back up before touching partitions.
+USB sticks and drives are mounted by udiskie (through udisks) when you plug them in; by hand,
+udisksctl mount -b /dev/sdX1, or sudo mount.
 
-References: https://docs.kernel.org/admin-guide/xfs.html ; man xfs ; man lsblk ;
-info "(guix) File Systems"
+References: https://docs.kernel.org/admin-guide/xfs.html ; man xfs ; man lsblk ; man fstab

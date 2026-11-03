@@ -1,0 +1,24 @@
+# Description: Plan 9 from User Space: acme, sam, rc, the plumber and the rest
+# URL: https://9fans.github.io/plan9port/
+# Maintainer: Rassvet
+# Depends on: fontconfig freetype xorg-libxext xorg-libxt
+
+name=plan9port
+version=20260711
+_commit=1f1396913fb5372408f442ed26933f5ae4b399cd
+release=1
+source=(https://github.com/9fans/plan9port/archive/$_commit/plan9port-$_commit.tar.gz)
+
+build() {
+	mv plan9port-$_commit plan9
+	cd plan9
+	# the tree builds in place and records its final location
+	./INSTALL -b
+	./INSTALL -c -r /usr/lib/plan9
+	cd ..
+	install -d $PKG/usr/lib
+	cp -a plan9 $PKG/usr/lib/plan9
+	rm -rf $PKG/usr/lib/plan9/.git* $PKG/usr/lib/plan9/dist
+	install -d $PKG/etc/profile.d
+	echo 'export PLAN9=/usr/lib/plan9; PATH=$PATH:$PLAN9/bin' > $PKG/etc/profile.d/plan9.sh
+}

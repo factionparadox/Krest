@@ -1,4 +1,4 @@
-"""rassvet-content against a fake installed system, a stub herd and a local web server
+"""rassvet-content against a fake installed system, a stub tutor service and a local web server
 (standing in for Kiwix, the Internet Archive and Hugging Face)."""
 import functools
 import hashlib
@@ -58,7 +58,7 @@ class ContentTests(unittest.TestCase):
         threading.Thread(target=httpd.serve_forever, daemon=True).start()
         self.addCleanup(httpd.server_close); self.addCleanup(httpd.shutdown)
         self.url = f'http://127.0.0.1:{httpd.server_port}'
-        # Stub herd: records what it was asked
+        # Stub /etc/rc.d/rassvet-tutor: records what it was asked
         self.herd = base / 'herd'
         self.herd.write_text('#!/bin/sh\necho "$@" >> "$(dirname "$0")/herd-args"\n')
         self.herd.chmod(0o755)
@@ -78,7 +78,7 @@ class ContentTests(unittest.TestCase):
         env = {**os.environ, 'RASSVET_CONTENT_ROOT': str(self.root),
                'RASSVET_CONTENT_LIB': str(self.root / 'usr/lib/rassvet/content'),
                'RASSVET_CONTENT_SHARE': str(self.root / 'usr/share/rassvet/russian'),
-               'RASSVET_CONTENT_HERD': str(self.herd), 'RASSVET_CONTENT_FREE_GB': '500', 'RASSVET_CONTENT_HF': self.url + '/hf',
+               'RASSVET_CONTENT_TUTOR_RC': str(self.herd), 'RASSVET_CONTENT_FREE_GB': '500', 'RASSVET_CONTENT_HF': self.url + '/hf',
                'RASSVET_CONTENT_KIWIX': self.url + '/zim', 'RASSVET_CONTENT_ARCHIVE': self.url + '/archive/',
                'RASSVET_CONTENT_MEZHDUNAMI': self.url + '/mn/index.shtml',
                'RASSVET_CONTENT_YTDLP': 'no-such-ytdlp',
@@ -98,11 +98,11 @@ class ContentTests(unittest.TestCase):
         tutor = self.data / 'tutor'
         self.assertEqual(os.readlink(tutor / 'tutor.gguf'), 'Qwen3.6-35B-A3B-UD-Q4_K_XL.gguf')
         self.assertTrue((tutor / 'tutor.gguf').read_bytes().startswith(b'GGUF'))
-        self.assertIn('start rassvet-tutor', self.herd_args())
+        self.assertIn('start', self.herd_args().split())
         self.assertRegex(self.run_tool('list').stdout, r'ai-tutor\s+installed')
         self.run_tool('remove', 'ai-tutor')
         self.assertEqual(list(tutor.iterdir()), [])
-        self.assertIn('stop rassvet-tutor', self.herd_args())
+        self.assertIn('stop', self.herd_args().split())
 
     def test_tampered_model_refused(self):
         model = self.site / 'hf/unsloth/Qwen3.6-35B-A3B-GGUF/resolve/main/Qwen3.6-35B-A3B-UD-Q4_K_XL.gguf'
@@ -147,14 +147,15 @@ class ContentTests(unittest.TestCase):
         self.assertEqual(self.run_tool('install', 'nonsense').returncode, 2)
 
     def test_packaged_files_exist(self):
-        """guix/rassvet/packages.scm puts every kit file in the rassvet-russian package."""
-        recipe = (PKG.parent / 'guix/rassvet/packages.scm').read_text()
+        """ports/rassvet-russian/Pkgfile installs every kit file."""
+        recipe = (PKG.parent / 'ports/rassvet-russian/Pkgfile').read_text()
         for name in ('fetch-files.py', 'fetch-kiwix.py', 'fetch-archive.py', 'fetch-mezhdunami.py',
                      'fetch-mirror.py', 'fetch-hf.py', 'library.tsv', 'audiobooks.tsv', 'voices.tsv',
                      'vocab.tsv', 'mirror.json'):
             self.assertTrue((PKG / name).is_file(), name)
-        for pattern in ('"rassvet-russian" "bin/"', '"rassvet-content" "bin/"', r'fetch-.*\\.py',
-                        r'mirror\\.json', r'\\.tsv'):
+        for pattern in ('rassvet-russian $PKG/usr/bin/', 'rassvet-content $PKG/usr/bin/',
+                        'fetch-*.py mirror.json $PKG/usr/lib/rassvet/content/',
+                        '*.tsv VOCAB-SOURCES.md $PKG/usr/share/rassvet/russian/'):
             self.assertIn(pattern, recipe, pattern)
 
 

@@ -1,0 +1,15 @@
+# Description: Hides the mouse pointer while you type
+# URL: https://github.com/jcs/xbanish
+# Maintainer: Rassvet
+# Depends on: xorg-libxfixes xorg-libxi xorg-libxt
+
+name=xbanish
+version=1.8
+release=1
+source=(https://github.com/jcs/$name/archive/v$version/$name-$version.tar.gz)
+
+build() {
+	cd $name-$version
+	make PREFIX=/usr
+	make DESTDIR=$PKG PREFIX=/usr MANDIR=/usr/share/man/man1 install
+}

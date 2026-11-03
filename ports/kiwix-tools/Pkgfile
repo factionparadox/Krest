@@ -1,0 +1,14 @@
+# Description: Kiwix's offline Wikipedia, Wiktionary and Wikisource server (kiwix-serve)
+# URL: https://kiwix.org
+# Maintainer: Rassvet
+
+name=kiwix-tools
+version=3.8.2
+release=1
+# Kiwix's own static build: one file per program, no libraries needed
+source=(https://download.kiwix.org/release/$name/${name}_linux-x86_64-musl-$version.tar.gz)
+
+build() {
+	install -d $PKG/usr/bin
+	install -m755 ${name}_linux-x86_64-musl-$version/kiwix-* $PKG/usr/bin/
+}

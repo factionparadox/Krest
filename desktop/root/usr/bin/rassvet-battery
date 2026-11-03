@@ -35,7 +35,7 @@ while :; do
     if [ "$level" -le 4 ]; then
       notify-send -u critical "Battery empty" "Hibernating now"
       sleep 5
-      loginctl hibernate 2>/dev/null || loginctl suspend
+      rassvet-sleep hibernate 2>/dev/null || rassvet-sleep suspend
     elif [ "$level" -le 7 ] && [ "$warned" -lt 2 ]; then
       notify-send -u critical "Battery at $level %" "Plug in now: the laptop hibernates at 4 %"; warned=2
     elif [ "$level" -le 15 ] && [ "$warned" -lt 1 ]; then

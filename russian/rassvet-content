@@ -35,7 +35,7 @@ KIWIX = os.environ.get('RASSVET_CONTENT_KIWIX', 'https://download.kiwix.org/zim'
 ARCHIVE = os.environ.get('RASSVET_CONTENT_ARCHIVE', 'https://archive.org/')
 MEZHDUNAMI = os.environ.get('RASSVET_CONTENT_MEZHDUNAMI', 'https://mezhdunami.org/')
 HF = os.environ.get('RASSVET_CONTENT_HF', 'https://huggingface.co')
-HERD = os.environ.get('RASSVET_CONTENT_HERD', 'herd')
+TUTOR_RC = os.environ.get('RASSVET_CONTENT_TUTOR_RC', '/etc/rc.d/rassvet-tutor')
 YTDLP = os.environ.get('RASSVET_CONTENT_YTDLP', 'yt-dlp')
 MIRROR_BASE = os.environ.get('RASSVET_CONTENT_MIRROR', '')   # tests only
 
@@ -86,9 +86,9 @@ def install_tutor(pack: str) -> bool:
     # the service runs as nobody: the model must be readable
     for path in (DATA, TUTOR, TUTOR / name):
         path.chmod(path.stat().st_mode | 0o444 | (0o111 if path.is_dir() else 0))
-    subprocess.run([HERD, 'restart', 'rassvet-tutor'], capture_output=True)
-    if not run([HERD, 'start', 'rassvet-tutor']):
-        say('    the tutor service did not start: sudo herd status rassvet-tutor ; '
+    subprocess.run([TUTOR_RC, 'stop'], capture_output=True)
+    if not run([TUTOR_RC, 'start']):
+        say('    the tutor service did not start: sudo /etc/rc.d/rassvet-tutor status ; '
             'less /var/log/rassvet-tutor.log')
         return False
     return True
@@ -189,7 +189,7 @@ def install(pack: str) -> bool:
 def remove(pack: str) -> bool:
     if pack in MODELS:
         # the service stops, and stays off after a restart (it starts only with a model)
-        subprocess.run([HERD, 'stop', 'rassvet-tutor'], capture_output=True)
+        subprocess.run([TUTOR_RC, 'stop'], capture_output=True)
         for path in TUTOR.glob('*'):
             path.unlink()
         return True

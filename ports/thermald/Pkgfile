@@ -1,0 +1,20 @@
+# Description: Intel's thermal daemon: keeps the CPU cool without throttling hard
+# URL: https://github.com/intel/thermal_daemon
+# Maintainer: Rassvet
+# Depends on: dbus glib libevdev libxml2 upower xz
+
+name=thermald
+version=2.5.13
+release=1
+source=(https://github.com/intel/thermal_daemon/archive/v$version/thermal_daemon-$version.tar.gz thermald.rc)
+
+build() {
+	cd thermal_daemon-$version
+	NO_CONFIGURE=1 ./autogen.sh
+	./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+		--disable-werror --disable-gtk-doc --with-systemdsystemunitdir=no
+	make
+	make DESTDIR=$PKG install
+	install -Dm755 $SRC/thermald.rc $PKG/etc/rc.d/thermald
+	rm -rf $PKG/usr/share/doc $PKG/usr/lib/systemd
+}

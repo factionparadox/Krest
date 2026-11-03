@@ -1,0 +1,14 @@
+# Description: Downloads video and audio (mpv and ani-cli use it)
+# URL: https://github.com/yt-dlp/yt-dlp
+# Maintainer: Rassvet
+# Depends on: ffmpeg python3
+
+name=yt-dlp
+version=2026.10.21
+release=1
+# yt-dlp's own release: one Python zip application
+source=(https://github.com/yt-dlp/yt-dlp/releases/download/$version/yt-dlp)
+
+build() {
+	install -Dm755 yt-dlp $PKG/usr/bin/yt-dlp
+}

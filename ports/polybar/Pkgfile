@@ -1,0 +1,21 @@
+# Description: Status bar for X (the bar at the top)
+# URL: https://polybar.github.io/
+# Maintainer: Rassvet
+# Depends on: alsa-lib cairo jsoncpp libnl libuv pulseaudio xorg-xcb-util xorg-xcb-util-cursor xorg-xcb-util-image xorg-xcb-util-wm xorg-xcb-util-xrm
+
+name=polybar
+version=3.7.2
+release=1
+source=(https://github.com/$name/$name/releases/download/$version/$name-$version.tar.gz)
+
+build() {
+	cmake -S $name-$version -B build -G Ninja \
+		-DCMAKE_INSTALL_PREFIX=/usr \
+		-DCMAKE_BUILD_TYPE=Release \
+		-DBUILD_DOC=OFF \
+		-DENABLE_ALSA=ON -DENABLE_PULSEAUDIO=ON -DENABLE_NETWORK=ON \
+		-DENABLE_MPD=OFF -DENABLE_I3=OFF -DENABLE_CURL=OFF
+	cmake --build build
+	DESTDIR=$PKG cmake --install build
+	rm -rf $PKG/usr/share/doc $PKG/usr/share/bash-completion $PKG/usr/share/zsh
+}
