@@ -7,7 +7,8 @@
 # The ISO is CRUX's own, with:
 #   - Arch Linux's ready-built kernel and Intel firmware for the installer itself, so the
 #     Framework 13 Pro's Wi-Fi, graphics and keyboard work from the first second;
-#   - NetworkManager (nmtui) in the installer, for Wi-Fi, from the CRUX ISO's packages;
+#   - krest-wifi in the installer: a Wi-Fi menu over CRUX's own wpa_supplicant and dhcpcd
+#     (NetworkManager and nmtui are compiled on the laptop with the rest);
 #   - Krest's installer (installer/krest-install), which starts on tty1;
 #   - those packages ready-built in /krest/packages, and this repository in /krest/repo.
 # Nothing is compiled on this computer. Everything is compiled on the laptop during the
@@ -16,10 +17,9 @@
 # What it does, in order (each step shows its commands; nothing is hidden):
 #   1. xorriso, cpio, rsync, curl, xz on this computer
 #   2. CRUX 3.8's ISO, checked against its published SHA-256
-#   3. a CRUX build root: CRUX's own live system, with every core package from the ISO
-#      installed into it (in ~/.cache/krest; made once, reused)
-#   4. Arch's kernel and firmware (pacman -Sw) made into a CRUX package, and NetworkManager's
-#      packages from the ISO, into build/work/packages
+#   3. (none: nothing is built here)
+#   4. Arch's kernel and firmware (pacman -Sw) made into a CRUX package, linux-arch, in
+#      build/work/packages
 #   5. the installer's live system and its initramfs, with those added
 #   6. the ISO
 set -Eeuo pipefail
@@ -102,24 +102,6 @@ if [[ ! -f $media/crux-media ]]; then
   chmod -R u+w "$media"
 fi
 
-# --------------------------------------------------------------------- 3. the build root
-root=$cache/buildroot
-if [[ ! -f $root/.krest-ready ]]; then
-  say "A CRUX build root in $root: the ISO's live system, then every core package"
-  safe_rm "$root"; sudo mkdir -p "$root"
-  sudo tar -xJf "$media/rootfs.tar.xz" -C "$root"
-  bind "$media" "$root/media"
-  # the live system is only a tool here: CRUX's core goes into /target inside it
-  chroot_run "$root" 'mkdir -p /target/var/lib/pkg && touch /target/var/lib/pkg/db &&
-    for p in /media/crux/core/*.pkg.tar.xz; do pkgadd -r /target "$p" || exit 1; done'
-  cleanup
-  # the build root proper is that /target
-  safe_rm "$cache/buildroot.new"
-  sudo mv "$root/target" "$cache/buildroot.new"
-  safe_rm "$root"; sudo mv "$cache/buildroot.new" "$root"
-  sudo touch "$root/.krest-ready"
-fi
-
 # depmod for a tree whose modules are in /lib/modules (Arch's own depmod looks in /usr/lib/modules)
 depmod_b() {
   local made=
@@ -133,7 +115,7 @@ depmod_b() {
 #   - Arch Linux's kernel and Intel firmware (pacman downloads them and checks Arch's
 #     signatures), made into one CRUX package, linux-arch: the kernel, its modules, and its
 #     firmware in /lib/firmware/<kernel version>, which only that kernel reads;
-#   - NetworkManager (nmtui) and what it needs, from the CRUX ISO's own packages.
+# NetworkManager isn't on CRUX's ISO, so the installer gets online with krest-wifi instead.
 # The laptop compiles everything else during the install, Krest's own 7.3 kernel included;
 # linux-arch stays on as the fallback kernel in the boot menu.
 say "Arch's ready-built kernel and Intel firmware (downloaded by pacman; nothing is compiled)"
@@ -148,7 +130,7 @@ for try in 1 2 3; do
   echo "    the download stalled; trying again ($try of 3; what's already downloaded is kept)"; sleep 5
 done
 safe_rm "$arch/pkgs"; mkdir -p "$arch/pkgs"
-pcache=$(pacman-conf CacheDir 2>/dev/null | head -n 1); pcache=${pcache:-/var/cache/pacman/pkg/}
+pcache=$(pacman-conf CacheDir 2>/dev/null | head -n 1 || true); pcache=${pcache:-/var/cache/pacman/pkg/}
 pacman -Sp --print-format '%n %f' $ARCH_PKGS | while read -r n f; do
   case " $ARCH_PKGS " in *" $n "*) cp "${pcache%/}/$f" "$arch/pkgs/" || exit 1 ;; esac
 done || die "the packages pacman downloaded are not in ${pcache}"
@@ -181,50 +163,28 @@ pkgv=${KVER//-/_}
 sudo bsdtar --uid 0 --gid 0 --zstd -cf "$work/packages/linux-arch#$pkgv-1.pkg.tar.zst" -C "$st/pkg" boot lib
 echo "    $(du -h "$work/packages/linux-arch#$pkgv-1.pkg.tar.zst" | cut -f1) linux-arch package"
 
-say "NetworkManager for the stick, from the CRUX ISO's packages"
-mkdir -p "$cache/distfiles"
-bind "$media" "$root/media"
-bind "$project" "$root/usr/src/krest"
-chroot_run "$root" "
-  set -e
-  for f in /etc/ports/*.inactive; do [ -e \"\$f\" ] && mv \"\$f\" \"\${f%.inactive}\"; done
-  ports -u core opt xorg
-  prt-get quickdep networkmanager > /tmp/nm-order
-"
-cleanup
-live_names="linux-arch"
-for name in $(sudo cat "$root/tmp/nm-order"); do
-  f=$(ls "$media"/crux/{core,opt,xorg}/"$name"#*.pkg.tar.* 2>/dev/null | head -n 1 || true)
-  if [[ -z $f ]]; then echo "    note: $name is not on the CRUX ISO"; continue; fi
-  cp "$f" "$work/packages/"
-  live_names="$live_names $name"
-done
-echo "$live_names" | tr ' ' '\n' > "$work/packages/LIVE"
-grep -qx networkmanager "$work/packages/LIVE" || die "the CRUX ISO has no NetworkManager package"
-echo "    $(wc -l < "$work/packages/LIVE") packages for the stick"
+echo linux-arch > "$work/packages/LIVE"
 
 # --------------------------------------------------------------------- 5. the live system
-say "The installer's live system: CRUX's, plus the kernel, NetworkManager and the installer"
+say "The installer's live system: CRUX's, plus the kernel, its firmware and the installer"
 live=$cache/live
 safe_rm "$live"; sudo mkdir -p "$live"
 sudo tar -xJf "$media/rootfs.tar.xz" -C "$live"
-bind "$work/packages" "$live/packages"
-chroot_run "$live" '
-  set -e
-  mkdir -p /var/tmp
-  for name in $(cat /packages/LIVE); do
-    pkg=$(ls /packages/$name#*.pkg.tar.* 2>/dev/null | head -n 1)
-    [ -n "$pkg" ] || continue
-    if pkginfo -i | grep -q "^$name "; then pkgadd -u -f "$pkg"; else pkgadd -f "$pkg"; fi
-  done
-  rm -rf /lib/modules/6.*
-  depmod '"$KVER"'
-  # every library nmtui needs is there
-  ! ldd /usr/bin/nmtui | grep "not found"
-'
+# CRUX's live root keeps no package database: the stick's packages are unpacked into it
+for name in $(cat "$work/packages/LIVE"); do
+  pkg=$(ls "$work"/packages/"$name"#*.pkg.tar.* 2>/dev/null | head -n 1 || true)
+  [[ -n $pkg ]] || die "no package for $name in $work/packages"
+  sudo bsdtar -xpf "$pkg" -C "$live"
+done
+sudo rm -rf "$live"/lib/modules/6.*
+# what the installer uses to get online
+for t in usr/sbin/wpa_supplicant usr/sbin/wpa_cli sbin/dhcpcd usr/bin/dialog usr/bin/curl; do
+  [[ -x $live/$t ]] || die "CRUX's live system has no /$t"
+done
 cleanup
 sudo install -m755 "$project/installer/krest-install" "$live/usr/bin/krest-install"
 sudo install -m755 "$project/installer/iso-binaries" "$live/usr/bin/iso-binaries"
+sudo install -m755 "$project/installer/krest-wifi" "$live/usr/bin/krest-wifi"
 sudo install -m644 "$project/installer/live-bash_profile" "$live/root/.bash_profile"
 sudo tar -C "$live" --one-file-system -cf - . | xz -T0 -6 > "$work/rootfs.tar.xz"
 safe_rm "$live"

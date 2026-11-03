@@ -1,0 +1,70 @@
+#!/bin/bash
+# krest-wifi: get online with Wi-Fi from a menu, using wpa_supplicant and dhcpcd (both on
+# CRUX's own stick). Used by the installer before NetworkManager is compiled; afterwards
+# Krest uses NetworkManager (nmtui).
+#
+#   krest-wifi          pick a network, type its password
+set -u
+[ "$(id -u)" = 0 ] || exec sudo "$0" "$@"
+CTRL=/run/wpa_supplicant
+CONF=/etc/krest-wifi.conf
+TITLE="Wi-Fi"
+dlg() { dialog --backtitle "Крест / Krest" --title "$TITLE" "$@" 3>&1 1>&2 2>&3; }
+
+iface=
+for d in /sys/class/net/*; do [ -d "$d/wireless" ] && { iface=${d##*/}; break; }; done
+if [ -z "$iface" ]; then
+	dlg --msgbox "No Wi-Fi device was found.\n\nPlug in a cable or a USB Ethernet adapter instead." 9 60
+	exit 1
+fi
+ip link set "$iface" up
+[ -f "$CONF" ] || printf 'ctrl_interface=DIR=%s\nupdate_config=1\n' "$CTRL" > "$CONF"
+wcli() { wpa_cli -p "$CTRL" -i "$iface" "$@"; }
+wcli ping >/dev/null 2>&1 || { wpa_supplicant -B -i "$iface" -c "$CONF" >/dev/null || exit 1; sleep 2; }
+
+while :; do
+	dialog --backtitle "Крест / Krest" --title "$TITLE" --infobox "Looking for networks on $iface ..." 5 50
+	wcli scan >/dev/null; sleep 5
+	# SSID, signal, flags; strongest first, each SSID once
+	mapfile -t rows < <(wcli scan_results | tail -n +2 | awk -F'\t' '$5 != "" {print $3 "\t" $5 "\t" $4}' |
+		sort -t$'\t' -k1,1nr | awk -F'\t' '!seen[$2]++')
+	items=()
+	for r in "${rows[@]}"; do
+		IFS=$'\t' read -r sig ssid flags <<<"$r"
+		lock=open; case $flags in *WPA*|*RSN*|*SAE*) lock=password ;; esac
+		items+=("$ssid" "$sig dBm  $lock")
+	done
+	items+=("(scan again)" "")
+	ssid=$(dlg --menu "Choose your network:" 20 70 12 "${items[@]}") || exit 1
+	[ "$ssid" = "(scan again)" ] && continue
+	flags=; for r in "${rows[@]}"; do IFS=$'\t' read -r _ s f <<<"$r"; [ "$s" = "$ssid" ] && flags=$f; done
+
+	wcli remove_network all >/dev/null
+	id=$(wcli add_network)
+	# the name as hex, so any character in it is safe
+	wcli set_network "$id" ssid "$(printf '%s' "$ssid" | od -An -tx1 | tr -d ' \n')" >/dev/null
+	case $flags in
+	*WPA*|*RSN*|*SAE*)
+		pw=$(dlg --insecure --passwordbox "Password for \"$ssid\":" 9 60) || continue
+		wcli set_network "$id" key_mgmt "WPA-PSK SAE" >/dev/null
+		wcli set_network "$id" ieee80211w 1 >/dev/null
+		wcli set_network "$id" psk "\"$pw\"" >/dev/null || { dlg --msgbox "That password can't be used (8 to 63 characters)." 7 60; continue; }
+		;;
+	*) wcli set_network "$id" key_mgmt NONE >/dev/null ;;
+	esac
+	wcli select_network "$id" >/dev/null
+	dialog --backtitle "Крест / Krest" --title "$TITLE" --infobox "Connecting to \"$ssid\" ..." 5 60
+	ok=
+	for _ in $(seq 20); do
+		wcli status | grep -q '^wpa_state=COMPLETED' && { ok=1; break; }
+		sleep 1
+	done
+	if [ -z "$ok" ]; then
+		dlg --msgbox "Couldn't connect to \"$ssid\". The password may be wrong." 7 60
+		continue
+	fi
+	dialog --backtitle "Крест / Krest" --title "$TITLE" --infobox "Connected. Getting an address ..." 5 50
+	dhcpcd -q -w -t 30 "$iface" >/dev/null 2>&1 || dhcpcd -n "$iface" >/dev/null 2>&1
+	wcli save_config >/dev/null 2>&1
+	exit 0
+done

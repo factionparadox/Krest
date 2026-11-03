@@ -2,16 +2,15 @@
 
     bash build/build-iso.sh
 
-On Arch (WSL2 is fine), with sudo and about 15 GB free. Nothing is compiled: it downloads CRUX 3.8's ISO (1.7 GB) and Arch's ready-built kernel and Intel firmware (pacman, Arch's signatures checked), and takes NetworkManager from CRUX's own packages. Everything is compiled on the laptop during the install.
+On Arch (WSL2 is fine), with sudo and about 15 GB free. Nothing is compiled: it downloads CRUX 3.8's ISO (1.7 GB) and Arch's ready-built kernel and Intel firmware (pacman, Arch's signatures checked), and nothing else. Everything is compiled on the laptop during the install.
 
 | Step | What happens |
 | --- | --- |
 | 1. Tools | `xorriso`, `cpio`, `rsync`, `curl` and `xz`, with pacman, apt or dnf if any are missing. |
 | 2. CRUX's ISO | `crux-3.8.iso` from a CRUX mirror, checked against its SHA-256 (pinned in the script), unpacked to `~/.cache/krest/media`. |
-| 3. The build root | CRUX's own live system is unpacked and used as a tool: from it, `pkgadd -r` installs every core package from the ISO into a fresh root (made once). It's only used to read the ports' dependency lists. |
-| 4. The stick's packages | `pacman -Sw` downloads Arch's `linux`, Intel/Realtek firmware and `sof-firmware`; they become one CRUX package, `linux-arch` (modules decompressed for CRUX's kmod; firmware in `/lib/firmware/<kernel version>`, read only by that kernel). NetworkManager and its dependencies (`prt-get quickdep` in the build root) are copied from the ISO's own packages. All go to `build/work/packages`. On the laptop, `linux-arch` stays as the fallback kernel; Krest's 7.3 kernel is compiled there. |
-| 5. The live system | CRUX's live root, with those packages added (Arch's kernel modules replace 6.12's), the installer, and a `.bash_profile` that starts it on tty1. CRUX's initramfs gets that kernel's storage, USB and filesystem modules, and a bigger RAM disk. |
-| 6. The ISO | CRUX's ISO rewritten by xorriso with the new kernel, initramfs and live root, the packages in `/krest/packages`, this repository in `/krest/repo`, and the boot menu renamed. |
+| 3. The stick's kernel | `pacman -Sw` downloads Arch's `linux`, Intel/Realtek firmware and `sof-firmware`; they become one CRUX package, `linux-arch` (modules decompressed for CRUX's kmod; firmware in `/lib/firmware/<kernel version>`, read only by that kernel), in `build/work/packages`. On the laptop it stays as the fallback kernel; Krest's 7.3 kernel is compiled there. |
+| 4. The live system | CRUX's live root, with `linux-arch` unpacked into it (its modules replace 6.12's), the installer, `krest-wifi` (a Wi-Fi menu over CRUX's own wpa_supplicant and dhcpcd: NetworkManager isn't on CRUX's ISO, so it's compiled on the laptop with the rest), and a `.bash_profile` that starts it on tty1. CRUX's initramfs gets that kernel's storage, USB and filesystem modules, and a bigger RAM disk. |
+| 5. The ISO | CRUX's ISO rewritten by xorriso with the new kernel, initramfs and live root, the packages in `/krest/packages`, this repository in `/krest/repo`, and the boot menu renamed. |
 
 Output: `out/krest-x86_64.iso` and its `.sha256`.
 

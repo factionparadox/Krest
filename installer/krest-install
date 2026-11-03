@@ -2,13 +2,14 @@
 # Крест / Krest installer: CRUX 3.8 with Krest's desktop, on one whole disk, built on
 # this laptop.
 #
-# It gets you online (nmtui), asks for the disk, a computer name, your username and password,
+# It gets you online (a cable, or Wi-Fi from a menu: krest-wifi), asks for the disk, a computer name, your username and password,
 # the timezone and whether to log in automatically, then after ONE Yes/No does the CRUX
 # install from the handbook by itself:
 #
 #   1. GPT: 1 GiB EFI, swap the size of the RAM (hibernation), XFS root.  mkfs, mount /mnt.
-#   2. CRUX's core from this stick (pkgadd), and the stick's ready-built kernel and
-#      NetworkManager, so the laptop can boot and get online even before anything is compiled.
+#   2. CRUX's core from this stick (pkgadd), the stick's ready-built kernel (Arch's, kept as a
+#      fallback) and wpa_supplicant, so the laptop boots and gets online before anything is
+#      compiled. NetworkManager (nmtui) is compiled with the rest in step 4.
 #   3. Your settings: /etc/fstab, rc.conf, users and passwords, ly, GRUB (the laptop boots now).
 #   4. The ports (ports -u, Krest's own checked), then the whole desktop compiled here with
 #      prt-get: every build shows on screen. This is the long step: hours.
@@ -26,7 +27,7 @@ EFI_GIB=1
 MIN_ROOT_GIB=40
 STEPS=4
 # booting needs these from the ISO, whatever their version: the bootloader and its tools
-BOOT_PKGS="grub2 grub2-efi efibootmgr xfsprogs dosfstools dracut"
+BOOT_PKGS="grub2 grub2-efi efibootmgr xfsprogs dosfstools dracut wpa_supplicant dialog"
 # ...and these, for the services Krest starts (built for real by prt-get afterwards)
 SERVICES="lo crond dbus networkmanager acpid tlp thermald intel-lpmd bluetoothd chronyd krest-firewall krest-tutor"
 
@@ -62,20 +63,15 @@ uuid() { blkid -s UUID -o value "$1"; }
 # ---------------------------------------------------------------- the network
 online() { curl -fsS -m 10 -o /dev/null https://crux.nu/ 2>/dev/null; }
 network() {
-	if ! pgrep -x NetworkManager >/dev/null; then
-		mkdir -p /run/dbus /var/run/dbus
-		dbus-uuidgen --ensure 2>/dev/null
-		[ -x /etc/rc.d/dbus ] && /etc/rc.d/dbus start >/dev/null 2>&1
-		[ -x /etc/rc.d/networkmanager ] && /etc/rc.d/networkmanager start >/dev/null 2>&1
-		sleep 4
-	fi
+	# a cable (or USB Ethernet adapter) gets an address by itself
+	pgrep -x dhcpcd >/dev/null || { dhcpcd -b -q >/dev/null 2>&1; sleep 6; }
 	while ! online; do
-		dlg --yes-label "Connect (nmtui)" --no-label "Try again" --yesno \
+		dlg --yes-label "Wi-Fi" --no-label "Try again" --yesno \
 "Krest compiles itself on this laptop from the internet, so it needs a connection.
 
-A cable (or a USB Ethernet adapter) connects by itself. For Wi-Fi, choose Connect: nmtui
-opens; pick \"Activate a connection\", then your network." 13 76
-		[ $? -eq 0 ] && nmtui
+A cable (or a USB Ethernet adapter) connects by itself: plug it in and choose Try again.
+For Wi-Fi, choose Wi-Fi, pick your network and type its password." 13 76
+		[ $? -eq 0 ] && krest-wifi
 		sleep 2
 	done
 }
@@ -157,7 +153,7 @@ disk() {
 
 # ---------------------------------------------------------------- 2. base
 base() {
-	stage 2 "CRUX's core from the stick (pkgadd), then the stick's kernel and NetworkManager"
+	stage 2 "CRUX's core from the stick (pkgadd), then the stick's kernel"
 	mkdir -p "$T/var/lib/pkg"; touch "$T/var/lib/pkg/db"
 	local n=0 total
 	total=$(ls "$MEDIA"/crux/core/*.pkg.tar.* | wc -l)
@@ -242,6 +238,7 @@ AUTOLOGIN=$AUTOLOGIN
 EOF
 	install -m755 /usr/bin/krest-install "$T/usr/bin/krest-install"
 	install -m755 /usr/bin/iso-binaries "$T/usr/bin/iso-binaries"
+	install -m755 /usr/bin/krest-wifi "$T/usr/bin/krest-wifi"
 }
 
 # ---------------------------------------------------------------- 4. compile (also --continue)
@@ -298,6 +295,7 @@ if [ "${1:-}" = --continue ]; then
 	[ "$(id -u)" = 0 ] || exec sudo "$0" "$@"
 	T=/; LOG=/var/log/krest-install.log
 	in_target() { run /bin/sh -c "$*"; }
+	network
 	compile
 	echo "Done. Restart (sudo reboot) to start the desktop."
 	exit 0
