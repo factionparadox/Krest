@@ -217,7 +217,6 @@ sudo find "$ird/lib/modules" -name '*.ko.zst' -exec zstd -q -d --rm {} \;
 depmod_b "$ird" "$KVER"
 # the live system is bigger now: give its RAM disk room
 sudo sed -i 's/-o size=1650m/-o size=75%/' "$ird/init"
-# ...which is now a gzip archive
 # Arch's kernel has no hotplug helper (CONFIG_UEVENT_HELPER), so mdev can't learn of the USB
 # stick when its driver loads: look at /dev again once the devices have settled, just before
 # the stick is searched for
@@ -230,6 +229,7 @@ sudo sed -i 's|^\(\s*\)echo > /proc/sys/kernel/hotplug$|\1{ echo > /proc/sys/ker
 sudo sed -i -e 's|Searching for the CRUX media|Searching for the Krest stick|' \
   -e 's|, CRUX media\.|, the Krest stick.|' -e "s|but it's not the CRUX media|but it's not the Krest stick|" \
   -e 's|The CRUX media|The Krest stick|g' -e 's|CRUX 3.8 - ${BLUE}https://crux.nu/|Krest, built on CRUX 3.8 - ${BLUE}https://github.com/factionparadox/Krest|' "$ird/init"
+# the live system is now a gzip archive
 sudo sed -i 's|tar -xJf ${MEDIAMNT}/${PREFIX}/rootfs.tar.xz|tar -xzf ${MEDIAMNT}/${PREFIX}/rootfs.tar.gz|; s|rootfs.tar.xz|rootfs.tar.gz|g' "$ird/init"
 grep -q 'tar -xzf ${MEDIAMNT}/${PREFIX}/rootfs.tar.gz' "$ird/init" || die "couldn't point the initramfs at rootfs.tar.gz"
 (cd "$ird" && sudo find . | sudo cpio -o -H newc --quiet) > "$work/initramfs"
