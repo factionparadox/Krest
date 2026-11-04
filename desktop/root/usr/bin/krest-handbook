@@ -1,10 +1,29 @@
 #!/bin/sh
-# The CRUX handbook, offline (it came with the install stick), beside the Krest wiki.
-#   krest-handbook        the handbook in less (/ searches, q quits)
-#   krest-handbook mc     Midnight Commander: the handbook and the Krest wiki side by side
-book=/usr/share/doc/crux/handbook.txt
+# The CRUX handbook, offline, beside the Krest wiki.
+#   krest-handbook          the handbook in less (/ searches, q quits)
+#   krest-handbook mc       Midnight Commander: the handbook and the Krest wiki side by side
+#   krest-handbook notes    CRUX 3.8's release notes
+#   krest-handbook update   fetch the newest handbook from crux.nu and keep it offline
+#                           (krest-update and the installer do this too)
+# The handbook from the install stick stays as handbook-stick.txt, in case crux.nu is down.
+dir=/usr/share/doc/crux
+url=https://crux.nu/Main/Handbook3-8
+book=$dir/handbook.txt
+[ -f "$book" ] || book=$dir/handbook-stick.txt
 case "${1:-read}" in
-	read) exec krest-term "CRUX handbook" less "$book" ;;
-	mc)   exec krest-term "Handbook" mc /usr/share/krest/learn/wiki /usr/share/doc/crux ;;
-	*)    echo "usage: krest-handbook [read|mc]" >&2; exit 2 ;;
+	read)  exec krest-term "CRUX handbook" less "$book" ;;
+	notes) exec krest-term "CRUX 3.8 release notes" less "$dir/releasenotes.txt" ;;
+	mc)    exec krest-term "Handbook" mc /usr/share/krest/learn/wiki "$dir" ;;
+	update)
+		[ "$(id -u)" = 0 ] || exec sudo "$0" "$@"
+		tmp=$(mktemp -d)
+		if curl -fsSL -m 60 -o "$tmp/page.html" "$url" &&
+		   python3 -I /usr/lib/krest/handbook-text "$tmp/page.html" "$tmp/handbook.txt"; then
+			install -m644 "$tmp/handbook.txt" "$dir/handbook.txt"
+			echo "The CRUX handbook is up to date ($(wc -l < "$dir/handbook.txt") lines, from $url)."
+		else
+			echo "Couldn't fetch the handbook from $url; the offline copy stays as it was."
+		fi
+		rm -rf "$tmp" ;;
+	*) echo "usage: krest-handbook [read|mc|notes|update]" >&2; exit 2 ;;
 esac

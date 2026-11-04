@@ -20,4 +20,7 @@ fi
 echo "==> Rebuilding what changed (prt-get sysup; each build shows here)"
 prt-get sysup
 echo
+echo "==> The CRUX handbook, for reading offline"
+krest-handbook update || true
+echo
 echo "Done. Anything new that was kept aside: sudo rejmerge"

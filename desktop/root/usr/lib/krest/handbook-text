@@ -1,0 +1,102 @@
+#!/usr/bin/env python3
+"""handbook-text PAGE.html OUT.txt: CRUX's online handbook (a PmWiki page) as plain text for less.
+
+Only the page's text (div#wikitext) is kept: headings, paragraphs wrapped at 78 columns,
+lists, tables and the command examples exactly as they are."""
+import html.parser, re, sys, textwrap
+
+class Page(html.parser.HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.out, self.buf = [], []
+        self.depth = 0          # <div> depth inside div#wikitext (0: outside)
+        self.pre = 0
+        self.skip = 0           # inside the table of contents
+        self.heading = None
+        self.cells = None
+    def flush(self, kind='p'):
+        text = ''.join(self.buf); self.buf = []
+        if self.pre:
+            return
+        text = re.sub(r'\s+', ' ', text).strip()
+        if not text:
+            return
+        if kind == 'li':
+            self.out.append(textwrap.fill(text, 78, initial_indent='  - ', subsequent_indent='    '))
+        else:
+            self.out.append(textwrap.fill(text, 78))
+    def handle_starttag(self, tag, attrs):
+        a = dict(attrs)
+        if self.depth == 0:
+            if tag == 'div' and a.get('id') == 'wikitext':
+                self.depth = 1
+            return
+        if tag == 'div':
+            self.depth += 1
+            if 'tocstyle' in (a.get('class') or ''):
+                self.skip = self.depth
+        if self.skip:
+            return
+        if tag in ('h1', 'h2', 'h3', 'h4'):
+            self.flush(); self.heading = tag
+        elif tag in ('p', 'div'):
+            self.flush()
+        elif tag == 'br':
+            self.buf.append('\n') if self.pre else self.flush()
+        elif tag == 'li':
+            self.flush()
+        elif tag == 'pre':
+            self.flush(); self.pre = 1
+        elif tag == 'tr':
+            self.flush(); self.cells = []
+        elif tag in ('td', 'th') and self.cells is not None:
+            self.buf = []
+    def handle_endtag(self, tag):
+        if self.depth == 0:
+            return
+        if tag == 'div':
+            if self.skip == self.depth:
+                self.skip = 0
+            self.depth -= 1
+            if self.depth == 0:
+                self.flush()
+            return
+        if self.skip:
+            return
+        if tag in ('h1', 'h2', 'h3', 'h4') and self.heading:
+            text = re.sub(r'\s+', ' ', ''.join(self.buf)).strip(); self.buf = []
+            if text:
+                if self.heading == 'h1':
+                    self.out.append(text.upper() + '\n' + '=' * len(text))
+                elif self.heading == 'h2':
+                    self.out.append(text + '\n' + '-' * len(text))
+                else:
+                    self.out.append(text)
+            self.heading = None
+        elif tag == 'li':
+            self.flush('li')
+        elif tag == 'pre':
+            code = ''.join(self.buf).strip('\n'); self.buf = []; self.pre = 0
+            self.out.append('\n'.join('    ' + l for l in code.split('\n')))
+        elif tag in ('td', 'th') and self.cells is not None:
+            self.cells.append(re.sub(r'\s+', ' ', ''.join(self.buf)).strip()); self.buf = []
+        elif tag == 'tr' and self.cells is not None:
+            if any(self.cells):
+                self.out.append('  ' + '  |  '.join(self.cells))
+            self.cells = None
+        elif tag == 'p':
+            self.flush()
+    def handle_data(self, data):
+        if self.depth and not self.skip:
+            self.buf.append(data)
+
+raw = open(sys.argv[1], 'rb').read()
+try:
+    text = raw.decode('utf-8')
+except UnicodeDecodeError:
+    text = raw.decode('iso-8859-1')
+p = Page(); p.feed(text); p.flush()
+body = '\n\n'.join(p.out).strip() + '\n'
+if len(body) < 20000 or 'Handbook for CRUX' not in text:
+    sys.exit('handbook-text: that does not look like the CRUX handbook page')
+open(sys.argv[2], 'w', encoding='utf-8').write(body)

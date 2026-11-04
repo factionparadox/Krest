@@ -3,13 +3,18 @@
 The CRUX handbook is CRUX's official documentation, written by its developers for each
 release: installing, configuring the system (rc.conf, the rc scripts, networking), the
 package system (pkgutils, ports, prt-get), building a kernel, and writing ports. It is short
-enough to read in an evening, and the rest of CRUX assumes you have. The installer copied the
-3.8 handbook from the stick to /usr/share/doc/crux/handbook.txt.
+enough to read in an evening, and the rest of CRUX assumes you have. It lives online at
+https://crux.nu/Main/Handbook3-8 and the CRUX team keeps improving it, so Krest keeps the
+newest copy offline in /usr/share/doc/crux/handbook.txt: the installer fetches it once the
+desktop is compiled, and krest-update fetches it again each time. The copy from the install
+stick stays beside it (handbook-stick.txt), with CRUX 3.8's release notes.
 
 ## Reading it
   krest-handbook            the handbook in less (menu -> Learn -> CRUX handbook)
   krest-handbook mc         Midnight Commander with this wiki on one side and the
                               handbook's folder on the other
+  krest-handbook notes      CRUX 3.8's release notes
+  krest-handbook update     fetch the newest handbook now
   less /usr/share/doc/crux/handbook.txt     the same, in any terminal
 
 less's keys:

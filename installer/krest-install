@@ -229,7 +229,10 @@ OSR
 	run cp -a "$MEDIA/krest/repo" "$T/usr/src/krest" || fail "copying the repository"
 	chown -R root:root "$T/usr/src/krest"
 	chroot "$T" git -C /usr/src/krest remote set-url origin https://github.com/factionparadox/Krest.git 2>/dev/null
+	# the stick's handbook (the newest one is fetched from crux.nu after compiling) and notes
+	cp "$MEDIA/crux/handbook.txt" "$T/usr/share/doc/crux/handbook-stick.txt"
 	cp "$MEDIA/crux/handbook.txt" "$T/usr/share/doc/crux/handbook.txt"
+	cp "$MEDIA/crux/releasenotes.txt" "$T/usr/share/doc/crux/releasenotes.txt" 2>/dev/null
 	install -m644 "$T/usr/src/krest/build/crux/pkgmk.conf" "$T/etc/pkgmk.conf"
 	install -m644 "$T/usr/src/krest/build/crux/prt-get.conf" "$T/etc/prt-get.conf"
 	for f in "$T"/etc/ports/*.inactive; do [ -e "$f" ] && mv "$f" "${f%.inactive}"; done
@@ -276,6 +279,8 @@ compile() {   # runs on the new system (in the chroot, or after booting it)
 		printf '\n==== [%d of %d] %s\n' "$n" "$total" "$name" | tee -a "$LOG"
 		in_target "prt-get install $name" || fail "building $name (its log: /var/log/pkgbuild/$name.log)"
 	done
+	say "  the newest CRUX handbook, for reading offline (krest-handbook)"
+	in_target "krest-handbook update" || true
 	finish
 }
 finish() {
