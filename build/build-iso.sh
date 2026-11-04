@@ -186,6 +186,13 @@ sudo install -m755 "$project/installer/krest-install" "$live/usr/bin/krest-insta
 sudo install -m755 "$project/installer/iso-binaries" "$live/usr/bin/iso-binaries"
 sudo install -m755 "$project/installer/krest-wifi" "$live/usr/bin/krest-wifi"
 sudo install -m644 "$project/installer/live-bash_profile" "$live/root/.bash_profile"
+# the stick calls itself Krest (it's still CRUX's live system underneath)
+kv=$(cat "$project/VERSION")
+printf 'NAME="Krest"\nPRETTY_NAME="Krest %s installer"\nID=krest\nID_LIKE=crux\nVERSION_ID=%s\nHOME_URL="https://github.com/factionparadox/Krest"\n' "$kv" "$kv" |
+  sudo tee "$live/etc/os-release" >/dev/null
+printf 'Krest %s installer, built on CRUX 3.8  (\\l)\n\n' "$kv" | sudo tee "$live/etc/issue" >/dev/null
+printf '\nKrest installer. It starts by itself on the first console; to start it again: krest-install\n\n' |
+  sudo tee "$live/etc/motd" >/dev/null
 # gzip, not xz: many times quicker to make, and the stick's busybox (no zstd) unpacks it quicker
 # too. pigz uses every core when it's there.
 gz=gzip; command -v pigz >/dev/null && gz=pigz
@@ -211,6 +218,10 @@ depmod_b "$ird" "$KVER"
 # the live system is bigger now: give its RAM disk room
 sudo sed -i 's/-o size=1650m/-o size=75%/' "$ird/init"
 # ...which is now a gzip archive
+# ...and its boot messages say Krest (the stick is still found by CRUX's crux-media file)
+sudo sed -i -e 's|Searching for the CRUX media|Searching for the Krest stick|' \
+  -e 's|, CRUX media\.|, the Krest stick.|' -e "s|but it's not the CRUX media|but it's not the Krest stick|" \
+  -e 's|The CRUX media|The Krest stick|g' -e 's|CRUX 3.8 - ${BLUE}https://crux.nu/|Krest, built on CRUX 3.8 - ${BLUE}https://github.com/factionparadox/Krest|' "$ird/init"
 sudo sed -i 's|tar -xJf ${MEDIAMNT}/${PREFIX}/rootfs.tar.xz|tar -xzf ${MEDIAMNT}/${PREFIX}/rootfs.tar.gz|; s|rootfs.tar.xz|rootfs.tar.gz|g' "$ird/init"
 grep -q 'tar -xzf ${MEDIAMNT}/${PREFIX}/rootfs.tar.gz' "$ird/init" || die "couldn't point the initramfs at rootfs.tar.gz"
 (cd "$ird" && sudo find . | sudo cpio -o -H newc --quiet) > "$work/initramfs"
@@ -233,7 +244,7 @@ xorriso -indev "$iso_in" -outdev "$iso" -boot_image any replay \
   -map "$work/grub.cfg" /boot/grub/grub.cfg \
   -map "$work/packages" /krest/packages \
   -map "$work/repo" /krest/repo \
-  -commit 2>&1 | grep -v '^xorriso : UPDATE' || true
+  -volid KREST -commit 2>&1 | grep -v '^xorriso : UPDATE' || true
 [[ -s $iso ]] || die "xorriso wrote no ISO"
 (cd "$project/out" && sha256sum "$(basename "$iso")" > "$(basename "$iso").sha256")
 say "Done: $iso ($(du -h "$iso" | cut -f1))"
