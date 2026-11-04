@@ -1,0 +1,35 @@
+# Krest's GRUB theme (made by build/make-grub-theme.py)
+title-text: ""
+desktop-image: "background.png"
+desktop-image-scale-method: "crop"
+desktop-color: "#0c0c10"
+terminal-font: "DejaVu Sans Regular 32"
+
++ boot_menu {
+	left = 54%
+	top = 44%
+	width = 40%
+	height = 40%
+	item_font = "DejaVu Sans Regular 44"
+	selected_item_font = "DejaVu Sans Bold 44"
+	item_color = "#9696a0"
+	selected_item_color = "#ececf0"
+	item_height = 76
+	item_padding = 28
+	item_spacing = 14
+	icon_width = 0
+	icon_height = 0
+	selected_item_pixmap_style = "select_*.png"
+	scrollbar = false
+}
+
++ label {
+	left = 54%
+	top = 88%
+	width = 40%
+	align = "left"
+	id = "__timeout__"
+	text = "Starting in %d s  ·  ↑ ↓ choose  ·  Enter starts  ·  e edits"
+	color = "#9696a0"
+	font = "DejaVu Sans Regular 32"
+}

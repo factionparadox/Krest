@@ -247,6 +247,15 @@ OSR
 	else
 		mkdir -p "$T/etc/default"; printf 'GRUB_CMDLINE_LINUX_DEFAULT="%s"\nGRUB_TIMEOUT=3\nGRUB_DISTRIBUTOR=Krest\n' "$cmdline" > "$T/etc/default/grub"
 	fi
+	# the boot menu's look: Паша and КРЕСТ (build/make-grub-theme.py), in GRUB's graphics mode
+	mkdir -p "$T/boot/grub/themes"
+	cp -a "$T/usr/src/krest/desktop/root/usr/share/krest/grub-theme" "$T/boot/grub/themes/krest"
+	set_grub() { if grep -q "^#\?$1=" "$T/etc/default/grub"; then sed -i "s|^#\?$1=.*|$1=$2|" "$T/etc/default/grub"; else echo "$1=$2" >> "$T/etc/default/grub"; fi; }
+	set_grub GRUB_THEME /boot/grub/themes/krest/theme.txt
+	set_grub GRUB_GFXMODE auto
+	set_grub GRUB_TERMINAL_OUTPUT gfxterm
+	set_grub GRUB_TIMEOUT 5
+	set_grub GRUB_DISTRIBUTOR Krest
 	in_target "dracut --force --early-microcode --kver $(ls "$T/lib/modules" | head -n 1) /boot/initramfs-$(ls "$T/lib/modules" | head -n 1).img" || fail "dracut"
 	in_target "grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=Krest && grub-install --target=x86_64-efi --efi-directory=/boot/efi --removable && grub-mkconfig -o /boot/grub/grub.cfg" || fail "GRUB"
 	cat > "$T/etc/krest-install.conf" <<EOF
