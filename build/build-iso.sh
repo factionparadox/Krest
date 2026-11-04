@@ -218,6 +218,14 @@ depmod_b "$ird" "$KVER"
 # the live system is bigger now: give its RAM disk room
 sudo sed -i 's/-o size=1650m/-o size=75%/' "$ird/init"
 # ...which is now a gzip archive
+# Arch's kernel has no hotplug helper (CONFIG_UEVENT_HELPER), so mdev can't learn of the USB
+# stick when its driver loads: look at /dev again once the devices have settled, just before
+# the stick is searched for
+sudo sed -i '/Searching for the CRUX media/i \	mdev -s' "$ird/init"
+grep -B1 'Searching for the CRUX media' "$ird/init" | grep -q 'mdev -s' || die "couldn't add the device rescan to the initramfs"
+# (and say nothing about the missing hotplug file: the rescan above stands in for it)
+sudo sed -i 's|^\(\s*\)echo "/bin/mdev" > /proc/sys/kernel/hotplug$|\1{ echo "/bin/mdev" > /proc/sys/kernel/hotplug; } 2>/dev/null; true|' "$ird/init"
+sudo sed -i 's|^\(\s*\)echo > /proc/sys/kernel/hotplug$|\1{ echo > /proc/sys/kernel/hotplug; } 2>/dev/null|' "$ird/init"
 # ...and its boot messages say Krest (the stick is still found by CRUX's crux-media file)
 sudo sed -i -e 's|Searching for the CRUX media|Searching for the Krest stick|' \
   -e 's|, CRUX media\.|, the Krest stick.|' -e "s|but it's not the CRUX media|but it's not the Krest stick|" \
