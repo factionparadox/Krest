@@ -11,10 +11,32 @@ CONF=/etc/krest-wifi.conf
 TITLE="Wi-Fi"
 dlg() { dialog --backtitle "Крест / Krest" --title "$TITLE" "$@" 3>&1 1>&2 2>&3; }
 
+# Wi-Fi switched off in software (rfkill) can't scan: switch it on
+for r in /sys/class/rfkill/rfkill*; do [ -w "$r/soft" ] && echo 0 > "$r/soft"; done 2>/dev/null
+command -v rfkill >/dev/null && rfkill unblock all 2>/dev/null
+# the driver may still be loading (and fetching its firmware): wait up to 15 seconds for it
 iface=
-for d in /sys/class/net/*; do [ -d "$d/wireless" ] && { iface=${d##*/}; break; }; done
+for _ in $(seq 15); do
+	for d in /sys/class/net/*; do [ -d "$d/wireless" ] && { iface=${d##*/}; break; }; done
+	[ -n "$iface" ] && break
+	sleep 1
+done
 if [ -z "$iface" ]; then
-	dlg --msgbox "No Wi-Fi device was found.\n\nPlug in a cable or a USB Ethernet adapter instead." 9 60
+	# what there is, for working out why: network chips, their drivers, the kernel's messages
+	{
+		echo "Network devices:"; ls /sys/class/net
+		echo; echo "Network chips (PCI class 02xx) and their drivers:"
+		for dev in /sys/bus/pci/devices/*; do
+			case $(cat "$dev/class") in 0x02*)
+				drv=$(basename "$(readlink "$dev/driver" 2>/dev/null)" 2>/dev/null)
+				echo "  ${dev##*/}  $(cat "$dev/vendor"):$(cat "$dev/device")  driver: ${drv:-none}" ;;
+			esac
+		done
+		echo; echo "Kernel messages about Wi-Fi and firmware:"
+		dmesg | grep -iE 'iwlwifi|iwlmld|mt79|mt76|ath1[12]k|rtw8|brcmf|firmware|rfkill' | tail -n 25
+	} > /tmp/krest-wifi.log 2>&1
+	dlg --title "No Wi-Fi device" --textbox /tmp/krest-wifi.log 22 76
+	dlg --msgbox "No Wi-Fi device appeared. What's above is kept in /tmp/krest-wifi.log.\n\nPlug in a cable or a USB Ethernet adapter to carry on, and send a photo of that screen to get Wi-Fi fixed." 11 64
 	exit 1
 fi
 ip link set "$iface" up
@@ -24,7 +46,11 @@ wcli ping >/dev/null 2>&1 || { wpa_supplicant -B -i "$iface" -c "$CONF" >/dev/nu
 
 while :; do
 	dialog --backtitle "Крест / Krest" --title "$TITLE" --infobox "Looking for networks on $iface ..." 5 50
-	wcli scan >/dev/null; sleep 5
+	# a scan can come back empty the first time: try up to three times
+	for _ in 1 2 3; do
+		wcli scan >/dev/null; sleep 5
+		[ "$(wcli scan_results | tail -n +2 | grep -c .)" -gt 0 ] && break
+	done
 	# SSID, signal, flags; strongest first, each SSID once
 	mapfile -t rows < <(wcli scan_results | tail -n +2 | awk -F'\t' '$5 != "" {print $3 "\t" $5 "\t" $4}' |
 		sort -t$'\t' -k1,1nr | awk -F'\t' '!seen[$2]++')

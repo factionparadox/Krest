@@ -118,10 +118,11 @@ depmod_b() {
 # NetworkManager isn't on CRUX's ISO, so the installer gets online with krest-wifi instead.
 # The laptop compiles everything else during the install, Krest's own 7.3 kernel included;
 # linux-arch stays on as the fallback kernel in the boot menu.
-say "Arch's ready-built kernel and Intel firmware (downloaded by pacman; nothing is compiled)"
+say "Arch's ready-built kernel and its firmware (downloaded by pacman; nothing is compiled)"
 command -v pacman >/dev/null || die "this step uses pacman: run the build on Arch (WSL is fine)"
 arch=$cache/arch
-ARCH_PKGS="linux linux-firmware-intel linux-firmware-realtek linux-firmware-other linux-firmware-whence sof-firmware wireless-regdb"
+# every Wi-Fi maker a laptop may carry (Intel, MediaTek, Qualcomm Atheros, Realtek, Broadcom)
+ARCH_PKGS="linux linux-firmware-intel linux-firmware-mediatek linux-firmware-atheros linux-firmware-realtek linux-firmware-broadcom linux-firmware-other linux-firmware-whence sof-firmware wireless-regdb"
 # into pacman's own cache (pacman downloads as its own user, which can't write in your home);
 # explicit names, so pacman fetches them even when this computer has them installed
 for try in 1 2 3; do
