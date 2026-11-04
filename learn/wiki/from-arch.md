@@ -21,9 +21,9 @@ carries straight over; this table is the rest.
   pacman -Qdt                 prt-get listorphans
   pacman -Sc                  rm what you no longer need from /usr/ports/distfiles, packages
   IgnorePkg in pacman.conf    sudo prt-get lock foo
-  downgrade                   sudo pkgadd -u -f /usr/ports/packages/foo#OLD-1.pkg.tar.zst
+  downgrade                   sudo port-undo foo           (see: krest-tools)
   makepkg / PKGBUILD          pkgmk / Pkgfile              (see: pkgfiles)
-  the AUR                     contrib, or a collection of your own   (see: ports)
+  the AUR, yay, paru           port-aurum foo: converts the PKGBUILD   (see: krest-tools)
   pacman-key                  CRUX's signify keys in /etc/ports; Krest's sha256 files
   pacman -U file.pkg.tar.zst  sudo pkgadd file.pkg.tar.zst ; -u to upgrade
   .pacnew files               sudo rejmerge

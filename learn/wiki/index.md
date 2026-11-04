@@ -23,6 +23,8 @@ In acme or mc:    the pages are plain text in /usr/share/krest/learn/wiki/
   time            chronyd and the clock; crond
 
 ## Packages
+  krest-tools     Krest's own: port-help, port-aurum (the AUR), port-undo, krest-fingerprint,
+                  krest-update, krest-handbook, krest-wifi
   prt-get         search, depinst, sysup, diff, remove, lock: everyday software
   pkgutils        pkgadd, pkgrm, pkginfo, pkgmk, rejmerge, and /var/lib/pkg/db
   pkgfiles        writing a port: the Pkgfile, pkgmk, footprints, Krest's sha256 files

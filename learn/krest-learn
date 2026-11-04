@@ -50,6 +50,7 @@ ALIASES = {
     "rejmerge": "first-steps", "pkgmk": "building", "revdep": "recovery",
     "ports": "ports", "ports -u": "ports", "krest-ports": "ports",
     "krest-update": "first-steps", "krest-install": "install",
+    "port-help": "packages", "port-aurum": "packages", "port-undo": "packages",
     "rc.d": "services", "init": "services", "telinit": "services", "halt": "services",
     "shutdown": "services", "reboot": "services", "poweroff": "services",
     "start-stop-daemon": "services", "crond": "services", "crontab": "services",
@@ -92,6 +93,10 @@ ALIASES = {
 }
 # commands whose wiki page goes deeper than the lesson (krest-learn wiki PAGE)
 WIKI_FOR = {
+    "port-help": "krest-tools", "port-aurum": "krest-tools", "port-undo": "krest-tools",
+    "krest-fingerprint": "krest-tools", "krest-wifi": "krest-tools", "aur": "krest-tools",
+    "makepkg": "krest-tools", "pkgbuild": "krest-tools", "fprintd": "krest-tools",
+    "krest-handbook": "handbook",
     "prt-get": "prt-get", "krest-update": "prt-get", "revdep": "prt-get",
     "prt-get path": "ports",
     "pkgadd": "pkgutils", "pkgrm": "pkgutils", "pkginfo": "pkgutils", "rejmerge": "pkgutils",
@@ -137,6 +142,11 @@ WIKI_FOR = {
     "repositories": "ports",
 }
 MANUALS = {
+    "port-help": "port-help ; less /usr/bin/port-help",
+    "port-aurum": "less /usr/bin/port-aurum ; port-help port-aurum",
+    "port-undo": "less /usr/bin/port-undo ; port-help port-undo",
+    "krest-fingerprint": "less /usr/bin/krest-fingerprint ; man fprintd-enroll",
+    "krest-wifi": "less /usr/bin/krest-wifi ; man wpa_cli",
     "prt-get": "man 8 prt-get", "krest-update": "man 8 prt-get ; man 8 ports ; krest-handbook",
     "ports": "man 8 ports", "pkgadd": "man 8 pkgadd", "pkgrm": "man 8 pkgrm",
     "pkginfo": "man 8 pkginfo", "pkgmk": "man 8 pkgmk ; man 5 pkgmk.conf",

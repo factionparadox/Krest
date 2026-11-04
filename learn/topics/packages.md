@@ -38,8 +38,14 @@ on this processor; they are not meant for another computer.
 ## No partial upgrades, no rollback
 Libraries are shared, so after a library update the programs linked against it are rebuilt
 when their ports change; prt-get sysup updates everything at once, which is the safe way.
-There are no generations: an update replaces the package. The previous package file usually
-stays in /usr/ports/packages (until the next build of that port overwrites a file of the same
-name), and  sudo pkgadd -u -f FILE  puts it back.
+There are no generations: an update replaces the package. The previous package file stays in
+/usr/ports/packages, and  sudo port-undo foo  puts it back (and locks foo so the next update
+leaves it alone).
 
-References: man prt-get ; man pkgmk ; man pkgadd ; krest-handbook ; krest-learn wiki prt-get
+Krest's own helpers:
+    port-help                     every package command on one page, in plain English
+    port-aurum foo                software from Arch's AUR: converts its PKGBUILD to a port
+    port-undo foo                 take back an update that broke foo
+
+References: man prt-get ; man pkgmk ; man pkgadd ; krest-handbook ; krest-learn wiki prt-get ;
+krest-learn wiki krest-tools
